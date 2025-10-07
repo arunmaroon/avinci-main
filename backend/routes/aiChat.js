@@ -157,21 +157,22 @@ async function getConversationHistory(agentId, limit = 10) {
  * Build conversation context
  */
 function buildConversationContext(agent, history, currentMessage) {
-    const { persona, prompt } = agent;
+    const { persona, prompt, name } = agent;
+    const agentName = persona?.name || name || 'AI Agent';
     
-    let context = `${prompt}\n\n`;
+    let context = `${prompt || 'You are a helpful AI assistant.'}\n\n`;
     
     // Add conversation history
     if (history.length > 0) {
         context += "Previous conversation:\n";
         history.forEach(entry => {
             context += `User: ${entry.user_message}\n`;
-            context += `${persona.name}: ${entry.agent_response}\n\n`;
+            context += `${agentName}: ${entry.agent_response}\n\n`;
         });
     }
     
     context += `Current user message: ${currentMessage}\n\n`;
-    context += `Respond as ${persona.name} would, staying in character:`;
+    context += `Respond as ${agentName} would, staying in character:`;
     
     return context;
 }
@@ -232,8 +233,11 @@ async function storeConversation(agentId, userMessage, agentResponse) {
  * Simulate image analysis (placeholder for vision API)
  */
 async function simulateImageAnalysis(agent, image) {
-    const { persona } = agent;
-    const { name, occupation, pain_points, personality_traits } = persona;
+    const { persona, name, role_title } = agent;
+    const agentName = persona?.name || name || 'AI Agent';
+    const occupation = persona?.occupation || role_title || 'Professional';
+    const pain_points = persona?.pain_points || [];
+    const personality_traits = persona?.personality_traits || [];
     
     // Simulate different responses based on agent personality
     const responses = [
@@ -244,7 +248,7 @@ async function simulateImageAnalysis(agent, image) {
     
     const randomResponse = responses[Math.floor(Math.random() * responses.length)];
     
-    return `${name}: ${randomResponse}`;
+    return `${agentName}: ${randomResponse}`;
 }
 
 module.exports = router;
