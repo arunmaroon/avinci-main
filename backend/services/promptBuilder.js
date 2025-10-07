@@ -68,6 +68,13 @@ RULES:
     /**
      * Build short persona summary for card views
      */
+    static buildShortPersona(persona) {
+        return this.buildShortSummary(persona);
+    }
+
+    /**
+     * Build short persona summary for card views
+     */
     static buildShortSummary(persona) {
         return {
             id: persona.id,

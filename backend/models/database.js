@@ -81,13 +81,15 @@ const createTables = async () => {
             CREATE TABLE IF NOT EXISTS agents (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(100) NOT NULL,
-                persona VARCHAR(100) NOT NULL,
+                persona JSONB,
+                demographics JSONB,
                 knowledge_level VARCHAR(20) NOT NULL,
                 language_style VARCHAR(20) NOT NULL,
                 emotional_range VARCHAR(20) DEFAULT 'Moderate',
                 hesitation_level VARCHAR(20) DEFAULT 'Medium',
                 traits JSONB DEFAULT '[]',
                 prompt TEXT,
+                master_system_prompt TEXT,
                 avatar VARCHAR(500),
                 avatar_url VARCHAR(500),
                 avatar_seed VARCHAR(100),
@@ -145,6 +147,14 @@ const createTables = async () => {
         await pool.query('CREATE INDEX IF NOT EXISTS idx_agents_created_by ON ai_agents(created_by)');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_session_id ON chat_messages(session_id)');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_documents_status ON document_uploads(status)');
+
+        // Add missing columns to agents table if they don't exist
+        await pool.query(`
+            ALTER TABLE agents 
+            ADD COLUMN IF NOT EXISTS persona JSONB,
+            ADD COLUMN IF NOT EXISTS demographics JSONB,
+            ADD COLUMN IF NOT EXISTS master_system_prompt TEXT;
+        `);
 
         console.log('✅ Database tables created');
 
