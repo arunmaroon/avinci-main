@@ -97,19 +97,67 @@ class IndianDemographicsService {
     }
 
     /**
-     * Generate realistic face photo URL based on demographics
+     * Generate realistic face photo URL using Unsplash
      */
     static generateUnsplashPhoto(demographics) {
         const { name, age, gender, role_title, location } = demographics;
         
-        // Use a more reliable face photo service
-        // This will generate consistent, high-quality face photos
-        const seed = this.generateSeedFromDemographics(demographics);
+        // Create search terms based on demographics for more relevant photos
+        let searchTerms = [];
         
-        // Use DiceBear API for consistent face generation
-        const diceBearUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf&size=400`;
+        // Add gender and age-based terms
+        if (gender === 'Male') {
+            searchTerms.push('indian-man', 'professional-man', 'business-man', 'portrait-man');
+        } else {
+            searchTerms.push('indian-woman', 'professional-woman', 'business-woman', 'portrait-woman');
+        }
         
-        return diceBearUrl;
+        // Add age-based terms
+        if (age < 30) {
+            searchTerms.push('young-adult', 'millennial', 'gen-z');
+        } else if (age < 50) {
+            searchTerms.push('middle-aged', 'professional', 'adult');
+        } else {
+            searchTerms.push('mature-adult', 'senior', 'experienced');
+        }
+        
+        // Add profession-based terms
+        if (role_title.toLowerCase().includes('engineer') || role_title.toLowerCase().includes('tech')) {
+            searchTerms.push('technology', 'software', 'developer', 'tech-professional');
+        } else if (role_title.toLowerCase().includes('manager') || role_title.toLowerCase().includes('executive')) {
+            searchTerms.push('business', 'office', 'corporate', 'executive');
+        } else if (role_title.toLowerCase().includes('doctor') || role_title.toLowerCase().includes('medical')) {
+            searchTerms.push('medical', 'healthcare', 'doctor', 'nurse');
+        } else if (role_title.toLowerCase().includes('teacher') || role_title.toLowerCase().includes('education')) {
+            searchTerms.push('education', 'teaching', 'teacher', 'academic');
+        } else if (role_title.toLowerCase().includes('sales') || role_title.toLowerCase().includes('marketing')) {
+            searchTerms.push('sales', 'marketing', 'business', 'professional');
+        }
+        
+        // Add location-based terms
+        if (location.toLowerCase().includes('mumbai')) {
+            searchTerms.push('mumbai', 'mumbai-city', 'mumbai-professional');
+        } else if (location.toLowerCase().includes('delhi')) {
+            searchTerms.push('delhi', 'delhi-city', 'delhi-professional');
+        } else if (location.toLowerCase().includes('bangalore')) {
+            searchTerms.push('bangalore', 'bengaluru', 'bangalore-professional');
+        } else if (location.toLowerCase().includes('chennai')) {
+            searchTerms.push('chennai', 'chennai-professional');
+        } else if (location.toLowerCase().includes('kolkata')) {
+            searchTerms.push('kolkata', 'kolkata-professional');
+        }
+        
+        // Select a random search term
+        const searchTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+        
+        // Generate Unsplash URL with specific dimensions and search term
+        const width = 400;
+        const height = 400;
+        
+        // Use Unsplash Source API for better photo selection
+        const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${encodeURIComponent(searchTerm)}&face,portrait`;
+        
+        return unsplashUrl;
     }
 
     /**

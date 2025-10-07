@@ -100,14 +100,21 @@ const AgentGrid = ({ agents, onSelectAgent, onDeleteAgent, onAgentStatusChange }
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="relative">
-                      <img
-                        src={agent.avatar_url}
-                        alt={agent.name}
-                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-                        onError={(e) => {
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`;
-                        }}
-                      />
+                            <img
+                              src={agent.avatar_url}
+                              alt={agent.name}
+                              className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                              onError={(e) => {
+                                // First fallback: Try a different Unsplash search
+                                if (e.target.src.includes('source.unsplash.com')) {
+                                  const fallbackUrl = `https://source.unsplash.com/400x400/?portrait,face,${agent.demographics?.gender?.toLowerCase() || 'person'}`;
+                                  e.target.src = fallbackUrl;
+                                } else {
+                                  // Second fallback: Use UI Avatars
+                                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`;
+                                }
+                              }}
+                            />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
                     </div>
                     <div className="flex-1">

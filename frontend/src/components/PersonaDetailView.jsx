@@ -43,14 +43,21 @@ const PersonaDetailView = ({ agent, onClose, onChat }) => {
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <img
-                  src={agent.avatar_url}
-                  alt={agent.name}
-                  className="w-20 h-20 rounded-full object-cover border-4 border-gray-200"
-                  onError={(e) => {
-                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`;
-                  }}
-                />
+                    <img
+                      src={agent.avatar_url}
+                      alt={agent.name}
+                      className="w-20 h-20 rounded-full object-cover border-4 border-gray-200"
+                      onError={(e) => {
+                        // First fallback: Try a different Unsplash search
+                        if (e.target.src.includes('source.unsplash.com')) {
+                          const fallbackUrl = `https://source.unsplash.com/400x400/?portrait,face,${agent.demographics?.gender?.toLowerCase() || 'person'}`;
+                          e.target.src = fallbackUrl;
+                        } else {
+                          // Second fallback: Use UI Avatars
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`;
+                        }
+                      }}
+                    />
                 <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-white"></div>
               </div>
               <div>
