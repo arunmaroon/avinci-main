@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, Badge, Avatar, Button } from './design-system';
-import PersonaDetailView from './PersonaDetailView';
+import DetailedPersonaCard from './DetailedPersonaCard';
 import PasswordConfirmation from './PasswordConfirmation';
 import api from '../utils/api';
 
 const AgentGrid = ({ agents, onSelectAgent, onDeleteAgent, onAgentStatusChange }) => {
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const [detailedPersona, setDetailedPersona] = useState(null);
   const [showDetailView, setShowDetailView] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [pendingAgent, setPendingAgent] = useState(null);
+  const [loadingPersona, setLoadingPersona] = useState(false);
   const getBadgeVariant = (knowledgeLevel) => {
     switch (knowledgeLevel) {
       case 'Novice': return 'success';
@@ -34,18 +36,33 @@ const AgentGrid = ({ agents, onSelectAgent, onDeleteAgent, onAgentStatusChange }
     return '👤';
   };
 
-  const handleViewDetails = (agent) => {
+  const handleViewDetails = async (agent) => {
     setSelectedAgent(agent);
+    setLoadingPersona(true);
     setShowDetailView(true);
+    
+    try {
+      // Fetch detailed persona data
+      const response = await api.get(`/agent/generate/detailed/${agent.id}`);
+      setDetailedPersona(response.data.persona);
+    } catch (error) {
+      console.error('Error fetching detailed persona:', error);
+      // Fallback to basic agent data
+      setDetailedPersona(agent);
+    } finally {
+      setLoadingPersona(false);
+    }
   };
 
   const handleCloseDetails = () => {
     setShowDetailView(false);
     setSelectedAgent(null);
+    setDetailedPersona(null);
   };
 
   const handleChat = (agent) => {
-    onSelectAgent && onSelectAgent(agent);
+    // Navigate to chat page with specific agent
+    window.location.href = `/agent-chat/${agent.id}`;
   };
 
   const handleSleepAgent = (agent) => {
@@ -287,11 +304,38 @@ const AgentGrid = ({ agents, onSelectAgent, onDeleteAgent, onAgentStatusChange }
 
           {/* Detail View Modal */}
           {showDetailView && selectedAgent && (
-            <PersonaDetailView
-              agent={selectedAgent}
-              onClose={handleCloseDetails}
-              onChat={handleChat}
-            />
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                {/* Header with close button */}
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 rounded-t-2xl flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-900">Detailed Persona</h2>
+                  <button
+                    onClick={handleCloseDetails}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6">
+                  {loadingPersona ? (
+                    <div className="flex justify-center items-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                      <p className="ml-4 text-gray-600">Loading detailed persona...</p>
+                    </div>
+                  ) : detailedPersona ? (
+                    <DetailedPersonaCard persona={detailedPersona} />
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>Failed to load detailed persona data.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Password Confirmation Modal */}
