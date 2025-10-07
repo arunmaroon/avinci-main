@@ -48,9 +48,9 @@ const PersonaDetailView = ({ agent, onClose, onChat }) => {
                       alt={agent.name}
                       className="w-20 h-20 rounded-full object-cover border-4 border-gray-200"
                       onError={(e) => {
-                        // First fallback: Try a different Unsplash search
-                        if (e.target.src.includes('source.unsplash.com')) {
-                          const fallbackUrl = `https://source.unsplash.com/400x400/?portrait,face,${agent.demographics?.gender?.toLowerCase() || 'person'}`;
+                        // First fallback: Try a different Random User photo
+                        if (e.target.src.includes('randomuser.me')) {
+                          const fallbackUrl = `https://randomuser.me/api/portraits/${agent.demographics?.gender === 'Male' ? 'men' : 'women'}/${Math.floor(Math.random() * 99) + 1}.jpg`;
                           e.target.src = fallbackUrl;
                         } else {
                           // Second fallback: Use UI Avatars

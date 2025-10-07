@@ -97,7 +97,7 @@ class IndianDemographicsService {
     }
 
     /**
-     * Generate realistic face photo URL using Unsplash
+     * Generate realistic face photo URL using a reliable service
      */
     static generateUnsplashPhoto(demographics) {
         const { name, age, gender, role_title, location } = demographics;
@@ -150,14 +150,18 @@ class IndianDemographicsService {
         // Select a random search term
         const searchTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
         
-        // Generate Unsplash URL with specific dimensions and search term
+        // Use a reliable service that provides actual face photos
         const width = 400;
         const height = 400;
         
-        // Use Unsplash Source API for better photo selection
-        const unsplashUrl = `https://source.unsplash.com/${width}x${height}/?${encodeURIComponent(searchTerm)}&face,portrait`;
+        // Generate a consistent seed based on demographics for reproducible results
+        const seed = this.generateSeedFromDemographics(demographics);
         
-        return unsplashUrl;
+        // Use Random User API for realistic face photos
+        // This provides actual human faces with good quality
+        const randomUserUrl = `https://randomuser.me/api/portraits/${gender === 'Male' ? 'men' : 'women'}/${(seed.charCodeAt(0) % 99) + 1}.jpg`;
+        
+        return randomUserUrl;
     }
 
     /**

@@ -105,9 +105,9 @@ const AgentGrid = ({ agents, onSelectAgent, onDeleteAgent, onAgentStatusChange }
                               alt={agent.name}
                               className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
                               onError={(e) => {
-                                // First fallback: Try a different Unsplash search
-                                if (e.target.src.includes('source.unsplash.com')) {
-                                  const fallbackUrl = `https://source.unsplash.com/400x400/?portrait,face,${agent.demographics?.gender?.toLowerCase() || 'person'}`;
+                                // First fallback: Try a different Random User photo
+                                if (e.target.src.includes('randomuser.me')) {
+                                  const fallbackUrl = `https://randomuser.me/api/portraits/${agent.demographics?.gender === 'Male' ? 'men' : 'women'}/${Math.floor(Math.random() * 99) + 1}.jpg`;
                                   e.target.src = fallbackUrl;
                                 } else {
                                   // Second fallback: Use UI Avatars
