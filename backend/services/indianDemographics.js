@@ -69,7 +69,8 @@ class IndianDemographicsService {
      * Generate Indian demographics
      */
     static generateIndianDemographics(overrides = {}) {
-        const isMale = Math.random() > 0.5;
+        // Default to male profiles unless explicitly specified
+        const isMale = overrides.gender ? overrides.gender === 'Male' : true;
         const selectedName = this.indianNames[isMale ? 'male' : 'female'][
             Math.floor(Math.random() * this.indianNames[isMale ? 'male' : 'female'].length)
         ];
@@ -85,7 +86,7 @@ class IndianDemographicsService {
         return {
             name: overrides.name || selectedName,
             age: overrides.age || Math.floor(Math.random() * 35) + 25, // 25-60
-            gender: overrides.gender || (isMale ? 'Male' : 'Female'),
+            gender: overrides.gender || 'Male', // Default to Male
             role_title: overrides.role_title || profession,
             company: overrides.company || company,
             location: overrides.location || `${city}, ${state}`,
@@ -238,11 +239,11 @@ class IndianDemographicsService {
         // Select a random search term
         const searchTerm = searchTerms[seedNum % searchTerms.length];
         
-        // Use a reliable photo service with Indian-specific search
-        // This will return photos that match Indian demographics
-        const indianPhotoUrl = `https://source.unsplash.com/400x400/?${encodeURIComponent(searchTerm)}&face,portrait`;
+        // Use a reliable photo service that works consistently
+        // Random User API provides good quality photos and works reliably
+        const randomUserUrl = `https://randomuser.me/api/portraits/${gender === 'Male' ? 'men' : 'women'}/${(seedNum % 99) + 1}.jpg`;
         
-        return indianPhotoUrl;
+        return randomUserUrl;
     }
 
     /**
