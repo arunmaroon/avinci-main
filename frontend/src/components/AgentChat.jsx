@@ -67,7 +67,7 @@ const AgentChat = ({ agentId, agentName, onClose }) => {
         setIsLoading(true);
 
         try {
-            const response = await api.post('/api/ai/generate', {
+            const response = await api.post('/ai/generate', {
                 agentId: selectedAgent.id,
                 message: inputMessage
             });
@@ -130,7 +130,7 @@ const AgentChat = ({ agentId, agentName, onClose }) => {
             formData.append('image', file);
             formData.append('agentId', selectedAgent.id);
 
-            const response = await api.post('/api/agent/feedback', formData, {
+            const response = await api.post('/agent/feedback', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
