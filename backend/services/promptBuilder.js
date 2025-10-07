@@ -130,6 +130,237 @@ RULES:
     }
 
     /**
+     * Build detailed UXPressia-style persona profile
+     */
+    static buildDetailedPersona(persona) {
+        const demographics = persona.demographics || {};
+        const age = demographics.age || 30;
+        const gender = demographics.gender || 'Unknown';
+        const location = persona.location || 'Unknown';
+        const role = persona.role_title || 'Professional';
+        const company = persona.company || 'Unknown Company';
+        
+        return {
+            // Header Section
+            id: persona.id,
+            name: persona.name,
+            title: `${role} at ${company}`,
+            location: location,
+            age: age,
+            gender: gender,
+            avatar_url: persona.avatar_url,
+            
+            // Quote Section
+            quote: persona.quote || this.generatePersonaQuote(persona),
+            
+            // Demographics Section
+            demographics: {
+                age: age,
+                gender: gender,
+                location: location,
+                occupation: role,
+                company: company,
+                education: demographics.education || 'Bachelor\'s Degree',
+                income_range: demographics.income_range || '₹5-10 Lakhs',
+                family_status: demographics.family_status || 'Single',
+                tech_savviness: persona.tech_savviness || 'Medium',
+                english_proficiency: demographics.english_proficiency || 'Intermediate'
+            },
+            
+            // Goals & Motivations
+            goals: {
+                primary: (persona.objectives || []).slice(0, 3),
+                secondary: (persona.objectives || []).slice(3, 6),
+                motivations: persona.motivations || ['Career growth', 'Financial stability', 'Work-life balance']
+            },
+            
+            // Pain Points & Challenges
+            pain_points: {
+                primary: (persona.fears || []).slice(0, 3),
+                secondary: (persona.apprehensions || []).slice(0, 3),
+                frustrations: persona.frustrations || ['Complex processes', 'Poor user experience', 'Lack of support']
+            },
+            
+            // Behavior Patterns
+            behaviors: {
+                communication_style: persona.communication_style?.formality || 'casual',
+                decision_making: persona.cognitive_profile?.decision_style || 'analytical',
+                tech_comfort: persona.tech_savviness || 'medium',
+                learning_style: persona.cognitive_profile?.learning_preference || 'visual',
+                work_style: this.generateWorkStyle(persona),
+                social_preferences: this.generateSocialPreferences(persona)
+            },
+            
+            // Skills & Knowledge
+            skills: {
+                technical: this.generateTechnicalSkills(persona),
+                soft_skills: this.generateSoftSkills(persona),
+                domain_knowledge: persona.domain_literacy?.level || 'intermediate',
+                areas_of_expertise: (persona.knowledge_bounds?.confident || []).slice(0, 5)
+            },
+            
+            // Personality Traits
+            personality: {
+                traits: persona.traits || ['Analytical', 'Goal-oriented', 'Collaborative'],
+                values: this.generateValues(persona),
+                attitudes: this.generateAttitudes(persona),
+                emotional_profile: persona.emotional_profile || {}
+            },
+            
+            // Technology Usage
+            technology: {
+                devices: this.generateDevices(persona),
+                platforms: this.generatePlatforms(persona),
+                apps: this.generateApps(persona),
+                comfort_level: persona.tech_savviness || 'medium'
+            },
+            
+            // Daily Life & Context
+            daily_life: {
+                morning_routine: this.generateMorningRoutine(persona),
+                work_environment: this.generateWorkEnvironment(persona),
+                leisure_activities: this.generateLeisureActivities(persona),
+                challenges: this.generateDailyChallenges(persona)
+            },
+            
+            // Quotes & Voice
+            voice: {
+                speaking_style: persona.speech_patterns?.sentence_length || 'medium',
+                common_phrases: persona.speech_patterns?.common_phrases || [],
+                vocabulary_level: persona.vocabulary_profile?.complexity || 5,
+                tone: persona.communication_style?.tone || 'professional'
+            },
+            
+            // Status
+            status: persona.status || 'active',
+            created_at: persona.created_at,
+            last_updated: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Generate persona quote based on their characteristics
+     */
+    static generatePersonaQuote(persona) {
+        const quotes = [
+            "I need something that just works without me having to think about it.",
+            "Time is money, and I don't have time for complicated processes.",
+            "I want to make informed decisions, but I need clear information.",
+            "Technology should make my life easier, not harder.",
+            "I'm willing to learn, but it needs to be intuitive.",
+            "I need to trust the system before I'll use it regularly.",
+            "Efficiency is key - show me the fastest way to get things done.",
+            "I want to feel confident when I'm using this product."
+        ];
+        
+        // Select quote based on persona characteristics
+        const index = (persona.name?.length || 0) % quotes.length;
+        return quotes[index];
+    }
+
+    /**
+     * Generate work style based on persona
+     */
+    static generateWorkStyle(persona) {
+        const styles = ['Collaborative', 'Independent', 'Structured', 'Flexible', 'Detail-oriented', 'Big-picture'];
+        return styles[Math.floor(Math.random() * styles.length)];
+    }
+
+    /**
+     * Generate social preferences
+     */
+    static generateSocialPreferences(persona) {
+        return {
+            communication: ['Email', 'WhatsApp', 'Phone calls'],
+            collaboration: ['Team meetings', 'One-on-one', 'Online tools'],
+            feedback: ['Direct', 'Constructive', 'Regular']
+        };
+    }
+
+    /**
+     * Generate technical skills
+     */
+    static generateTechnicalSkills(persona) {
+        const skills = ['Basic computer skills', 'Mobile apps', 'Online banking', 'Social media', 'Email', 'Video calls'];
+        return skills.slice(0, 4);
+    }
+
+    /**
+     * Generate soft skills
+     */
+    static generateSoftSkills(persona) {
+        const skills = ['Communication', 'Problem-solving', 'Time management', 'Teamwork', 'Adaptability'];
+        return skills.slice(0, 3);
+    }
+
+    /**
+     * Generate values
+     */
+    static generateValues(persona) {
+        return ['Honesty', 'Efficiency', 'Quality', 'Innovation', 'Customer focus'];
+    }
+
+    /**
+     * Generate attitudes
+     */
+    static generateAttitudes(persona) {
+        return {
+            towards_technology: 'Cautiously optimistic',
+            towards_change: 'Open but careful',
+            towards_learning: 'Willing to adapt'
+        };
+    }
+
+    /**
+     * Generate devices
+     */
+    static generateDevices(persona) {
+        return ['Smartphone', 'Laptop', 'Tablet'];
+    }
+
+    /**
+     * Generate platforms
+     */
+    static generatePlatforms(persona) {
+        return ['Windows', 'Android', 'iOS'];
+    }
+
+    /**
+     * Generate apps
+     */
+    static generateApps(persona) {
+        return ['WhatsApp', 'Gmail', 'Google Chrome', 'Microsoft Office'];
+    }
+
+    /**
+     * Generate morning routine
+     */
+    static generateMorningRoutine(persona) {
+        return 'Wakes up at 7 AM, checks phone, has coffee, reviews daily tasks, starts work by 9 AM';
+    }
+
+    /**
+     * Generate work environment
+     */
+    static generateWorkEnvironment(persona) {
+        return 'Office-based with some remote work flexibility, collaborative workspace';
+    }
+
+    /**
+     * Generate leisure activities
+     */
+    static generateLeisureActivities(persona) {
+        return ['Reading', 'Watching movies', 'Socializing with friends', 'Exercise', 'Cooking'];
+    }
+
+    /**
+     * Generate daily challenges
+     */
+    static generateDailyChallenges(persona) {
+        return ['Time management', 'Information overload', 'Technology complexity', 'Work-life balance'];
+    }
+
+    /**
      * Generate avatar URL based on persona demographics
      */
     static generateAvatarUrl(persona) {

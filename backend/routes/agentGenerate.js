@@ -8,6 +8,7 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { v4: uuidv4 } = require('uuid');
 const PersonaExtractor = require('../services/personaExtractor');
+const promptBuilder = require('../services/promptBuilder');
 const IndianDemographicsService = require('../services/indianDemographics');
 
 // PersonaExtractor will be initialized lazily when needed
@@ -94,6 +95,64 @@ router.post('/generate', async (req, res) => {
         res.status(500).json({
             error: 'Agent generation failed',
             details: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/agent/generate/detailed - Get all agents with detailed personas
+ */
+router.get('/detailed', async (req, res) => {
+    try {
+        const query = 'SELECT * FROM agents ORDER BY created_at DESC';
+        const result = await pool.query(query);
+        
+        const detailedAgents = result.rows.map(agent => 
+            promptBuilder.buildDetailedPersona(agent)
+        );
+        
+        res.json({
+            success: true,
+            agents: detailedAgents,
+            count: detailedAgents.length
+        });
+    } catch (error) {
+        console.error('Error fetching detailed agents:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch detailed agents' 
+        });
+    }
+});
+
+/**
+ * GET /api/agent/generate/detailed/:id - Get detailed persona for specific agent
+ */
+router.get('/detailed/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const query = 'SELECT * FROM agents WHERE id = $1';
+        const result = await pool.query(query, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Agent not found' 
+            });
+        }
+        
+        const agent = result.rows[0];
+        const detailedPersona = promptBuilder.buildDetailedPersona(agent);
+        
+        res.json({
+            success: true,
+            persona: detailedPersona
+        });
+    } catch (error) {
+        console.error('Error fetching detailed persona:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to fetch detailed persona' 
         });
     }
 });
