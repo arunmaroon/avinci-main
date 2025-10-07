@@ -4,6 +4,8 @@
  */
 
 const express = require('express');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
 const router = express.Router();
 const { pool } = require('../models/database');
 const { v4: uuidv4 } = require('uuid');
@@ -11,6 +13,21 @@ const providerGateway = require('../services/providerGateway');
 const behaviorEngine = require('../services/behaviorEngine');
 const promptBuilder = require('../services/promptBuilder');
 const IndianDemographicsService = require('../services/indianDemographics');
+
+// Configure multer for PDF uploads
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF files are allowed'), false);
+        }
+    }
+});
 
 /**
  * Calculate English literacy based on education and communication style
@@ -304,5 +321,98 @@ async function saveAgent(personaData) {
         throw new Error('Failed to save agent to database: ' + error.message);
     }
 }
+
+/**
+ * POST /pdf-upload - Create agents from PDF file
+ */
+router.post('/pdf-upload', upload.single('file'), async (req, res) => {
+    try {
+        const file = req.file;
+        const adminId = 'system'; // No auth required for testing
+        
+        if (!file) {
+            return res.status(400).json({ error: 'PDF file is required' });
+        }
+
+        console.log('Processing PDF file:', file.originalname);
+        
+        // Parse PDF content
+        const pdfData = await pdfParse(file.buffer);
+        const pdfText = pdfData.text;
+        
+        if (!pdfText || pdfText.trim().length === 0) {
+            return res.status(400).json({ error: 'No text content found in PDF' });
+        }
+
+        console.log('PDF text extracted, length:', pdfText.length);
+        
+        // Generate Indian demographics for the PDF content
+        const indianDemographics = IndianDemographicsService.generateIndianDemographics();
+        
+        // Stage 1: Analyze transcript for behavioral signals
+        console.log('Stage 1: Extracting behavioral DNA from PDF...');
+        const analysis = await providerGateway.analyzeTranscript({
+            raw_text: pdfText,
+            file_name: file.originalname
+        }, indianDemographics);
+        console.log('Behavioral analysis completed');
+        
+        // Stage 2: Synthesize persona and master system prompt
+        console.log('Stage 2: Synthesizing persona...');
+        const synthesisResult = await providerGateway.synthesizePersona(analysis, indianDemographics);
+        console.log('Persona synthesis completed');
+        
+        // Parse synthesis result
+        let personaData, masterSystemPrompt;
+        try {
+            const parsed = JSON.parse(synthesisResult);
+            personaData = parsed.persona;
+            masterSystemPrompt = parsed.master_system_prompt;
+        } catch (e) {
+            // Fallback if synthesis doesn't return JSON
+            personaData = {
+                name: indianDemographics.name || 'PDF Generated Persona',
+                role_title: indianDemographics.role_title || 'Professional',
+                company: indianDemographics.company || 'Unknown',
+                location: indianDemographics.location || 'Unknown',
+                demographics: indianDemographics,
+                ...analysis
+            };
+            masterSystemPrompt = promptBuilder.buildMasterPrompt(personaData);
+        }
+        
+        // Generate Unsplash photo URL based on demographics
+        const avatarUrl = IndianDemographicsService.generateUnsplashPhoto(indianDemographics);
+        
+        // Save to database
+        const agentId = await saveAgent({
+            ...personaData,
+            master_system_prompt: masterSystemPrompt,
+            avatar_url: avatarUrl,
+            status: 'active'
+        });
+        
+        console.log(`Agent created successfully from PDF: ${agentId}`);
+        
+        // Return agent data
+        const query = 'SELECT * FROM agents WHERE id = $1';
+        const result = await pool.query(query, [agentId]);
+        const agent = result.rows[0];
+        const fullAgent = promptBuilder.buildFullProfile(agent);
+        
+        res.status(201).json({
+            success: true,
+            agents: [fullAgent],
+            count: 1,
+            message: 'Agent created successfully from PDF'
+        });
+        
+    } catch (error) {
+        console.error('Error processing PDF:', error);
+        res.status(500).json({ 
+            error: 'Failed to process PDF: ' + error.message 
+        });
+    }
+});
 
 module.exports = router;

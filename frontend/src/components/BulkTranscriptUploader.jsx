@@ -29,9 +29,11 @@ const BulkTranscriptUploader = ({ onAgentsCreated }) => {
             file.type === 'text/plain' || 
             file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
             file.type === 'text/csv' ||
+            file.type === 'application/pdf' ||
             file.name.endsWith('.txt') ||
             file.name.endsWith('.csv') ||
-            file.name.endsWith('.xlsx')
+            file.name.endsWith('.xlsx') ||
+            file.name.endsWith('.pdf')
         );
 
         const newFiles = validFiles.map(file => ({
@@ -66,6 +68,8 @@ const BulkTranscriptUploader = ({ onAgentsCreated }) => {
             } else if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
                 reader.readAsText(file);
             } else if (file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || file.name.endsWith('.xlsx')) {
+                reader.readAsArrayBuffer(file);
+            } else if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
                 reader.readAsArrayBuffer(file);
             } else {
                 reject(new Error('Unsupported file type'));
@@ -550,6 +554,38 @@ const BulkTranscriptUploader = ({ onAgentsCreated }) => {
         return [transcriptData];
     };
 
+    const parsePDFFile = async (arrayBuffer, fileName) => {
+        try {
+            // For PDF files, we'll send the file to the backend for processing
+            // since PDF parsing requires server-side libraries
+            const formData = new FormData();
+            const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+            const file = new File([blob], fileName, { type: 'application/pdf' });
+            formData.append('file', file);
+
+            const response = await api.post('/agents/v5/pdf-upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response.data && response.data.agents) {
+                return response.data.agents.map(agent => ({
+                    transcript: {
+                        raw_text: agent.transcript || 'PDF content processed',
+                        file_name: fileName
+                    },
+                    demographics: agent.demographics || {}
+                }));
+            } else {
+                throw new Error('No agents created from PDF');
+            }
+        } catch (error) {
+            console.error('PDF parsing error:', error);
+            throw new Error(`Failed to parse PDF: ${error.message}`);
+        }
+    };
+
     const processFile = async (fileData) => {
         try {
             setProcessingStatus(prev => ({
@@ -564,6 +600,8 @@ const BulkTranscriptUploader = ({ onAgentsCreated }) => {
             if (fileContent.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
                 fileData.file.name.endsWith('.xlsx')) {
                 transcripts = parseExcelFile(fileContent.content, fileData.name);
+            } else if (fileContent.type === 'application/pdf' || fileData.file.name.endsWith('.pdf')) {
+                transcripts = await parsePDFFile(fileContent.content, fileData.name);
             } else {
                 transcripts = parseTextFile(fileContent.content, fileData.name);
             }
@@ -855,17 +893,17 @@ const BulkTranscriptUploader = ({ onAgentsCreated }) => {
                         Click to select files or drag and drop
                     </p>
                     <p className="text-xs text-gray-500">
-                        Supports .txt, .csv, .xlsx files
+                        Supports .txt, .csv, .xlsx, .pdf files
                     </p>
                 </div>
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".txt,.csv,.xlsx"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                />
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept=".txt,.csv,.xlsx,.pdf"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                    />
             </div>
 
             {/* File List */}
