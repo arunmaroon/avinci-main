@@ -1,0 +1,30 @@
+# Inception Agents v2 - Requirements
+# Python 3.11+
+
+# Core Framework
+streamlit==1.29.0
+
+# AI & LLM
+langchain==0.1.0
+langchain-openai==0.0.2
+langchain-community==0.0.10
+openai==1.6.1
+
+# Vector Storage
+faiss-cpu==1.7.4
+
+# Document Processing
+pypdf2==3.0.1
+
+# Image Handling
+pillow==10.1.0
+
+# Data & Analytics
+pandas==2.1.4
+numpy==1.26.2
+
+# Database
+sqlite3  # Built-in with Python
+
+# Utilities
+python-dotenv==1.0.0
