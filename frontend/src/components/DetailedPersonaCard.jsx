@@ -127,17 +127,21 @@ const DetailedPersonaCard = ({ persona }) => {
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Primary Goals:</h4>
                                     <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                                        {goals?.primary?.map((goal, index) => (
+                                        {Array.isArray(goals?.primary) ? goals.primary.map((goal, index) => (
                                             <li key={index}>{goal}</li>
-                                        ))}
+                                        )) : (
+                                            <li className="text-gray-500">No primary goals available</li>
+                                        )}
                                     </ul>
                                 </div>
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Motivations:</h4>
                                     <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                                        {goals?.motivations?.map((motivation, index) => (
+                                        {Array.isArray(goals?.motivations) ? goals.motivations.map((motivation, index) => (
                                             <li key={index}>{motivation}</li>
-                                        ))}
+                                        )) : (
+                                            <li className="text-gray-500">No motivations available</li>
+                                        )}
                                     </ul>
                                 </div>
                             </div>
@@ -153,17 +157,21 @@ const DetailedPersonaCard = ({ persona }) => {
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Primary Concerns:</h4>
                                     <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                                        {pain_points?.primary?.map((point, index) => (
+                                        {Array.isArray(pain_points?.primary) ? pain_points.primary.map((point, index) => (
                                             <li key={index}>{point}</li>
-                                        ))}
+                                        )) : (
+                                            <li className="text-gray-500">No primary pain points available</li>
+                                        )}
                                     </ul>
                                 </div>
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Frustrations:</h4>
                                     <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                                        {pain_points?.frustrations?.map((frustration, index) => (
+                                        {Array.isArray(pain_points?.frustrations) ? pain_points.frustrations.map((frustration, index) => (
                                             <li key={index}>{frustration}</li>
-                                        ))}
+                                        )) : (
+                                            <li className="text-gray-500">No frustrations available</li>
+                                        )}
                                     </ul>
                                 </div>
                             </div>
@@ -182,21 +190,25 @@ const DetailedPersonaCard = ({ persona }) => {
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Technical Skills:</h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {skills?.technical?.map((skill, index) => (
+                                        {Array.isArray(skills?.technical) ? skills.technical.map((skill, index) => (
                                             <span key={index} className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
                                                 {skill}
                                             </span>
-                                        ))}
+                                        )) : (
+                                            <span className="text-gray-500 text-sm">No technical skills available</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Soft Skills:</h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {skills?.soft_skills?.map((skill, index) => (
+                                        {Array.isArray(skills?.soft_skills) ? skills.soft_skills.map((skill, index) => (
                                             <span key={index} className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
                                                 {skill}
                                             </span>
-                                        ))}
+                                        )) : (
+                                            <span className="text-gray-500 text-sm">No soft skills available</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -212,21 +224,25 @@ const DetailedPersonaCard = ({ persona }) => {
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Devices:</h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {technology?.devices?.map((device, index) => (
+                                        {Array.isArray(technology?.devices) ? technology.devices.map((device, index) => (
                                             <span key={index} className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
                                                 {device}
                                             </span>
-                                        ))}
+                                        )) : (
+                                            <span className="text-gray-500 text-sm">No devices available</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Platforms:</h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {technology?.platforms?.map((platform, index) => (
+                                        {Array.isArray(technology?.platforms) ? technology.platforms.map((platform, index) => (
                                             <span key={index} className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
                                                 {platform}
                                             </span>
-                                        ))}
+                                        )) : (
+                                            <span className="text-gray-500 text-sm">No platforms available</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
@@ -256,11 +272,13 @@ const DetailedPersonaCard = ({ persona }) => {
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Leisure Activities:</h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {daily_life?.leisure_activities?.map((activity, index) => (
+                                        {Array.isArray(daily_life?.leisure_activities) ? daily_life.leisure_activities.map((activity, index) => (
                                             <span key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
                                                 {activity}
                                             </span>
-                                        ))}
+                                        )) : (
+                                            <span className="text-gray-500 text-sm">No leisure activities available</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -276,21 +294,25 @@ const DetailedPersonaCard = ({ persona }) => {
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Traits:</h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {personality?.traits?.map((trait, index) => (
+                                        {Array.isArray(personality?.traits) ? personality.traits.map((trait, index) => (
                                             <span key={index} className="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm">
                                                 {trait}
                                             </span>
-                                        ))}
+                                        )) : (
+                                            <span className="text-gray-500 text-sm">No traits available</span>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-2">Values:</h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {personality?.values?.map((value, index) => (
+                                        {Array.isArray(personality?.values) ? personality.values.map((value, index) => (
                                             <span key={index} className="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm">
                                                 {value}
                                             </span>
-                                        ))}
+                                        )) : (
+                                            <span className="text-gray-500 text-sm">No values available</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
