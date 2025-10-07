@@ -1,0 +1,58 @@
+Interview Transcript: Abdul Rahman
+Date: October 2024
+Context: User research for fintech loan application
+
+Interviewer: Thanks for joining us, Abdul. Can you tell me a bit about yourself?
+
+Abdul: Sure! I'm Abdul, 34 years old, self-employed. I run a small catering business here in Bangalore. Been doing this for about 5 years now.
+
+Interviewer: Great. Have you ever applied for a personal loan?
+
+Abdul: Oh yes, multiple times. The business has ups and downs, you know? Sometimes I need quick cash for equipment or to manage cash flow. I've used Money View, Shriram Finance, and tried a couple of credit cards too.
+
+Interviewer: Tell me about your experience with Money View.
+
+Abdul: Money View... [sighs] Look, the rates are okay, but the app is so frustrating. I remember once I needed Rs. 50,000 urgently for new kitchen equipment. I opened the app, and it just kept lagging. Took me almost 2 hours to complete the application because it kept freezing. This was during peak hours, around 7 PM. I was so close to giving up!
+
+Interviewer: That sounds really frustrating. What happened with Shriram Finance?
+
+Abdul: Shriram was better, actually. I got an 18-month personal loan at 11% interest. The process was smoother, mostly offline though. I prefer digital when it works, but if an app is going to lag like Money View, I'd rather just go to a branch.
+
+Interviewer: You mentioned credit cards. How was that experience?
+
+Abdul: Don't even get me started on credit cards! The hidden charges are insane. They never tell you upfront about the processing fees, late charges, all that. I felt cheated honestly. With personal loans, at least I can calculate my EMI upfront and plan my repayment. With credit cards, you never know what you'll owe.
+
+Interviewer: When you apply for loans online, what information do they typically ask for?
+
+Abdul: Here's the thing that annoys me the most—they ask for company details! I'm self-employed! I don't have a company name or HR department. Some apps like Money View made this mandatory, so I just had to write "Self-employed" everywhere. Why can't they just have a simple option for freelancers and self-employed folks? It's 2024!
+
+Interviewer: That's a really good point. What would make the loan application process better for you?
+
+Abdul: Keep it short, keep it fast, and don't ask me irrelevant questions. Like, why do you need to know my loan purpose before you even tell me if I'm eligible? Just tell me upfront—"Abdul, you can get X amount at Y rate"—then I'll tell you what I need it for. Also, show me everything clearly—no hidden fees popping up at the last step. I hate that.
+
+Interviewer: What about the app's design or interface?
+
+Abdul: Simple is best. I don't have time to read through 10 pages of terms. Give me the important stuff upfront. And please, test your app during peak hours! If it lags when everyone's trying to use it, what's the point?
+
+Interviewer: Do you understand terms like EMI, interest rate, processing fee?
+
+Abdul: Yes, absolutely. EMI is easy—when I took that Shriram loan, my EMI was around Rs. 3,000 per month for 18 months. I could plan my business expenses around that. Interest rate at 11% was decent. Processing fee... that's where they try to sneak in extra charges sometimes [laughs].
+
+Interviewer: Last question—if you had to rate your ideal loan app, what features would it have?
+
+Abdul: Fast, no lag. Short application—maybe 5 minutes max. Clear eligibility criteria upfront so I don't waste time. Options for self-employed without forcing me to fill in company details. Transparent pricing—show me all fees on one screen. And honestly, a simple interface. I'm not looking for fancy animations, just efficiency.
+
+Interviewer: Perfect. Thanks so much for your time, Abdul!
+
+Abdul: No problem! Hope this helps you build something better than Money View [laughs].
+
+---
+
+Key observations:
+- Self-employed, frustrated with "company details" fields
+- Extremely sensitive to app performance (lagging = dealbreaker)
+- Values transparency over everything (hidden fees = trust killer)
+- Prefers digital but will go offline if digital is broken
+- Understands financial terms well (EMI, interest rates)
+- Wants short, efficient processes—no unnecessary questions
+- Practical, direct communication style

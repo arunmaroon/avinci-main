@@ -1,0 +1,47 @@
+# Environment variables
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Streamlit cache
+.streamlit/
+
+# Uploaded files
+images/*.jpg
+images/*.jpeg
+images/*.png
+images/*.gif
+images/*.pdf
+images/*.webp
+
+# Database
+*.db
+agents.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
