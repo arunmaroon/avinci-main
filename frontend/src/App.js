@@ -7,6 +7,7 @@ import AIAgents from './pages/AIAgents';
 import AgentLibrary from './pages/AgentLibrary';
 import ChatInterface from './pages/ChatInterface';
 import DesignFeedback from './components/DesignFeedback';
+import AgentChat from './components/AgentChat';
 import './index.css';
 
 function App() {
@@ -55,6 +56,7 @@ function App() {
           <Route path="/generate" element={<AIAgents />} />
           <Route path="/agents" element={<AgentLibrary />} />
           <Route path="/chat" element={<ChatInterface />} />
+          <Route path="/agent-chat/:agentId?" element={<AgentChat />} />
           <Route path="/design-feedback" element={<DesignFeedback />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

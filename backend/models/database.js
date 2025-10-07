@@ -148,6 +148,19 @@ const createTables = async () => {
 
         console.log('✅ Database tables created');
 
+        // Conversations table for chat history
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS conversations (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                agent_id UUID NOT NULL,
+                session_id VARCHAR(100),
+                user_message TEXT NOT NULL,
+                agent_response TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+            );
+        `);
+
         // Create default admin
         await createDefaultAdmin();
 
