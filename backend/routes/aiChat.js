@@ -4,9 +4,18 @@
  */
 
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const { pool } = require('../models/database');
 const { OpenAI } = require('openai');
+
+// Configure multer for file uploads
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    }
+});
 
 // OpenAI will be initialized lazily when needed
 let openai = null;
@@ -83,7 +92,7 @@ router.post('/generate', async (req, res) => {
  * POST /api/agent/feedback - Get agent feedback on uploaded image
  * Body: { image, agentId }
  */
-router.post('/feedback', async (req, res) => {
+router.post('/feedback', upload.single('image'), async (req, res) => {
     try {
         const { agentId } = req.body;
         const image = req.file;
@@ -157,10 +166,34 @@ async function getConversationHistory(agentId, limit = 10) {
  * Build conversation context
  */
 function buildConversationContext(agent, history, currentMessage) {
-    const { persona, prompt, name } = agent;
+    const { persona, prompt, master_system_prompt, name, location, demographics } = agent;
     const agentName = persona?.name || name || 'AI Agent';
     
-    let context = `${prompt || 'You are a helpful AI assistant.'}\n\n`;
+    // Use master_system_prompt if available, otherwise fall back to basic prompt
+    let systemPrompt = master_system_prompt || prompt || 'You are a helpful AI assistant.';
+    
+    // If we have detailed persona data, enhance the context
+    if (demographics && (demographics.age || demographics.location)) {
+        const age = demographics.age || 'unknown';
+        const location = demographics.location || agent.location || 'unknown';
+        const gender = demographics.gender || 'unknown';
+        const occupation = demographics.role_title || agent.role_title || 'professional';
+        
+        // Add specific persona details to the system prompt
+        systemPrompt += `\n\nIMPORTANT USER PERSONA DETAILS:
+- You are ${agentName}, ${age} years old, ${gender}
+- You live in ${location}
+- You work as a ${occupation}
+- When asked about your location, say "${location}"
+- When asked about your age, say "${age}"
+- When asked about your profession, say "${occupation}"
+- You are a USER testing designs, not a customer service agent
+- Share your honest user opinions and experiences
+- Never ask "How can I help you?" - you are the one who needs help
+- Always stay in character as this specific user, not a generic AI assistant`;
+    }
+    
+    let context = `${systemPrompt}\n\n`;
     
     // Add conversation history
     if (history.length > 0) {
@@ -233,20 +266,28 @@ async function storeConversation(agentId, userMessage, agentResponse) {
  * Simulate image analysis (placeholder for vision API)
  */
 async function simulateImageAnalysis(agent, image) {
-    const { persona, name, role_title } = agent;
+    const { persona, name, role_title, demographics, location, objectives, needs, fears } = agent;
     const agentName = persona?.name || name || 'AI Agent';
-    const occupation = persona?.occupation || role_title || 'Professional';
-    const pain_points = persona?.pain_points || [];
+    const occupation = persona?.occupation || demographics?.role_title || role_title || 'Professional';
+    const pain_points = persona?.pain_points || fears || [];
     const personality_traits = persona?.personality_traits || [];
+    const agentLocation = demographics?.location || location || 'unknown location';
+    const age = demographics?.age || 'unknown age';
+    const userNeeds = needs || [];
+    const userObjectives = objectives || [];
     
-    // Simulate different responses based on agent personality
-    const responses = [
-        `Looking at this image, I can see some interesting design elements. As someone who works in ${occupation}, I notice ${pain_points?.[0] || 'some potential usability issues'} that could affect user experience.`,
-        `This reminds me of the challenges we face in ${occupation}. The interface looks ${personality_traits?.includes('detail-oriented') ? 'well thought out' : 'functional'}, but I'm concerned about ${pain_points?.[1] || 'the overall user flow'}.`,
-        `From my perspective in ${occupation}, this design has potential but needs work on ${pain_points?.[2] || 'accessibility and security'}. I've seen similar issues in my work that caused problems for users.`
+    // Generate user-focused design feedback based on persona
+    const userResponses = [
+        `Looking at this design, I can see it's trying to be user-friendly. As a ${age}-year-old ${occupation} from ${agentLocation}, I ${userNeeds.includes('simple interfaces') ? 'appreciate the clean look' : 'find it a bit overwhelming'}. ${pain_points?.[0] ? `I'm worried about ${pain_points[0]} - that usually confuses me.` : 'The layout seems straightforward.'}`,
+        
+        `This reminds me of apps I use daily. ${userObjectives.includes('navigate easily') ? 'I like how easy it seems to navigate' : 'I might struggle to find what I need'}. ${personality_traits?.includes('detail-oriented') ? 'The attention to detail is nice' : 'It looks functional but basic'}. ${pain_points?.[1] ? `However, ${pain_points[1]} is something that usually frustrates me.` : 'Overall, it seems user-friendly.'}`,
+        
+        `From my perspective as a regular user, this design ${userNeeds.includes('clean designs') ? 'looks clean and modern' : 'seems a bit cluttered'}. ${age} and working in ${agentLocation}, I've used similar apps before. ${pain_points?.[2] ? `I'm concerned about ${pain_points[2]} - that's usually where I get stuck.` : 'The interface seems intuitive enough.'} ${userObjectives.includes('use mobile apps') ? 'I would probably use this on my phone.' : 'I prefer desktop versions.'}`,
+        
+        `As someone who ${userNeeds.includes('ease of navigation') ? 'values simple navigation' : 'doesn\'t mind complex interfaces'}, this design ${userNeeds.includes('simple interfaces') ? 'looks promising' : 'might be too basic for my needs'}. ${pain_points?.[0] ? `I'm worried about ${pain_points[0]} - that usually causes me problems.` : 'The layout seems clear.'} ${userObjectives.includes('find simple designs') ? 'I appreciate the straightforward approach.' : 'I might need more features.'}`
     ];
     
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    const randomResponse = userResponses[Math.floor(Math.random() * userResponses.length)];
     
     return `${agentName}: ${randomResponse}`;
 }

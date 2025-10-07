@@ -5,6 +5,7 @@
 
 const { OpenAI } = require('openai');
 const { Pinecone } = require('@pinecone-database/pinecone');
+const EnhancedPersonaTemplate = require('./enhancedPersonaTemplate');
 
 class PersonaExtractor {
     constructor() {
@@ -68,10 +69,19 @@ class PersonaExtractor {
             
             const extractedData = JSON.parse(content);
             
+            // Validate extracted data
+            const validation = EnhancedPersonaTemplate.validatePersonaData(extractedData);
+            if (!validation.isValid) {
+                console.warn('Persona validation failed, missing sections:', validation.missingSections);
+            }
+            
+            // Enhance persona data with calculated fields
+            const enhancedData = EnhancedPersonaTemplate.enhancePersonaData(extractedData);
+            
             // Generate embedding for vector storage (optional)
             let embedding = null;
             try {
-                embedding = await this.generateEmbedding(extractedData);
+                embedding = await this.generateEmbedding(enhancedData);
             } catch (error) {
                 console.warn('Embedding generation failed, continuing without vector storage:', error.message);
             }
@@ -79,14 +89,14 @@ class PersonaExtractor {
             // Store in Pinecone if available
             if (this.index && embedding) {
                 try {
-                    await this.storePersonaVector(extractedData, embedding);
+                    await this.storePersonaVector(enhancedData, embedding);
                 } catch (error) {
                     console.warn('Vector storage failed, continuing without storage:', error.message);
                 }
             }
             
-            console.log('Persona extraction completed:', extractedData);
-            return extractedData;
+            console.log('Persona extraction completed:', enhancedData);
+            return enhancedData;
             
         } catch (error) {
             console.error('Persona extraction failed:', error);
@@ -95,46 +105,10 @@ class PersonaExtractor {
     }
 
     /**
-     * Build extraction prompt for GPT-4o
+     * Build extraction prompt for GPT-4o using enhanced template
      */
     buildExtractionPrompt(transcriptText, demographics) {
-        return `
-Analyze the following transcript and extract detailed persona information. Return a JSON object with these exact keys:
-
-{
-  "name": "Person's name or generate Indian name",
-  "age": "Estimated age (number)",
-  "occupation": "Job title or profession",
-  "company": "Company name or generate Indian company",
-  "location": "City, State or generate Indian location",
-  "education": "Education level",
-  "hobbies": ["hobby1", "hobby2", "hobby3"],
-  "pain_points": ["pain1", "pain2", "pain3"],
-  "key_quotes": ["quote1", "quote2", "quote3"],
-  "communication_style": {
-    "formality": "casual|professional|formal",
-    "sentence_length": "short|medium|long",
-    "filler_words": ["um", "like", "you know"],
-    "common_phrases": ["phrase1", "phrase2"]
-  },
-  "emotional_profile": {
-    "baseline_mood": "positive|neutral|negative",
-    "frustration_triggers": ["trigger1", "trigger2"],
-    "excitement_triggers": ["trigger1", "trigger2"]
-  },
-  "tech_savviness": "low|medium|high",
-  "domain_knowledge": "low|medium|high",
-  "personality_traits": ["trait1", "trait2", "trait3"],
-  "goals": ["goal1", "goal2", "goal3"],
-  "challenges": ["challenge1", "challenge2", "challenge3"]
-}
-
-Demographics context: ${JSON.stringify(demographics)}
-
-Transcript:
-${transcriptText}
-
-Extract persona data and return valid JSON only:`;
+        return EnhancedPersonaTemplate.buildExtractionPrompt(transcriptText, demographics);
     }
 
     /**
@@ -218,6 +192,61 @@ Extract persona data and return valid JSON only:`;
             console.error('Persona retrieval failed:', error);
             throw new Error(`Persona retrieval failed: ${error.message}`);
         }
+    }
+
+    /**
+     * Generate conversation starters for a persona
+     */
+    generateConversationStarters(personaData) {
+        return EnhancedPersonaTemplate.generateConversationStarters(personaData);
+    }
+
+    /**
+     * Generate design testing scenarios for a persona
+     */
+    generateDesignTestingScenarios(personaData) {
+        return EnhancedPersonaTemplate.generateDesignTestingScenarios(personaData);
+    }
+
+    /**
+     * Generate persona summary
+     */
+    generatePersonaSummary(personaData) {
+        return EnhancedPersonaTemplate.generatePersonaSummary(personaData);
+    }
+
+    /**
+     * Extract key behavioral patterns from transcript
+     */
+    extractBehavioralPatterns(transcriptText) {
+        const patterns = {
+            hesitation_indicators: [],
+            emphasis_patterns: [],
+            question_patterns: [],
+            agreement_patterns: [],
+            disagreement_patterns: [],
+            emotional_indicators: []
+        };
+
+        // Simple pattern extraction (can be enhanced with NLP)
+        const text = transcriptText.toLowerCase();
+        
+        // Hesitation indicators
+        patterns.hesitation_indicators = [
+            'um', 'uh', 'er', 'like', 'you know', 'actually', 'basically'
+        ].filter(word => text.includes(word));
+
+        // Question patterns
+        patterns.question_patterns = [
+            'how', 'what', 'why', 'when', 'where', 'can you', 'could you', 'would you'
+        ].filter(word => text.includes(word));
+
+        // Emotional indicators
+        patterns.emotional_indicators = [
+            'frustrated', 'excited', 'worried', 'confused', 'happy', 'sad', 'angry'
+        ].filter(word => text.includes(word));
+
+        return patterns;
     }
 }
 

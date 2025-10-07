@@ -101,7 +101,7 @@ router.get('/', async (req, res) => {
             res.json(shortAgents);
         } else {
             // Return full view (default)
-            const query = 'SELECT * FROM agents WHERE status != "archived" ORDER BY created_at DESC';
+            const query = 'SELECT * FROM agents WHERE status != \'archived\' ORDER BY created_at DESC';
             const result = await pool.query(query);
             const fullAgents = result.rows.map(agent => promptBuilder.buildFullProfile(agent));
             res.json(fullAgents);
