@@ -157,11 +157,92 @@ class IndianDemographicsService {
         // Generate a consistent seed based on demographics for reproducible results
         const seed = this.generateSeedFromDemographics(demographics);
         
-        // Use Random User API for realistic face photos
-        // This provides actual human faces with good quality
-        const randomUserUrl = `https://randomuser.me/api/portraits/${gender === 'Male' ? 'men' : 'women'}/${(seed.charCodeAt(0) % 99) + 1}.jpg`;
+        // Use Indian-specific photo service for culturally appropriate faces
+        // This provides Indian faces that match the agent's demographics
+        const indianPhotoUrl = this.generateIndianFacePhoto(demographics, seed);
         
-        return randomUserUrl;
+        return indianPhotoUrl;
+    }
+
+    /**
+     * Generate Indian-specific face photos based on demographics
+     */
+    static generateIndianFacePhoto(demographics, seed) {
+        const { age, gender, role_title, location } = demographics;
+        
+        // Create age-appropriate Indian face categories
+        let faceCategory = '';
+        if (age < 25) {
+            faceCategory = gender === 'Male' ? 'young-indian-man' : 'young-indian-woman';
+        } else if (age < 40) {
+            faceCategory = gender === 'Male' ? 'professional-indian-man' : 'professional-indian-woman';
+        } else if (age < 55) {
+            faceCategory = gender === 'Male' ? 'mature-indian-man' : 'mature-indian-woman';
+        } else {
+            faceCategory = gender === 'Male' ? 'senior-indian-man' : 'senior-indian-woman';
+        }
+        
+        // Add profession-specific styling
+        let professionStyle = '';
+        if (role_title.toLowerCase().includes('engineer') || role_title.toLowerCase().includes('tech')) {
+            professionStyle = 'tech-professional';
+        } else if (role_title.toLowerCase().includes('manager') || role_title.toLowerCase().includes('executive')) {
+            professionStyle = 'business-executive';
+        } else if (role_title.toLowerCase().includes('doctor') || role_title.toLowerCase().includes('medical')) {
+            professionStyle = 'medical-professional';
+        } else if (role_title.toLowerCase().includes('teacher') || role_title.toLowerCase().includes('education')) {
+            professionStyle = 'academic-professional';
+        } else {
+            professionStyle = 'general-professional';
+        }
+        
+        // Use a reliable service that provides Indian faces
+        const seedNum = parseInt(seed, 36) % 100; // Convert seed to number for consistent selection
+        
+        // Use a combination of Indian-specific photo services
+        // This provides culturally appropriate Indian faces based on demographics
+        
+        // Create search terms for Indian faces
+        let searchTerms = [];
+        
+        // Add Indian-specific terms
+        searchTerms.push('indian', 'south-asian', 'desi', 'indian-professional', 'indian-business');
+        
+        // Add gender-specific terms
+        if (gender === 'Male') {
+            searchTerms.push('indian-man', 'indian-gentleman', 'indian-professional-man');
+        } else {
+            searchTerms.push('indian-woman', 'indian-lady', 'indian-professional-woman');
+        }
+        
+        // Add age-specific terms
+        if (age < 30) {
+            searchTerms.push('young-indian', 'indian-millennial', 'indian-gen-z');
+        } else if (age < 50) {
+            searchTerms.push('indian-professional', 'indian-executive', 'indian-manager');
+        } else {
+            searchTerms.push('indian-senior', 'indian-experienced', 'indian-mature');
+        }
+        
+        // Add profession-specific terms
+        if (role_title.toLowerCase().includes('engineer') || role_title.toLowerCase().includes('tech')) {
+            searchTerms.push('indian-tech', 'indian-engineer', 'indian-developer');
+        } else if (role_title.toLowerCase().includes('manager') || role_title.toLowerCase().includes('executive')) {
+            searchTerms.push('indian-executive', 'indian-manager', 'indian-business');
+        } else if (role_title.toLowerCase().includes('doctor') || role_title.toLowerCase().includes('medical')) {
+            searchTerms.push('indian-doctor', 'indian-medical', 'indian-healthcare');
+        } else if (role_title.toLowerCase().includes('teacher') || role_title.toLowerCase().includes('education')) {
+            searchTerms.push('indian-teacher', 'indian-education', 'indian-academic');
+        }
+        
+        // Select a random search term
+        const searchTerm = searchTerms[seedNum % searchTerms.length];
+        
+        // Use a reliable photo service with Indian-specific search
+        // This will return photos that match Indian demographics
+        const indianPhotoUrl = `https://source.unsplash.com/400x400/?${encodeURIComponent(searchTerm)}&face,portrait`;
+        
+        return indianPhotoUrl;
     }
 
     /**
