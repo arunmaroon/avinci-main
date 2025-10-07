@@ -355,7 +355,7 @@ router.post('/pdf-upload', upload.single('file'), async (req, res) => {
             raw_text: pdfText,
             file_name: file.originalname
         }, indianDemographics);
-        console.log('Behavioral analysis completed');
+        console.log('Behavioral analysis completed:', analysis);
         
         // Stage 2: Synthesize persona and master system prompt
         console.log('Stage 2: Synthesizing persona...');
@@ -369,6 +369,7 @@ router.post('/pdf-upload', upload.single('file'), async (req, res) => {
             personaData = parsed.persona;
             masterSystemPrompt = parsed.master_system_prompt;
         } catch (e) {
+            console.log('Synthesis result is not JSON, using fallback:', e.message);
             // Fallback if synthesis doesn't return JSON
             personaData = {
                 name: indianDemographics.name || 'PDF Generated Persona',

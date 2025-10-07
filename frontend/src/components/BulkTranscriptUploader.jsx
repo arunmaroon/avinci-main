@@ -571,11 +571,19 @@ const BulkTranscriptUploader = ({ onAgentsCreated }) => {
 
             if (response.data && response.data.agents) {
                 return response.data.agents.map(agent => ({
-                    transcript: {
-                        raw_text: agent.transcript || 'PDF content processed',
-                        file_name: fileName
-                    },
-                    demographics: agent.demographics || {}
+                    raw_text: agent.quote || agent.master_system_prompt || 'PDF content processed',
+                    speaker_turns: [{
+                        speaker: 'PDF_Content',
+                        content: agent.quote || agent.master_system_prompt || 'PDF content processed',
+                        timestamp: 0
+                    }],
+                    metadata: {
+                        filename: fileName,
+                        total_turns: 1,
+                        estimated_duration: 60,
+                        format: 'standard',
+                        speakers: ['PDF_Content']
+                    }
                 }));
             } else {
                 throw new Error('No agents created from PDF');
@@ -634,7 +642,7 @@ const BulkTranscriptUploader = ({ onAgentsCreated }) => {
 
                     // For moderator/respondent format, focus on respondent data
                     let transcriptForAgent = transcripts[i];
-                    if (transcripts[i].metadata.format === 'moderator_respondent') {
+                    if (transcripts[i].metadata && transcripts[i].metadata.format === 'moderator_respondent') {
                         // Filter to only include respondent turns for agent creation
                         const respondentTurns = transcripts[i].speaker_turns.filter(turn => turn.speaker === 'Respondent');
                         
