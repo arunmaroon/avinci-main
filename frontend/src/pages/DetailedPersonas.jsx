@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DetailedPersonaCard from '../components/DetailedPersonaCard';
 import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
-import api from '../services/api';
+import api from '../utils/api';
 
 const DetailedPersonas = () => {
     const [personas, setPersonas] = useState([]);
