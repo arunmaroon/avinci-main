@@ -8,15 +8,25 @@ const { Pinecone } = require('@pinecone-database/pinecone');
 
 class PersonaExtractor {
     constructor() {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY environment variable is required');
+        }
+        
         this.openai = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY
         });
         
-        this.pinecone = new Pinecone({
-            apiKey: process.env.PINECONE_API_KEY
-        });
-        
-        this.index = this.pinecone.index(process.env.PINECONE_INDEX_NAME || 'persona-vectors');
+        if (process.env.PINECONE_API_KEY) {
+            this.pinecone = new Pinecone({
+                apiKey: process.env.PINECONE_API_KEY
+            });
+            
+            this.index = this.pinecone.index(process.env.PINECONE_INDEX_NAME || 'persona-vectors');
+        } else {
+            console.warn('PINECONE_API_KEY not provided, vector storage will be disabled');
+            this.pinecone = null;
+            this.index = null;
+        }
     }
 
     /**
@@ -47,13 +57,33 @@ class PersonaExtractor {
                 max_tokens: 2000
             });
 
-            const extractedData = JSON.parse(response.choices[0].message.content);
+            let content = response.choices[0].message.content;
             
-            // Generate embedding for vector storage
-            const embedding = await this.generateEmbedding(extractedData);
+            // Remove markdown code blocks if present
+            if (content.includes('```json')) {
+                content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+            } else if (content.includes('```')) {
+                content = content.replace(/```\n?/g, '');
+            }
             
-            // Store in Pinecone
-            await this.storePersonaVector(extractedData, embedding);
+            const extractedData = JSON.parse(content);
+            
+            // Generate embedding for vector storage (optional)
+            let embedding = null;
+            try {
+                embedding = await this.generateEmbedding(extractedData);
+            } catch (error) {
+                console.warn('Embedding generation failed, continuing without vector storage:', error.message);
+            }
+            
+            // Store in Pinecone if available
+            if (this.index && embedding) {
+                try {
+                    await this.storePersonaVector(extractedData, embedding);
+                } catch (error) {
+                    console.warn('Vector storage failed, continuing without storage:', error.message);
+                }
+            }
             
             console.log('Persona extraction completed:', extractedData);
             return extractedData;

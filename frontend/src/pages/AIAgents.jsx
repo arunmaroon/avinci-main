@@ -6,7 +6,7 @@ import EmptyState from '../components/EmptyState';
 import DocumentUpload from '../components/DocumentUpload';
 import GenerationStatus from '../components/GenerationStatus';
 import AgentGrid from '../components/AgentGrid';
-import { useAgentStore } from '../stores/agentStore';
+import useAgentStore from '../stores/agentStore';
 
 const AIAgents = () => {
   const [activeTab, setActiveTab] = useState('view');

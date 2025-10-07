@@ -39,6 +39,11 @@ services:
       - DATABASE_URL=postgresql://avinci_user:avinci_password@postgres:5432/avinci
       - REDIS_URL=redis://redis:6379
       - PORT=9001
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-persona-vectors}
+      - GROK_API_KEY=${GROK_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     ports:
       - "9001:9001"
     depends_on:
@@ -47,6 +52,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ./uploads:/app/uploads
     networks:
       - avinci-network
 
@@ -78,6 +84,9 @@ services:
     environment:
       - DATABASE_URL=postgresql://avinci_user:avinci_password@postgres:5432/avinci
       - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-persona-vectors}
     ports:
       - "8000:8000"
     depends_on:
@@ -85,6 +94,35 @@ services:
       - redis
     volumes:
       - ./data-processing:/app
+      - ./uploads:/app/uploads
+      - ./transcripts:/app/transcripts
+    networks:
+      - avinci-network
+
+  # Research Service for Advanced Analytics
+  research:
+    build:
+      context: ./data-processing
+      dockerfile: Dockerfile
+    container_name: avinci-research
+    environment:
+      - DATABASE_URL=postgresql://avinci_user:avinci_password@postgres:5432/avinci
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-persona-vectors}
+      - SERVICE_TYPE=research
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    volumes:
+      - ./data-processing:/app
+      - ./uploads:/app/uploads
+      - ./transcripts:/app/transcripts
+      - ./analytics:/app/analytics
     networks:
       - avinci-network
 

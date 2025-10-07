@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatPanel from './ChatPanel';
 import { useAgentChat } from '../hooks/useAgentChat';
-import { useAgentStore } from '../stores/agentStore';
+import useAgentStore from '../stores/agentStore';
 
 const AgentPreview = ({ onClose }) => {
   const [selectedAgents, setSelectedAgents] = useState({

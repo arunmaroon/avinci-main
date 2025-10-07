@@ -8,10 +8,20 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { OpenAI } = require('openai');
 
-// Initialize OpenAI
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+// OpenAI will be initialized lazily when needed
+let openai = null;
+
+const getOpenAI = () => {
+    if (!openai) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY environment variable is required');
+        }
+        openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+    }
+    return openai;
+};
 
 /**
  * POST /api/ai/generate - Chat with an agent
@@ -171,7 +181,7 @@ function buildConversationContext(agent, history, currentMessage) {
  */
 async function generateAgentResponse(context, userMessage) {
     try {
-        const response = await openai.chat.completions.create({
+        const response = await getOpenAI().chat.completions.create({
             model: "gpt-4o",
             messages: [
                 {

@@ -123,28 +123,28 @@ class IndianDemographicsService {
         }
         
         // Add profession-based terms
-        if (role_title.toLowerCase().includes('engineer') || role_title.toLowerCase().includes('tech')) {
+        if (role_title && role_title.toLowerCase().includes('engineer') || role_title && role_title.toLowerCase().includes('tech')) {
             searchTerms.push('technology', 'software', 'developer', 'tech-professional');
-        } else if (role_title.toLowerCase().includes('manager') || role_title.toLowerCase().includes('executive')) {
+        } else if (role_title && role_title.toLowerCase().includes('manager') || role_title && role_title.toLowerCase().includes('executive')) {
             searchTerms.push('business', 'office', 'corporate', 'executive');
-        } else if (role_title.toLowerCase().includes('doctor') || role_title.toLowerCase().includes('medical')) {
+        } else if (role_title && role_title.toLowerCase().includes('doctor') || role_title && role_title.toLowerCase().includes('medical')) {
             searchTerms.push('medical', 'healthcare', 'doctor', 'nurse');
-        } else if (role_title.toLowerCase().includes('teacher') || role_title.toLowerCase().includes('education')) {
+        } else if (role_title && role_title.toLowerCase().includes('teacher') || role_title && role_title.toLowerCase().includes('education')) {
             searchTerms.push('education', 'teaching', 'teacher', 'academic');
-        } else if (role_title.toLowerCase().includes('sales') || role_title.toLowerCase().includes('marketing')) {
+        } else if (role_title && role_title.toLowerCase().includes('sales') || role_title && role_title.toLowerCase().includes('marketing')) {
             searchTerms.push('sales', 'marketing', 'business', 'professional');
         }
         
         // Add location-based terms
-        if (location.toLowerCase().includes('mumbai')) {
+        if (location && location.toLowerCase().includes('mumbai')) {
             searchTerms.push('mumbai', 'mumbai-city', 'mumbai-professional');
-        } else if (location.toLowerCase().includes('delhi')) {
+        } else if (location && location.toLowerCase().includes('delhi')) {
             searchTerms.push('delhi', 'delhi-city', 'delhi-professional');
-        } else if (location.toLowerCase().includes('bangalore')) {
+        } else if (location && location.toLowerCase().includes('bangalore')) {
             searchTerms.push('bangalore', 'bengaluru', 'bangalore-professional');
-        } else if (location.toLowerCase().includes('chennai')) {
+        } else if (location && location.toLowerCase().includes('chennai')) {
             searchTerms.push('chennai', 'chennai-professional');
-        } else if (location.toLowerCase().includes('kolkata')) {
+        } else if (location && location.toLowerCase().includes('kolkata')) {
             searchTerms.push('kolkata', 'kolkata-professional');
         }
         
@@ -166,84 +166,52 @@ class IndianDemographicsService {
     }
 
     /**
-     * Generate Indian-specific face photos based on demographics
+     * Generate Indian-specific face photos based on demographics using real Unsplash photos
      */
     static generateIndianFacePhoto(demographics, seed) {
         const { age, gender, role_title, location } = demographics;
         
-        // Create age-appropriate Indian face categories
-        let faceCategory = '';
-        if (age < 25) {
-            faceCategory = gender === 'Male' ? 'young-indian-man' : 'young-indian-woman';
-        } else if (age < 40) {
-            faceCategory = gender === 'Male' ? 'professional-indian-man' : 'professional-indian-woman';
-        } else if (age < 55) {
-            faceCategory = gender === 'Male' ? 'mature-indian-man' : 'mature-indian-woman';
-        } else {
-            faceCategory = gender === 'Male' ? 'senior-indian-man' : 'senior-indian-woman';
-        }
+        // Curated list of real Indian faces from Unsplash
+        const indianFaces = {
+            male: [
+                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=400&h=400&fit=crop&crop=face'
+            ],
+            female: [
+                'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=400&fit=crop&crop=face'
+            ]
+        };
         
-        // Add profession-specific styling
-        let professionStyle = '';
-        if (role_title.toLowerCase().includes('engineer') || role_title.toLowerCase().includes('tech')) {
-            professionStyle = 'tech-professional';
-        } else if (role_title.toLowerCase().includes('manager') || role_title.toLowerCase().includes('executive')) {
-            professionStyle = 'business-executive';
-        } else if (role_title.toLowerCase().includes('doctor') || role_title.toLowerCase().includes('medical')) {
-            professionStyle = 'medical-professional';
-        } else if (role_title.toLowerCase().includes('teacher') || role_title.toLowerCase().includes('education')) {
-            professionStyle = 'academic-professional';
-        } else {
-            professionStyle = 'general-professional';
-        }
+        // Convert seed to number for consistent selection
+        const seedNum = parseInt(seed, 36) % 100;
         
-        // Use a reliable service that provides Indian faces
-        const seedNum = parseInt(seed, 36) % 100; // Convert seed to number for consistent selection
+        // Select from appropriate gender array
+        const genderKey = gender === 'Male' ? 'male' : 'female';
+        const faceArray = indianFaces[genderKey];
+        const selectedIndex = seedNum % faceArray.length;
         
-        // Use a combination of Indian-specific photo services
-        // This provides culturally appropriate Indian faces based on demographics
-        
-        // Create search terms for Indian faces
-        let searchTerms = [];
-        
-        // Add Indian-specific terms
-        searchTerms.push('indian', 'south-asian', 'desi', 'indian-professional', 'indian-business');
-        
-        // Add gender-specific terms
-        if (gender === 'Male') {
-            searchTerms.push('indian-man', 'indian-gentleman', 'indian-professional-man');
-        } else {
-            searchTerms.push('indian-woman', 'indian-lady', 'indian-professional-woman');
-        }
-        
-        // Add age-specific terms
-        if (age < 30) {
-            searchTerms.push('young-indian', 'indian-millennial', 'indian-gen-z');
-        } else if (age < 50) {
-            searchTerms.push('indian-professional', 'indian-executive', 'indian-manager');
-        } else {
-            searchTerms.push('indian-senior', 'indian-experienced', 'indian-mature');
-        }
-        
-        // Add profession-specific terms
-        if (role_title.toLowerCase().includes('engineer') || role_title.toLowerCase().includes('tech')) {
-            searchTerms.push('indian-tech', 'indian-engineer', 'indian-developer');
-        } else if (role_title.toLowerCase().includes('manager') || role_title.toLowerCase().includes('executive')) {
-            searchTerms.push('indian-executive', 'indian-manager', 'indian-business');
-        } else if (role_title.toLowerCase().includes('doctor') || role_title.toLowerCase().includes('medical')) {
-            searchTerms.push('indian-doctor', 'indian-medical', 'indian-healthcare');
-        } else if (role_title.toLowerCase().includes('teacher') || role_title.toLowerCase().includes('education')) {
-            searchTerms.push('indian-teacher', 'indian-education', 'indian-academic');
-        }
-        
-        // Select a random search term
-        const searchTerm = searchTerms[seedNum % searchTerms.length];
-        
-        // Use a reliable photo service that works consistently
-        // Random User API provides good quality photos and works reliably
-        const randomUserUrl = `https://randomuser.me/api/portraits/${gender === 'Male' ? 'men' : 'women'}/${(seedNum % 99) + 1}.jpg`;
-        
-        return randomUserUrl;
+        return faceArray[selectedIndex];
     }
 
     /**

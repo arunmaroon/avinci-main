@@ -4,7 +4,7 @@ import {
     ChartBarIcon, 
     ChatBubbleLeftRightIcon, 
     UserGroupIcon,
-    TrendingUpIcon,
+    ArrowTrendingUpIcon,
     ClockIcon,
     HeartIcon
 } from '@heroicons/react/24/outline';
@@ -59,7 +59,7 @@ const Dashboard = () => {
                         <div className={`flex items-center mt-1 text-sm ${
                             trend > 0 ? 'text-green-600' : 'text-red-600'
                         }`}>
-                            <TrendingUpIcon className="w-4 h-4 mr-1" />
+                            <ArrowTrendingUpIcon className="w-4 h-4 mr-1" />
                             {trend > 0 ? '+' : ''}{trend}%
                         </div>
                     )}
@@ -205,10 +205,10 @@ const Dashboard = () => {
                                 color="purple"
                             />
                             <StatCard
-                                title="Peak Hour"
-                                value={analytics.engagement?.peakHour || 'N/A'}
-                                icon={TrendingUpIcon}
-                                color="orange"
+                title="Peak Hour"
+                value={analytics.engagement?.peakHour || 'N/A'}
+                icon={ArrowTrendingUpIcon}
+                color="orange"
                             />
                         </div>
 

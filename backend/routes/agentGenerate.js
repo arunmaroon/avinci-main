@@ -10,8 +10,15 @@ const { v4: uuidv4 } = require('uuid');
 const PersonaExtractor = require('../services/personaExtractor');
 const IndianDemographicsService = require('../services/indianDemographics');
 
-// Initialize PersonaExtractor
-const personaExtractor = new PersonaExtractor();
+// PersonaExtractor will be initialized lazily when needed
+let personaExtractor = null;
+
+const getPersonaExtractor = () => {
+    if (!personaExtractor) {
+        personaExtractor = new PersonaExtractor();
+    }
+    return personaExtractor;
+};
 
 /**
  * POST /api/agent/generate - Generate agent from transcript
@@ -33,7 +40,7 @@ router.post('/generate', async (req, res) => {
         const indianDemographics = IndianDemographicsService.generateIndianDemographics(demographics);
         
         // Extract persona using PersonaExtractor
-        const personaData = await personaExtractor.extractPersona(transcriptText, indianDemographics);
+        const personaData = await getPersonaExtractor().extractPersona(transcriptText, indianDemographics);
         
         // Create agent prompt template
         const agentPrompt = buildAgentPrompt(personaData);
@@ -166,16 +173,16 @@ router.get('/', async (req, res) => {
  */
 function buildAgentPrompt(personaData) {
     const {
-        name,
-        occupation,
-        company,
-        location,
-        communication_style,
-        emotional_profile,
-        personality_traits,
-        pain_points,
-        goals,
-        key_quotes
+        name = 'Unknown',
+        occupation = 'Professional',
+        company = 'Unknown Company',
+        location = 'Unknown Location',
+        communication_style = {},
+        emotional_profile = {},
+        personality_traits = [],
+        pain_points = [],
+        goals = [],
+        key_quotes = []
     } = personaData;
     
     return `You are ${name}, a ${occupation} at ${company} in ${location}.
