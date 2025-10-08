@@ -14,7 +14,7 @@ const useAgentStore = create((set, get) => ({
     fetchAgents: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get('/agent/generate');
+            const response = await api.get('/api/agent/generate');
             set({ 
                 agents: response.data.agents,
                 isLoading: false 

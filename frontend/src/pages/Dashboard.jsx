@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { 
     ChartBarIcon, 
     ChatBubbleLeftRightIcon, 
     UserGroupIcon,
     ArrowTrendingUpIcon,
     ClockIcon,
-    HeartIcon
+    HeartIcon,
+    SparklesIcon
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 
@@ -131,23 +133,24 @@ const Dashboard = () => {
         );
     }
 
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-red-500 text-6xl mb-4">⚠️</div>
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Analytics</h2>
-                    <p className="text-gray-600 mb-4">{error}</p>
-                    <button
-                        onClick={fetchAnalytics}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                        Try Again
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    // Don't block the entire UI if analytics fails
+    // if (error) {
+    //     return (
+    //         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    //             <div className="text-center">
+    //                 <div className="text-red-500 text-6xl mb-4">⚠️</div>
+    //                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Analytics</h2>
+    //                 <p className="text-gray-600 mb-4">{error}</p>
+    //                 <button
+    //                     onClick={fetchAnalytics}
+    //                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+    //                 >
+    //                     Try Again
+    //                 </button>
+    //             </div>
+    //         </div>
+    //     );
+    // }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -178,6 +181,61 @@ const Dashboard = () => {
                             >
                                 Refresh
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Error Banner */}
+                {error && (
+                    <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                                <div className="text-red-500 mr-3">⚠️</div>
+                                <div>
+                                    <h3 className="text-sm font-semibold text-red-800">Analytics Error</h3>
+                                    <p className="text-sm text-red-600">{error}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setError(null);
+                                    fetchAnalytics();
+                                }}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* New Features Banner */}
+                <div className="mb-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold mb-2 flex items-center">
+                                <SparklesIcon className="h-6 w-6 mr-2" />
+                                Sirius v0.2 - Enhanced Features Available!
+                            </h2>
+                            <p className="text-blue-100 mb-4">
+                                Test the new chat memory, UI feedback, and usability testing capabilities
+                            </p>
+                            <Link 
+                                to="/test-enhanced"
+                                className="inline-flex items-center px-6 py-3 bg-white text-blue-600 rounded-full font-semibold hover:bg-blue-50 transition-colors"
+                            >
+                                Try Enhanced Chat
+                            </Link>
+                        </div>
+                        <div className="hidden md:block">
+                            <div className="text-right text-blue-100">
+                                <div className="text-sm">New Features:</div>
+                                <div className="text-xs space-y-1">
+                                    <div>🧠 Chat Memory</div>
+                                    <div>🎨 UI Feedback</div>
+                                    <div>🧪 Usability Testing</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

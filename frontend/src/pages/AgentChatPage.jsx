@@ -20,7 +20,7 @@ const AgentChatPage = () => {
     const fetchAgentDetails = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/agent/generate/${agentId}`);
+            const response = await api.get(`/api/agent/generate/${agentId}`);
             setAgent(response.data.agent);
         } catch (error) {
             console.error('Error fetching agent details:', error);

@@ -1,6 +1,6 @@
 {
   "name": "sirius-frontend",
-  "version": "2.01",
+  "version": "2.02",
   "private": true,
   "proxy": "http://localhost:9001",
   "dependencies": {
@@ -12,6 +12,7 @@
     "framer-motion": "^12.23.22",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.16.0",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4",

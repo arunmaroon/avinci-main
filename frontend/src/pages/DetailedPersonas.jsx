@@ -18,7 +18,7 @@ const DetailedPersonas = () => {
     const fetchDetailedPersonas = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/agent/generate/detailed');
+            const response = await api.get('/api/agent/generate/detailed');
             if (response.data.success) {
                 setPersonas(response.data.agents);
             } else {
