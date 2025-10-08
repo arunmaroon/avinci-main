@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ChartBarIcon, 
     ChatBubbleLeftRightIcon, 
     UserGroupIcon,
     ArrowTrendingUpIcon,
     ClockIcon,
-    HeartIcon
+    HeartIcon,
+    SparklesIcon,
+    CommandLineIcon,
+    EyeIcon,
+    PlusCircleIcon
 } from '@heroicons/react/24/outline';
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import api from '../utils/api';
 
 const Dashboard = () => {
@@ -16,16 +21,18 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const [selectedAgent, setSelectedAgent] = useState('');
     const [agents, setAgents] = useState([]);
+    const [recentActivity, setRecentActivity] = useState([]);
 
     useEffect(() => {
         fetchAgents();
         fetchAnalytics();
+        generateRecentActivity();
     }, [selectedAgent]);
 
     const fetchAgents = async () => {
         try {
             const response = await api.get('/agent/generate');
-            setAgents(response.data.agents);
+            setAgents(response.data.agents || []);
         } catch (error) {
             console.error('Error fetching agents:', error);
         }
@@ -45,229 +52,258 @@ const Dashboard = () => {
         }
     };
 
-    const StatCard = ({ title, value, icon: Icon, color = 'blue', trend = null }) => (
+    const generateRecentActivity = () => {
+        const activities = [
+            { id: 1, type: 'agent_created', message: 'New agent "Priya" created from transcript', time: '2 minutes ago', icon: PlusCircleIcon },
+            { id: 2, type: 'chat_started', message: 'Chat session started with "Rajesh"', time: '5 minutes ago', icon: ChatBubbleLeftRightIcon },
+            { id: 3, type: 'feedback_received', message: 'Design feedback received from "Maria"', time: '12 minutes ago', icon: EyeIcon },
+            { id: 4, type: 'agent_updated', message: 'Agent "David" persona updated', time: '1 hour ago', icon: UserGroupIcon },
+        ];
+        setRecentActivity(activities);
+    };
+
+    const StatCard = ({ title, value, icon: Icon, color = 'primary', trend = null, subtitle = null }) => (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+            transition={{ duration: 0.5 }}
+            className="card-interactive p-6 relative overflow-hidden"
         >
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-gray-600">{title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{value}</p>
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-20 h-20 opacity-10">
+                <Icon className="w-full h-full" style={{ color: '#144835' }} />
+            </div>
+            
+            <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(20, 72, 53, 0.1)' }}>
+                        <Icon className="w-6 h-6" style={{ color: '#144835' }} />
+                    </div>
                     {trend && (
-                        <div className={`flex items-center mt-1 text-sm ${
-                            trend > 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                            <ArrowTrendingUpIcon className="w-4 h-4 mr-1" />
-                            {trend > 0 ? '+' : ''}{trend}%
+                        <div className="flex items-center text-sm" style={{ color: trend > 0 ? '#10b981' : '#ef4444' }}>
+                            <ArrowTrendingUpIcon className={`w-4 h-4 mr-1 ${trend < 0 ? 'rotate-180' : ''}`} />
+                            {Math.abs(trend)}%
                         </div>
                     )}
                 </div>
-                <div className={`p-3 rounded-full bg-${color}-100`}>
-                    <Icon className={`w-6 h-6 text-${color}-600`} />
+                
+                <div>
+                    <h3 className="text-2xl font-bold text-slate-800 mb-1">{value}</h3>
+                    <p className="text-slate-600 text-sm">{title}</p>
+                    {subtitle && <p className="text-slate-500 text-xs mt-1">{subtitle}</p>}
                 </div>
             </div>
         </motion.div>
     );
 
-    const ThemeCard = ({ theme, percentage, count }) => (
+    const QuickActionCard = ({ title, description, icon: Icon, href, color = 'primary' }) => (
+        <motion.a
+            href={href}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="block card-interactive p-6 group"
+        >
+            <div className="flex items-start space-x-4">
+                <div className="p-3 rounded-xl group-hover:scale-110 transition-transform duration-200" style={{ backgroundColor: 'rgba(20, 72, 53, 0.1)' }}>
+                    <Icon className="w-6 h-6" style={{ color: '#144835' }} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="font-semibold text-slate-800 mb-1">{title}</h3>
+                    <p className="text-sm text-slate-600">{description}</p>
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <ArrowTrendingUpIcon className="w-5 h-5 text-slate-400" />
+                </div>
+            </div>
+        </motion.a>
+    );
+
+    const ActivityItem = ({ activity }) => (
         <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+            className="flex items-start space-x-3 p-4 rounded-xl hover:bg-slate-50 transition-colors duration-200"
         >
-            <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium text-gray-900">{theme}</h3>
-                <span className="text-sm text-gray-500">{count} mentions</span>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(20, 72, 53, 0.1)' }}>
+                <activity.icon className="w-4 h-4" style={{ color: '#144835' }} />
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${percentage}%` }}
-                />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{percentage}% of conversations</p>
-        </motion.div>
-    );
-
-    const SentimentCard = ({ sentiment }) => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
-        >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Analysis</h3>
-            <div className="space-y-4">
-                {Object.entries(sentiment.distribution).map(([type, percentage]) => (
-                    <div key={type} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full mr-3 ${
-                                type === 'positive' ? 'bg-green-500' :
-                                type === 'negative' ? 'bg-red-500' : 'bg-gray-500'
-                            }`} />
-                            <span className="capitalize text-gray-700">{type}</span>
-                        </div>
-                        <span className="font-semibold text-gray-900">{percentage}%</span>
-                    </div>
-                ))}
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-600">
-                    Average Score: <span className="font-semibold">{sentiment.averageScore}</span>
-                </p>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-800">{activity.message}</p>
+                <p className="text-xs text-slate-500 mt-1">{activity.time}</p>
             </div>
         </motion.div>
     );
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading analytics...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-red-500 text-6xl mb-4">⚠️</div>
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Analytics</h2>
-                    <p className="text-gray-600 mb-4">{error}</p>
-                    <button
-                        onClick={fetchAnalytics}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                        Try Again
-                    </button>
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 animate-pulse-slow" style={{ background: 'linear-gradient(135deg, #144835 0%, #0e2f26 100%)' }}>
+                        <SparklesIcon className="w-8 h-8 text-white" />
+                    </div>
+                    <p className="text-slate-600">Loading dashboard...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-                            <p className="text-gray-600 mt-2">Insights from your AI agent conversations</p>
+                            <h1 className="text-3xl font-bold text-slate-800 mb-2">Welcome to AVINCI</h1>
+                            <p className="text-slate-600">Your AI Agent Platform for Design Testing</p>
                         </div>
-                        <div className="flex items-center space-x-4">
-                            <select
-                                value={selectedAgent}
-                                onChange={(e) => setSelectedAgent(e.target.value)}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                                <option value="">All Agents</option>
-                                {agents.map(agent => (
-                                    <option key={agent.id} value={agent.id}>
-                                        {agent.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <button
-                                onClick={fetchAnalytics}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                            >
-                                Refresh
-                            </button>
+                        <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2 px-4 py-2 rounded-xl border" style={{ background: 'rgba(20, 72, 53, 0.1)', borderColor: 'rgba(20, 72, 53, 0.3)' }}>
+                                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#144835' }} />
+                                <span className="text-sm font-medium text-slate-700">System Online</span>
+                            </div>
                         </div>
                     </div>
+                </motion.div>
+
+                {/* Stats Grid */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+                >
+                    <StatCard
+                        title="Total Agents"
+                        value={agents.length}
+                        icon={UserGroupIcon}
+                        trend={12}
+                        subtitle="Active personas"
+                    />
+                    <StatCard
+                        title="Active Chats"
+                        value="24"
+                        icon={ChatBubbleLeftRightIcon}
+                        trend={8}
+                        subtitle="Ongoing conversations"
+                    />
+                    <StatCard
+                        title="Design Tests"
+                        value="156"
+                        icon={EyeIcon}
+                        trend={-3}
+                        subtitle="This month"
+                    />
+                    <StatCard
+                        title="Avg. Response Time"
+                        value="2.3s"
+                        icon={ClockIcon}
+                        trend={-15}
+                        subtitle="Faster than last week"
+                    />
+                </motion.div>
+
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Quick Actions */}
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="lg:col-span-1"
+                    >
+                        <h2 className="text-xl font-semibold text-slate-800 mb-6">Quick Actions</h2>
+                        <div className="space-y-4">
+                            <QuickActionCard
+                                title="Generate New Agent"
+                                description="Create AI agents from transcripts"
+                                icon={PlusCircleIcon}
+                                href="/generate"
+                            />
+                            <QuickActionCard
+                                title="Browse Agent Library"
+                                description="View all available agents"
+                                icon={UserGroupIcon}
+                                href="/agents"
+                            />
+                            <QuickActionCard
+                                title="Start Chat Session"
+                                description="Talk to your AI agents"
+                                icon={ChatBubbleLeftRightIcon}
+                                href="/chat"
+                            />
+                            <QuickActionCard
+                                title="Design Feedback"
+                                description="Get insights on your designs"
+                                icon={EyeIcon}
+                                href="/design-feedback"
+                            />
+                        </div>
+                    </motion.div>
+
+                    {/* Recent Activity */}
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="lg:col-span-2"
+                    >
+                        <h2 className="text-xl font-semibold text-slate-800 mb-6">Recent Activity</h2>
+                        <div className="card p-6">
+                            <div className="space-y-2">
+                                <AnimatePresence>
+                                    {recentActivity.map((activity) => (
+                                        <ActivityItem key={activity.id} activity={activity} />
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        </div>
+                    </motion.div>
                 </div>
 
-                {analytics ? (
-                    <>
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            <StatCard
-                                title="Total Messages"
-                                value={analytics.engagement?.totalMessages || 0}
-                                icon={ChatBubbleLeftRightIcon}
-                                color="blue"
-                            />
-                            <StatCard
-                                title="Active Days"
-                                value={analytics.engagement?.activeDays || 0}
-                                icon={ClockIcon}
-                                color="green"
-                            />
-                            <StatCard
-                                title="Avg Message Length"
-                                value={`${analytics.engagement?.averageMessageLength || 0} chars`}
-                                icon={ChartBarIcon}
-                                color="purple"
-                            />
-                            <StatCard
-                title="Peak Hour"
-                value={analytics.engagement?.peakHour || 'N/A'}
-                icon={ArrowTrendingUpIcon}
-                color="orange"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Themes Analysis */}
-                            <div>
-                                <h2 className="text-xl font-semibold text-gray-900 mb-6">Conversation Themes</h2>
-                                <div className="space-y-4">
-                                    {analytics.themes?.themes?.map((theme, index) => (
-                                        <ThemeCard
-                                            key={index}
-                                            theme={theme.name}
-                                            percentage={theme.percentage}
-                                            count={theme.count}
-                                        />
-                                    )) || (
-                                        <div className="text-center py-8 text-gray-500">
-                                            No theme data available
+                {/* Featured Agents */}
+                {agents.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8 }}
+                        className="mt-8"
+                    >
+                        <h2 className="text-xl font-semibold text-slate-800 mb-6">Featured Agents</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {agents.slice(0, 3).map((agent, index) => (
+                                <motion.div
+                                    key={agent.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.9 + index * 0.1 }}
+                                    className="card-interactive p-6"
+                                >
+                                    <div className="flex items-start space-x-4">
+                                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'rgba(20, 72, 53, 0.1)' }}>
+                                            {agent.name?.charAt(0) || 'A'}
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Sentiment Analysis */}
-                            <div>
-                                <h2 className="text-xl font-semibold text-gray-900 mb-6">Sentiment Analysis</h2>
-                                {analytics.sentiment ? (
-                                    <SentimentCard sentiment={analytics.sentiment} />
-                                ) : (
-                                    <div className="text-center py-8 text-gray-500">
-                                        No sentiment data available
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-slate-800">{agent.name}</h3>
+                                            <p className="text-sm text-slate-600 mb-2">{agent.role_title}</p>
+                                            <p className="text-xs text-slate-500">{agent.location}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => window.location.href = `/agent-chat/${agent.id}`}
+                                            className="px-3 py-1 text-xs font-medium rounded-full transition-colors duration-200"
+                                            style={{ backgroundColor: 'rgba(20, 72, 53, 0.1)', color: '#144835' }}
+                                        >
+                                            Chat
+                                        </button>
                                     </div>
-                                )}
-                            </div>
+                                </motion.div>
+                            ))}
                         </div>
-
-                        {/* Common Phrases */}
-                        {analytics.themes?.commonPhrases && analytics.themes.commonPhrases.length > 0 && (
-                            <div className="mt-8">
-                                <h2 className="text-xl font-semibold text-gray-900 mb-6">Common Phrases</h2>
-                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {analytics.themes.commonPhrases.slice(0, 10).map((phrase, index) => (
-                                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                                <span className="text-gray-700 truncate">{phrase.phrase}</span>
-                                                <span className="text-sm text-gray-500 ml-2">{phrase.count}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <div className="text-center py-12">
-                        <div className="text-gray-400 text-6xl mb-4">📊</div>
-                        <h2 className="text-xl font-semibold text-gray-900 mb-2">No Analytics Data</h2>
-                        <p className="text-gray-600">Start chatting with agents to see analytics here.</p>
-                    </div>
+                    </motion.div>
                 )}
             </div>
         </div>

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SimpleLogin from './components/SimpleLogin';
-import Layout from './components/layout/Layout';
-import Dashboard from './pages/Dashboard';
+import UberLayout from './components/layout/UberLayout';
+import UberDashboard from './pages/UberDashboard';
 import AIAgents from './pages/AIAgents';
-import AgentLibrary from './pages/AgentLibrary';
+import UberAgentLibrary from './pages/UberAgentLibrary';
 import ChatInterface from './pages/ChatInterface';
 import DetailedPersonas from './pages/DetailedPersonas';
 import AgentChatPage from './pages/AgentChatPage';
+import UberResearchStudio from './pages/UberResearchStudio';
 import DesignFeedback from './components/DesignFeedback';
 import AgentChat from './components/AgentChat';
 import './index.css';
@@ -52,19 +53,20 @@ function App() {
 
   return (
     <Router>
-      <Layout user={user} onLogout={handleLogout}>
+      <UberLayout user={user} onLogout={handleLogout}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<UberDashboard />} />
           <Route path="/generate" element={<AIAgents />} />
-          <Route path="/agents" element={<AgentLibrary />} />
+          <Route path="/agents" element={<UberAgentLibrary />} />
           <Route path="/detailed-personas" element={<DetailedPersonas />} />
+          <Route path="/research-studio" element={<UberResearchStudio />} />
           <Route path="/chat" element={<ChatInterface />} />
           <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
           <Route path="/agent-chat" element={<AgentChat />} />
           <Route path="/design-feedback" element={<DesignFeedback />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
-      </Layout>
+      </UberLayout>
     </Router>
   );
 }

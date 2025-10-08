@@ -35,6 +35,7 @@ app.use('/api/agents/v4', require('./routes/agents_v4'));
 app.use('/api/agents/v3', require('./routes/agents_v3'));
 app.use('/api/agents', require('./routes/agents'));
 app.use('/api/agent/generate', require('./routes/agentGenerate')); // New agent generation with PersonaExtractor
+app.use('/api/enhanced-agent', require('./routes/enhancedAgentGenerate')); // Enhanced agent generation with fintech focus
 app.use('/api/ai', require('./routes/aiChat')); // AI chat with generated agents
 app.use('/api/analytics', require('./routes/analytics')); // Analytics and insights
 app.use('/api/chat/v4', require('./routes/chat_v4')); // New SSE streaming chat

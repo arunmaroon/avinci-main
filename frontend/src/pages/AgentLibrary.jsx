@@ -1,27 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    UserGroupIcon, 
-    MagnifyingGlassIcon,
+    PlusIcon, 
+    MagnifyingGlassIcon, 
     FunnelIcon,
-    DocumentTextIcon,
+    Squares2X2Icon,
+    ListBulletIcon,
+    UserGroupIcon,
     SparklesIcon,
-    PlusIcon
+    CommandLineIcon
 } from '@heroicons/react/24/outline';
-import api from '../utils/api';
-import EnhancedAgentCreator from '../components/EnhancedAgentCreator';
-import PersonaChat from '../components/PersonaChat';
-import BulkTranscriptUploader from '../components/BulkTranscriptUploader';
+import { PlusIcon as PlusSolidIcon } from '@heroicons/react/24/solid';
 import AgentGrid from '../components/AgentGrid';
+import EnhancedAgentCreator from '../components/EnhancedAgentCreator';
+import BulkTranscriptUploader from '../components/BulkTranscriptUploader';
+import LoadingSpinner from '../components/LoadingSpinner';
+import api from '../utils/api';
 
 const AgentLibrary = () => {
     const [agents, setAgents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [showEnhancedCreator, setShowEnhancedCreator] = useState(false);
-    const [showBulkUploader, setShowBulkUploader] = useState(false);
-    const [selectedAgentForChat, setSelectedAgentForChat] = useState(null);
-    const [showChat, setShowChat] = useState(false);
+    const [error, setError] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+    const [sortBy, setSortBy] = useState('created_at');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showBulkUpload, setShowBulkUpload] = useState(false);
+    const [selectedAgents, setSelectedAgents] = useState(new Set());
 
     useEffect(() => {
         fetchAgents();
@@ -30,271 +37,375 @@ const AgentLibrary = () => {
     const fetchAgents = async () => {
         try {
             setLoading(true);
-            console.log('Fetching agents from API...');
-            const response = await api.get('/agents/v5?view=short');
-            console.log('Agents response:', response.data);
-            setAgents(response.data);
+            const response = await api.get('/agent/generate');
+            setAgents(response.data.agents || []);
         } catch (error) {
             console.error('Error fetching agents:', error);
-            console.error('Error details:', error.response?.data);
+            setError('Failed to load agents');
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredAgents = agents.filter(agent => {
-        const matchesSearch = !searchTerm || 
-            agent.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            agent.role_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            agent.quote?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
-        
-        return matchesSearch && matchesStatus;
-    });
-
-    const handleAddTestAgent = async () => {
+    const handleCreateAgent = async (agentData) => {
         try {
-            console.log('Creating test agent...');
-            const response = await api.post('/agents/v5', {
-                transcript: {
-                    raw_text: 'This is a test transcript for creating a demo agent. The person is friendly and helpful, always willing to assist with questions and provide guidance. They love using mobile apps for banking and are eager to learn new features. They sometimes get confused by technical terms and are apprehensive about making mistakes. They prefer simple language and step-by-step instructions.',
-                    file_name: 'test_transcript.txt'
-                },
-                demographics: {
-                    // Let the backend generate Indian demographics automatically
-                }
-            });
-            console.log('Test agent created:', response.data);
-            // Refresh the agents list
-            fetchAgents();
+            const response = await api.post('/agents/v5', agentData);
+            if (response.data.success) {
+                setAgents(prev => [response.data.agent, ...prev]);
+                setShowCreateModal(false);
+            }
         } catch (error) {
-            console.error('Error creating test agent:', error);
-            console.error('Error details:', error.response?.data);
+            console.error('Error creating agent:', error);
+            throw error;
         }
     };
 
-    const handleAgentCreated = (newAgent) => {
-        console.log('New agent created:', newAgent);
-        fetchAgents(); // Refresh the list
-        setShowEnhancedCreator(false); // Close the creator
-    };
-
-    const handleStartChat = (agent) => {
-        setSelectedAgentForChat(agent);
-        setShowChat(true);
-    };
-
-    const handleBulkAgentsCreated = (createdAgents) => {
-        console.log('Bulk agents created:', createdAgents);
-        fetchAgents(); // Refresh the list
-        setShowBulkUploader(false); // Close the uploader
+    const handleBulkUpload = async (transcripts) => {
+        try {
+            const response = await api.post('/agents/v5/bulk', { transcripts });
+            if (response.data.success) {
+                setAgents(prev => [...response.data.agents, ...prev]);
+                setShowBulkUpload(false);
+            }
+        } catch (error) {
+            console.error('Error bulk uploading:', error);
+            throw error;
+        }
     };
 
     const handleDeleteAgent = async (agentId) => {
         try {
-            console.log('Deleting agent:', agentId);
-            const response = await api.delete(`/agents/v5/${agentId}`);
-            console.log('Agent deleted:', response.data);
-            // Refresh the agents list
-            fetchAgents();
+            await api.delete(`/agent/generate/${agentId}`);
+            setAgents(prev => prev.filter(agent => agent.id !== agentId));
         } catch (error) {
             console.error('Error deleting agent:', error);
-            console.error('Error details:', error.response?.data);
         }
     };
 
-    const handleAgentStatusChange = (agentId, newStatus) => {
-        setAgents(prevAgents => 
-            prevAgents.map(agent => 
-                agent.id === agentId 
-                    ? { ...agent, status: newStatus }
-                    : agent
-            )
-        );
+    const handleAgentStatusChange = async (agentId, newStatus) => {
+        try {
+            await api.patch(`/agent/generate/${agentId}`, { status: newStatus });
+            setAgents(prev => prev.map(agent => 
+                agent.id === agentId ? { ...agent, status: newStatus } : agent
+            ));
+        } catch (error) {
+            console.error('Error updating agent status:', error);
+        }
     };
 
-    return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-h2 font-bold text-gray-900 flex items-center">
-                    <UserGroupIcon className="h-8 w-8 mr-3 text-primary-600" />
-                    Agent Library
-                </h1>
-                <div className="flex space-x-4">
-                    <button
-                        onClick={handleAddTestAgent}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                        <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                        Add Test Agent
-                    </button>
-                    <button
-                        onClick={() => setShowEnhancedCreator(true)}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                        <SparklesIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                        Generate New Agent
-                    </button>
-                </div>
-            </div>
+    const filteredAgents = agents.filter(agent => {
+        const matchesSearch = agent.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            agent.role_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            agent.location?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesStatus = filterStatus === 'all' || agent.status === filterStatus;
+        
+        return matchesSearch && matchesStatus;
+    });
 
-            {/* Search and Filters */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                        <div className="relative">
-                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search agents by name, role, or quote..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
-                            />
+    const sortedAgents = [...filteredAgents].sort((a, b) => {
+        const aValue = a[sortBy];
+        const bValue = b[sortBy];
+        
+        if (sortOrder === 'asc') {
+            return aValue > bValue ? 1 : -1;
+        } else {
+            return aValue < bValue ? 1 : -1;
+        }
+    });
+
+    const handleSelectAgent = (agentId) => {
+        setSelectedAgents(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(agentId)) {
+                newSet.delete(agentId);
+            } else {
+                newSet.add(agentId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedAgents.size === sortedAgents.length) {
+            setSelectedAgents(new Set());
+        } else {
+            setSelectedAgents(new Set(sortedAgents.map(agent => agent.id)));
+        }
+    };
+
+    const handleBulkAction = async (action) => {
+        if (selectedAgents.size === 0) return;
+        
+        try {
+            const promises = Array.from(selectedAgents).map(agentId => {
+                switch (action) {
+                    case 'delete':
+                        return api.delete(`/agent/generate/${agentId}`);
+                    case 'sleep':
+                        return api.patch(`/agent/generate/${agentId}`, { status: 'sleeping' });
+                    case 'activate':
+                        return api.patch(`/agent/generate/${agentId}`, { status: 'active' });
+                    default:
+                        return Promise.resolve();
+                }
+            });
+            
+            await Promise.all(promises);
+            await fetchAgents();
+            setSelectedAgents(new Set());
+        } catch (error) {
+            console.error('Error performing bulk action:', error);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+                <LoadingSpinner size="large" message="Loading agents..." variant="logo" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+            {/* Header */}
+            <div className="glass border-b border-white/20 p-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <h1 className="text-3xl font-bold text-slate-800 mb-2">Agent Library</h1>
+                            <p className="text-slate-600">Manage and interact with your AI agents</p>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                            <button
+                                onClick={() => setShowBulkUpload(true)}
+                                className="btn-secondary flex items-center space-x-2"
+                            >
+                                <Squares2X2Icon className="w-5 h-5" />
+                                <span>Bulk Upload</span>
+                            </button>
+                            
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                className="btn-primary flex items-center space-x-2"
+                            >
+                                <PlusSolidIcon className="w-5 h-5" />
+                                <span>Create Agent</span>
+                            </button>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                            <FunnelIcon className="w-5 h-5 text-gray-400" />
+
+                    {/* Search and Filters */}
+                    <div className="flex flex-col lg:flex-row gap-4">
+                        {/* Search */}
+                        <div className="flex-1 relative">
+                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search agents by name, role, or location..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                            />
+                        </div>
+
+                        {/* Filters */}
+                        <div className="flex items-center space-x-3">
                             <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
+                                className="px-4 py-3 rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
                             >
                                 <option value="all">All Status</option>
                                 <option value="active">Active</option>
                                 <option value="sleeping">Sleeping</option>
                                 <option value="archived">Archived</option>
                             </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Agents Grid */}
-            {loading ? (
-                <div className="text-center py-10">
-                    <svg className="animate-spin h-10 w-10 text-primary-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p className="mt-4 text-lg text-gray-600">Loading agents...</p>
-                </div>
-            ) : filteredAgents.length === 0 ? (
-                <div className="text-center py-12">
-                    <UserGroupIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No agents found</h3>
-                    <p className="text-gray-500 mb-6">
-                        {searchTerm || statusFilter !== 'all' 
-                            ? 'Try adjusting your search or filter criteria'
-                            : 'Get started by generating your first AI agent'
-                        }
-                    </p>
-                    {!searchTerm && statusFilter === 'all' && (
-                        <div className="space-y-4">
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button 
-                                    onClick={() => setShowBulkUploader(true)}
-                                    className="text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2" 
-                                    style={{ backgroundColor: '#144835' }} 
-                                    onMouseOver={(e) => e.target.style.backgroundColor = '#0f3a2a'} 
-                                    onMouseOut={(e) => e.target.style.backgroundColor = '#144835'}
+                            <select
+                                value={`${sortBy}-${sortOrder}`}
+                                onChange={(e) => {
+                                    const [field, order] = e.target.value.split('-');
+                                    setSortBy(field);
+                                    setSortOrder(order);
+                                }}
+                                className="px-4 py-3 rounded-xl border border-slate-200 focus:border-primary-300 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                            >
+                                <option value="created_at-desc">Newest First</option>
+                                <option value="created_at-asc">Oldest First</option>
+                                <option value="name-asc">Name A-Z</option>
+                                <option value="name-desc">Name Z-A</option>
+                                <option value="role_title-asc">Role A-Z</option>
+                                <option value="role_title-desc">Role Z-A</option>
+                            </select>
+
+                            <div className="flex items-center bg-white rounded-xl border border-slate-200 p-1">
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    className={`p-2 rounded-lg transition-all duration-200 ${
+                                        viewMode === 'grid' 
+                                            ? 'bg-primary-100 text-primary-800' 
+                                            : 'text-slate-400 hover:text-slate-600'
+                                    }`}
                                 >
-                                    <SparklesIcon className="w-5 h-5" />
-                                    <span>Bulk Upload Transcripts</span>
+                                    <Squares2X2Icon className="w-5 h-5" />
                                 </button>
-                                <button 
-                                    onClick={() => setShowEnhancedCreator(true)}
-                                    className="text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2" 
-                                    style={{ backgroundColor: '#144835' }} 
-                                    onMouseOver={(e) => e.target.style.backgroundColor = '#0f3a2a'} 
-                                    onMouseOut={(e) => e.target.style.backgroundColor = '#144835'}
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-2 rounded-lg transition-all duration-200 ${
+                                        viewMode === 'list' 
+                                            ? 'bg-primary-100 text-primary-800' 
+                                            : 'text-slate-400 hover:text-slate-600'
+                                    }`}
                                 >
-                                    <DocumentTextIcon className="w-5 h-5" />
-                                    <span>Single Transcript</span>
-                                </button>
-                                <button 
-                                    onClick={handleAddTestAgent}
-                                    className="text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2" 
-                                    style={{ backgroundColor: '#144835' }} 
-                                    onMouseOver={(e) => e.target.style.backgroundColor = '#0f3a2a'} 
-                                    onMouseOut={(e) => e.target.style.backgroundColor = '#144835'}
-                                >
-                                    <PlusIcon className="w-5 h-5" />
-                                    <span>Add Test Agent</span>
+                                    <ListBulletIcon className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
-                    )}
-                </div>
-            ) : (
-                <AgentGrid 
-                    agents={filteredAgents}
-                    onSelectAgent={handleStartChat}
-                    onDeleteAgent={handleDeleteAgent}
-                    onAgentStatusChange={handleAgentStatusChange}
-                />
-            )}
-
-            {/* Stats */}
-            <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900">{agents.length}</div>
-                        <div className="text-sm text-gray-500">Total Agents</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                            {agents.filter(agent => agent.status === 'active').length}
-                        </div>
-                        <div className="text-sm text-gray-500">Active</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-yellow-600">
-                            {agents.filter(agent => agent.status === 'sleeping').length}
-                        </div>
-                        <div className="text-sm text-gray-500">Sleeping</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">
-                            {agents.filter(agent => agent.status === 'archived').length}
-                        </div>
-                        <div className="text-sm text-gray-500">Archived</div>
                     </div>
                 </div>
             </div>
 
-            {/* Bulk Transcript Uploader */}
-            <div className="mt-12">
-                <h2 className="text-h3 font-bold text-gray-900 mb-4 flex items-center">
-                    <SparklesIcon className="h-7 w-7 mr-2 text-primary-600" />
-                    Bulk Transcript Uploader
-                </h2>
-                <p className="text-body-md text-gray-600 mb-6">
-                    Upload CSV or Excel files containing multiple transcripts to generate agents in bulk.
-                </p>
-                <BulkTranscriptUploader onAgentsCreated={handleBulkAgentsCreated} />
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto p-6">
+                {/* Stats and Actions */}
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-6">
+                        <div className="text-sm text-slate-600">
+                            <span className="font-semibold text-slate-800">{sortedAgents.length}</span> agents found
+                        </div>
+                        {selectedAgents.size > 0 && (
+                            <div className="flex items-center space-x-3">
+                                <span className="text-sm text-slate-600">
+                                    <span className="font-semibold text-primary-800">{selectedAgents.size}</span> selected
+                                </span>
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={() => handleBulkAction('activate')}
+                                        className="px-3 py-1 text-xs font-medium rounded-lg bg-primary-100 text-primary-800 hover:bg-primary-200 transition-colors duration-200"
+                                    >
+                                        Activate
+                                    </button>
+                                    <button
+                                        onClick={() => handleBulkAction('sleep')}
+                                        className="px-3 py-1 text-xs font-medium rounded-lg bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors duration-200"
+                                    >
+                                        Sleep
+                                    </button>
+                                    <button
+                                        onClick={() => handleBulkAction('delete')}
+                                        className="px-3 py-1 text-xs font-medium rounded-lg bg-red-100 text-red-800 hover:bg-red-200 transition-colors duration-200"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                        <button
+                            onClick={handleSelectAll}
+                            className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors duration-200"
+                        >
+                            {selectedAgents.size === sortedAgents.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Agents Grid/List */}
+                {error ? (
+                    <div className="text-center py-12">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-red-100">
+                            <CommandLineIcon className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-2">Error Loading Agents</h3>
+                        <p className="text-slate-600 mb-4">{error}</p>
+                        <button
+                            onClick={fetchAgents}
+                            className="btn-primary"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                ) : sortedAgents.length === 0 ? (
+                    <div className="text-center py-12">
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mx-auto bg-gradient-primary">
+                            <UserGroupIcon className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-2">No Agents Found</h3>
+                        <p className="text-slate-600 mb-6">
+                            {searchQuery || filterStatus !== 'all' 
+                                ? 'Try adjusting your search or filters' 
+                                : 'Create your first AI agent to get started'
+                            }
+                        </p>
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="btn-primary flex items-center space-x-2 mx-auto"
+                        >
+                            <PlusSolidIcon className="w-5 h-5" />
+                            <span>Create Your First Agent</span>
+                        </button>
+                    </div>
+                ) : (
+                    <AgentGrid
+                        agents={sortedAgents}
+                        onSelectAgent={handleSelectAgent}
+                        onDeleteAgent={handleDeleteAgent}
+                        onAgentStatusChange={handleAgentStatusChange}
+                        selectedAgents={selectedAgents}
+                        viewMode={viewMode}
+                    />
+                )}
             </div>
 
-            {/* Agent Creator Modal */}
-            {showEnhancedCreator && (
-                <EnhancedAgentCreator 
-                    onClose={() => setShowEnhancedCreator(false)} 
-                    onAgentCreated={handleAgentCreated} 
-                />
-            )}
+            {/* Modals */}
+            <AnimatePresence>
+                {showCreateModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            <EnhancedAgentCreator
+                                onClose={() => setShowCreateModal(false)}
+                                onSuccess={handleCreateAgent}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
 
-            {/* Persona Chat Modal */}
-            {showChat && selectedAgentForChat && (
-                <PersonaChat 
-                    agent={selectedAgentForChat} 
-                    onClose={() => setShowChat(false)} 
-                />
-            )}
+                {showBulkUpload && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            <BulkTranscriptUploader
+                                onClose={() => setShowBulkUpload(false)}
+                                onSuccess={handleBulkUpload}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

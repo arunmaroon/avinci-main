@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* Import Design System */
-@import './styles/design-system.css';
+@import './styles/uber-design-system.css';
 
 @layer base {
   body {
