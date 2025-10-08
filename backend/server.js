@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 const { createTables, redis } = require('./models/database');
 require('dotenv').config();
 
@@ -11,6 +12,38 @@ const PORT = process.env.PORT || 9001;
 if (!fs.existsSync('uploads')) {
     fs.mkdirSync('uploads');
 }
+if (!fs.existsSync('uploads/ui')) {
+    fs.mkdirSync('uploads/ui');
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/ui/');
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    },
+    fileFilter: function (req, file, cb) {
+        const allowedTypes = /jpeg|jpg|png|pdf/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('Only image files (PNG, JPG, JPEG) and PDF files are allowed'));
+        }
+    }
+});
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));

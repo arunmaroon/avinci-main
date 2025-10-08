@@ -1,10 +1,26 @@
-# Sirius - AI Intelligence Platform
+# Sirius v2.02 - Enhanced AI Intelligence Platform
 
-A comprehensive AI-powered platform built with modern technologies for intelligent conversations, document processing, and data analysis.
+A comprehensive AI-powered platform built with modern technologies for intelligent conversations, document processing, and data analysis. **Now with enhanced chat memory, detailed UI feedback, and usability testing capabilities.**
 
-## 🚀 Features
+## ✨ New Features in v2.02
 
-- **AI-Powered Chat**: GPT-4o integration for intelligent conversations
+- **🧠 Chat Memory**: Conversations retain context and uploaded UI images
+- **🎨 Detailed UI Feedback**: Get specific, actionable design critiques (spacing, alignment, button sizes)
+- **🧪 Usability Testing**: Run task-based usability tests with persona-specific pain points
+- **🎯 Airbnb/Uber Style UI**: Clean, intuitive, bold design system
+- **📱 Mobile-First**: Responsive design with accessibility features
+
+## 🔧 Improvements in v2.02
+
+- **🔧 Fixed API Endpoints**: Resolved 404 errors in chat functionality
+- **🧠 Separate Chat History**: Each agent maintains independent conversation memory
+- **🎯 Enhanced Error Handling**: Non-blocking analytics errors with retry functionality
+- **⚡ Improved Performance**: Optimized API calls and state management
+- **🛠️ Better Developer Experience**: Cleaner code structure and reduced compilation warnings
+
+## 🚀 Core Features
+
+- **AI-Powered Chat**: GPT-4o integration for intelligent conversations with memory
 - **Document Processing**: Upload, process, and search documents with vector embeddings
 - **Audio Transcription**: Whisper integration for speech-to-text
 - **Vector Search**: Pinecone/Weaviate integration for semantic search
