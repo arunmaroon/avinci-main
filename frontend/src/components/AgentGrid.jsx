@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, Badge, Avatar, Button } from './design-system';
-import DetailedPersonaCard from './DetailedPersonaCard';
+import EnhancedDetailedPersonaCard from './EnhancedDetailedPersonaCard';
 import PasswordConfirmation from './PasswordConfirmation';
 import api from '../utils/api';
 
@@ -42,9 +42,9 @@ const AgentGrid = ({ agents, onSelectAgent, onDeleteAgent, onAgentStatusChange }
     setShowDetailView(true);
     
     try {
-      // Fetch detailed persona data
-      const response = await api.get(`/agent/generate/detailed/${agent.id}`);
-      setDetailedPersona(response.data.persona);
+      // Fetch detailed persona data using the correct endpoint
+      const response = await api.get(`/personas/${agent.id}`);
+      setDetailedPersona(response.data.agent);
     } catch (error) {
       console.error('Error fetching detailed persona:', error);
       // Fallback to basic agent data
@@ -327,7 +327,7 @@ const AgentGrid = ({ agents, onSelectAgent, onDeleteAgent, onAgentStatusChange }
                       <p className="ml-4 text-gray-600">Loading detailed persona...</p>
                     </div>
                   ) : detailedPersona ? (
-                    <DetailedPersonaCard persona={detailedPersona} />
+                    <EnhancedDetailedPersonaCard persona={detailedPersona} />
                   ) : (
                     <div className="text-center py-12 text-gray-500">
                       <p>Failed to load detailed persona data.</p>

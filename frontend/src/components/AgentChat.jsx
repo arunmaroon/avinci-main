@@ -7,36 +7,25 @@ import {
     XMarkIcon
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
-import useChatStore from '../stores/chatStore';
 
 const AgentChat = ({ agentId, agentName, onClose }) => {
-    const {
-        chatHistory,
-        isLoading,
-        setCurrentAgent,
-        sendMessage,
-        appendMessage,
-        clearHistory
-    } = useChatStore();
-    
+    const [messages, setMessages] = useState([]);
     const [inputMessage, setInputMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [selectedAgent, setSelectedAgent] = useState(null);
-    const [availableAgents, setAvailableAgents] = useState([]);
     const [chatThemes, setChatThemes] = useState([]);
-    const [showAgentSelector, setShowAgentSelector] = useState(false);
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
         if (agentId) {
-            setCurrentAgent(agentId);
             fetchAgent(agentId);
         }
-        fetchAvailableAgents();
-    }, [agentId, setCurrentAgent]);
+    }, [agentId]);
 
     useEffect(() => {
         scrollToBottom();
-    }, [chatHistory]);
+    }, [messages]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -44,45 +33,63 @@ const AgentChat = ({ agentId, agentName, onClose }) => {
 
     const fetchAgent = async (id) => {
         try {
-            const response = await api.get(`/agent/generate/${id}`);
+            const response = await api.get(`/enhanced-chat/personas/${id}`);
             setSelectedAgent(response.data.agent);
         } catch (error) {
             console.error('Error fetching agent:', error);
+            setError('Failed to load agent');
         }
     };
 
-    const fetchAvailableAgents = async () => {
-        try {
-            const response = await api.get('/agent/generate');
-            setAvailableAgents(response.data.agents);
-        } catch (error) {
-            console.error('Error fetching agents:', error);
-        }
-    };
+    const sendMessage = async () => {
+        if (!inputMessage.trim() || isLoading || !selectedAgent) return;
 
-    const handleSendMessage = async () => {
-        if (!inputMessage.trim() || !selectedAgent) return;
-
-        const message = inputMessage;
+        const userMessage = inputMessage.trim();
         setInputMessage('');
-        
-        // Use the chat store's sendMessage function
-        await sendMessage(message);
-        
-        // Extract themes from the conversation
-        if (chatHistory.length >= 2) {
-            const lastUserMessage = chatHistory[chatHistory.length - 2];
-            const lastAgentMessage = chatHistory[chatHistory.length - 1];
-            if (lastUserMessage.role === 'user' && lastAgentMessage.role === 'agent') {
-                extractThemes(lastUserMessage.content, lastAgentMessage.content);
+        setError(null);
+
+        // Add user message
+        setMessages(prev => [...prev, { 
+            role: 'user', 
+            content: userMessage, 
+            timestamp: new Date() 
+        }]);
+        setIsLoading(true);
+
+        try {
+            const response = await api.post('/ai/generate', {
+                agentId: selectedAgent.id,
+                query: userMessage,
+                chat_history: messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                }))
+            });
+
+            if (response.data && response.data.success && response.data.response) {
+                const agentResponse = response.data.response;
+                setMessages(prev => [...prev, { 
+                    role: 'agent', 
+                    content: agentResponse, 
+                    timestamp: new Date() 
+                }]);
+                
+                // Extract themes
+                extractThemes(userMessage, agentResponse);
+            } else {
+                throw new Error('Invalid response from server');
             }
+        } catch (err) {
+            console.error('Error sending message:', err);
+            setError('Sorry, I encountered an error. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const extractThemes = (userMessage, agentResponse) => {
         const themes = [];
         
-        // Simple theme extraction based on keywords
         const fintechKeywords = ['banking', 'payment', 'finance', 'money', 'transaction', 'account', 'card'];
         const techKeywords = ['app', 'software', 'technology', 'digital', 'online', 'mobile'];
         const painKeywords = ['problem', 'issue', 'difficult', 'frustrated', 'confused', 'stuck'];
@@ -102,32 +109,6 @@ const AgentChat = ({ agentId, agentName, onClose }) => {
         setChatThemes(prev => [...new Set([...prev, ...themes])]);
     };
 
-    const handleImageUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        try {
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('agentId', selectedAgent.id);
-
-            const response = await api.post('/api/agent/feedback', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            // Add feedback message to chat history
-            appendMessage({
-                role: 'agent',
-                content: response.data.feedback,
-                ui_path: response.data.ui_path
-            });
-        } catch (error) {
-            console.error('Error uploading image:', error);
-        }
-    };
-
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -135,112 +116,45 @@ const AgentChat = ({ agentId, agentName, onClose }) => {
         }
     };
 
+    if (error) {
+        return (
+            <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <UserIcon className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Error</h2>
+                    <p className="text-gray-600 mb-6">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex h-full bg-gray-50">
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col">
-                {/* Header */}
-                <div className="bg-white border-b border-gray-200 p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            {selectedAgent && (
-                                <>
-                                    <img
-                                        src={selectedAgent.avatar_url}
-                                        alt={selectedAgent.name}
-                                        className="w-10 h-10 rounded-full object-cover"
-                                    />
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-gray-900">
-                                            {selectedAgent.name}
-                                        </h2>
-                                        <p className="text-sm text-gray-500">
-                                            {selectedAgent.persona?.occupation || 'AI Agent'}
-                                            {chatHistory.length > 0 && (
-                                                <span className="ml-2 text-blue-600">
-                                                    • {chatHistory.length} messages
-                                                </span>
-                                            )}
-                                        </p>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            {chatHistory.length > 0 && (
-                                <button
-                                    onClick={() => {
-                                        if (window.confirm('Clear chat history for this agent?')) {
-                                            clearHistory();
-                                        }
-                                    }}
-                                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                                    title="Clear Chat History"
-                                >
-                                    <XMarkIcon className="w-5 h-5" />
-                                </button>
-                            )}
-                            <button
-                                onClick={() => setShowAgentSelector(!showAgentSelector)}
-                                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-                                title="Select Agent"
-                            >
-                                <UserIcon className="w-5 h-5" />
-                            </button>
-                            {onClose && (
-                                <button
-                                    onClick={onClose}
-                                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Agent Selector Dropdown */}
-                {showAgentSelector && (
-                    <div className="bg-white border-b border-gray-200 p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {availableAgents.map(agent => (
-                                <button
-                                    key={agent.id}
-                                    onClick={() => {
-                                        fetchAgent(agent.id);
-                                        setShowAgentSelector(false);
-                                    }}
-                                    className={`p-3 rounded-lg border text-left transition-colors ${
-                                        selectedAgent?.id === agent.id
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    <div className="flex items-center space-x-3">
-                                        <img
-                                            src={agent.avatar_url}
-                                            alt={agent.name}
-                                            className="w-8 h-8 rounded-full object-cover"
-                                        />
-                                        <div>
-                                            <p className="font-medium text-gray-900">{agent.name}</p>
-                                            <p className="text-sm text-gray-500">{agent.occupation}</p>
-                                        </div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Messages */}
+                {/* Chat Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {messages.length === 0 && (
+                        <div className="text-center text-gray-500 py-8">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <UserIcon className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <p>Start a conversation with {selectedAgent?.name || agentName}</p>
+                        </div>
+                    )}
+
                     <AnimatePresence>
-                        {chatHistory.map((message) => (
+                        {messages.map((message, index) => (
                             <motion.div
-                                key={message.id}
+                                key={index}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
@@ -249,100 +163,74 @@ const AgentChat = ({ agentId, agentName, onClose }) => {
                                 <div
                                     className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                                         message.role === 'user'
-                                            ? 'bg-blue-500 text-white'
-                                            : message.role === 'error'
-                                            ? 'bg-red-100 text-red-800'
+                                            ? 'bg-blue-600 text-white'
                                             : 'bg-white text-gray-900 border border-gray-200'
                                     }`}
                                 >
                                     <p className="text-sm">{message.content}</p>
-                                    {message.isImageFeedback && (
-                                        <p className="text-xs mt-1 text-gray-500 italic">
-                                            (Image feedback)
-                                        </p>
-                                    )}
+                                    <p className="text-xs opacity-70 mt-1">
+                                        {new Date(message.timestamp).toLocaleTimeString()}
+                                    </p>
                                 </div>
                             </motion.div>
                         ))}
                     </AnimatePresence>
-                    
+
                     {isLoading && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex justify-start"
-                        >
-                            <div className="bg-white text-gray-900 border border-gray-200 px-4 py-2 rounded-lg">
-                                <div className="flex items-center space-x-2">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                                    <span className="text-sm">Thinking...</span>
+                        <div className="flex justify-start">
+                            <div className="bg-white text-gray-900 max-w-xs lg:max-w-md px-4 py-2 rounded-lg border border-gray-200">
+                                <div className="flex space-x-1">
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     )}
-                    
+
                     <div ref={messagesEndRef} />
                 </div>
 
                 {/* Input Area */}
                 <div className="bg-white border-t border-gray-200 p-4">
-                    <div className="flex items-end space-x-2">
-                        <div className="flex-1">
-                            <textarea
-                                value={inputMessage}
-                                onChange={(e) => setInputMessage(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                placeholder="Type your message..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                rows={1}
-                                disabled={!selectedAgent || isLoading}
-                            />
-                        </div>
-                        <div className="flex items-center space-x-1">
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageUpload}
-                                className="hidden"
-                                id="image-upload"
-                                disabled={!selectedAgent || isLoading}
-                            />
-                            <label
-                                htmlFor="image-upload"
-                                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer disabled:opacity-50"
-                                title="Upload Image"
-                            >
-                                <PhotoIcon className="w-5 h-5" />
-                            </label>
-                            <button
-                                onClick={handleSendMessage}
-                                disabled={!inputMessage.trim() || !selectedAgent || isLoading}
-                                className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <PaperAirplaneIcon className="w-5 h-5" />
-                            </button>
-                        </div>
+                    <div className="flex space-x-2">
+                        <input
+                            type="text"
+                            value={inputMessage}
+                            onChange={(e) => setInputMessage(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Type your message..."
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={isLoading}
+                        />
+                        <button
+                            onClick={sendMessage}
+                            disabled={!inputMessage.trim() || isLoading}
+                            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <PaperAirplaneIcon className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Theme Sidebar */}
+            {/* Chat Themes Sidebar */}
             <div className="w-64 bg-white border-l border-gray-200 p-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Chat Themes</h3>
-                <div className="space-y-2">
-                    {chatThemes.length > 0 ? (
-                        chatThemes.map((theme, index) => (
+                {chatThemes.length > 0 ? (
+                    <div className="space-y-2">
+                        {chatThemes.map((theme, index) => (
                             <div
                                 key={index}
-                                className="px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700"
+                                className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium"
                             >
                                 {theme}
                             </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-gray-500 italic">No themes detected yet</p>
-                    )}
-                </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-500 text-sm">No themes detected yet</p>
+                )}
             </div>
         </div>
     );

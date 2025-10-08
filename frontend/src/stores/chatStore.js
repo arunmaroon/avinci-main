@@ -45,7 +45,11 @@ const useChatStore = create(
 
             sendMessage: async (message, ui_path = null) => {
                 const { currentAgentId, chatHistory } = get();
-                if (!currentAgentId) return;
+                
+                if (!currentAgentId) {
+                    console.error('No currentAgentId set!');
+                    return;
+                }
 
                 // Add user message immediately
                 get().appendMessage({
@@ -57,19 +61,24 @@ const useChatStore = create(
                 set({ isLoading: true, error: null });
 
                 try {
-                    const response = await api.post('/api/ai/generate', {
+                    const response = await api.post('/ai/generate', {
                         agentId: currentAgentId,
                         query: message,
                         ui_path,
                         chat_history: chatHistory
                     });
 
-                    // Add agent response
-                    get().appendMessage({
-                        role: 'agent',
-                        content: response.data.response,
-                        ui_path
-                    });
+                    // Check if response is successful
+                    if (response.data && response.data.success && response.data.response) {
+                        // Add agent response
+                        get().appendMessage({
+                            role: 'agent',
+                            content: response.data.response,
+                            ui_path
+                        });
+                    } else {
+                        throw new Error('Invalid response format');
+                    }
 
                     set({ isLoading: false });
 

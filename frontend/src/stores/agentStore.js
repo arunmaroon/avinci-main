@@ -14,9 +14,9 @@ const useAgentStore = create((set, get) => ({
     fetchAgents: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get('/api/agent/generate');
+            const response = await api.get('/enhanced-chat/personas');
             set({ 
-                agents: response.data.agents,
+                agents: response.data.personas,
                 isLoading: false 
             });
         } catch (error) {

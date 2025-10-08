@@ -13,8 +13,8 @@ const TestEnhancedChat = () => {
 
     const fetchAgents = async () => {
         try {
-            const response = await api.get('/agents');
-            setAgents(response.data.slice(0, 3)); // Get first 3 agents for testing
+            const response = await api.get('/enhanced-chat/personas');
+            setAgents(response.data.personas.slice(0, 3)); // Get first 3 agents for testing
         } catch (error) {
             console.error('Error fetching agents:', error);
         } finally {

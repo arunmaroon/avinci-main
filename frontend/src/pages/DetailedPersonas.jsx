@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DetailedPersonaCard from '../components/DetailedPersonaCard';
+import EnhancedDetailedPersonaCard from '../components/EnhancedDetailedPersonaCard';
 import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 
@@ -18,9 +18,9 @@ const DetailedPersonas = () => {
     const fetchDetailedPersonas = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/api/agent/generate/detailed');
+            const response = await api.get('/enhanced-chat/personas');
             if (response.data.success) {
-                setPersonas(response.data.agents);
+                setPersonas(response.data.personas);
             } else {
                 setError('Failed to fetch detailed personas');
             }
@@ -33,11 +33,11 @@ const DetailedPersonas = () => {
     };
 
     const filteredPersonas = personas.filter(persona => {
-        const matchesSearch = persona.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            persona.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            persona.location.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = persona.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            persona.occupation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            persona.location?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const matchesStatus = filterStatus === 'all' || persona.status === filterStatus;
+        const matchesStatus = filterStatus === 'all' || persona.is_active === true;
         
         return matchesSearch && matchesStatus;
     });
@@ -141,16 +141,10 @@ const DetailedPersonas = () => {
                     <div className="space-y-8">
                         {filteredPersonas.map((persona) => (
                             <div key={persona.id} className="relative">
-                                <DetailedPersonaCard persona={persona} />
+                                <EnhancedDetailedPersonaCard persona={persona} />
                                 
                                 {/* Action Buttons */}
                                 <div className="absolute top-4 right-4 flex space-x-2">
-                                    <button
-                                        onClick={() => setSelectedPersona(selectedPersona?.id === persona.id ? null : persona)}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                                    >
-                                        {selectedPersona?.id === persona.id ? 'Hide Details' : 'View Details'}
-                                    </button>
                                     <button
                                         onClick={() => window.open(`/agent-chat/${persona.id}`, '_blank')}
                                         className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"

@@ -20,8 +20,8 @@ const EnhancedChatPage = () => {
     const fetchAgent = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/agents/${agentId}`);
-            setAgent(response.data);
+            const response = await api.get(`/enhanced-chat/personas/${agentId}`);
+            setAgent(response.data.agent);
         } catch (err) {
             console.error('Error fetching agent:', err);
             setError('Failed to load agent');

@@ -60,12 +60,12 @@ router.get('/', async (req, res) => {
             // Return short view for card rendering
             const query = `
                 SELECT 
-                    id, name, avatar_url, role_title, company, location, quote,
+                    id, name, avatar_url, occupation as role_title, employment_type as company, location, quote,
                     objectives, fears, apprehensions, tech_savviness, 
-                    domain_literacy, communication_style, status, demographics,
+                    domain_literacy, communication_style, is_active as status, demographics,
                     created_at
-                FROM agents 
-                WHERE status != 'archived'
+                FROM ai_agents 
+                WHERE is_active = true
                 ORDER BY created_at DESC
             `;
             
@@ -101,7 +101,7 @@ router.get('/', async (req, res) => {
             res.json(shortAgents);
         } else {
             // Return full view (default)
-            const query = 'SELECT * FROM agents WHERE status != "archived" ORDER BY created_at DESC';
+            const query = 'SELECT * FROM ai_agents WHERE is_active = true ORDER BY created_at DESC';
             const result = await pool.query(query);
             const fullAgents = result.rows.map(agent => promptBuilder.buildFullProfile(agent));
             res.json(fullAgents);
@@ -120,7 +120,7 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         
-        const query = 'SELECT * FROM agents WHERE id = $1';
+        const query = 'SELECT * FROM ai_agents WHERE id = $1';
         const result = await pool.query(query, [id]);
         
         if (result.rows.length === 0) {
@@ -199,7 +199,7 @@ router.post('/', async (req, res) => {
         console.log(`Agent created successfully: ${agentId}`);
         
         // Return full agent data
-        const query = 'SELECT * FROM agents WHERE id = $1';
+        const query = 'SELECT * FROM ai_agents WHERE id = $1';
         const result = await pool.query(query, [agentId]);
         const agent = result.rows[0];
         const fullAgent = promptBuilder.buildFullProfile(agent);
@@ -272,44 +272,44 @@ async function saveAgent(personaData) {
         const agentId = uuidv4();
         
         const query = `
-            INSERT INTO agents (
-                name, role_title, company, location, demographics, traits, behaviors,
+            INSERT INTO ai_agents (
+                name, occupation, employment_type, location, demographics, traits, behaviors,
                 objectives, needs, fears, apprehensions, motivations, frustrations,
                 domain_literacy, tech_savviness, communication_style, speech_patterns,
                 vocabulary_profile, emotional_profile, cognitive_profile, knowledge_bounds,
-                quote, master_system_prompt, status, source_meta, avatar_url
+                quote, master_system_prompt, is_active, source_meta, avatar_url
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
             ) RETURNING id
         `;
 
         const values = [
-            personaData.name,
-            personaData.role_title || 'AI Persona',
-            personaData.company || 'Unknown',
-            personaData.location || 'Unknown',
-            JSON.stringify(personaData.demographics || {}),
-            JSON.stringify(personaData.traits || {}),
-            JSON.stringify(personaData.behaviors || {}),
-            personaData.objectives || [],
-            personaData.needs || [],
-            personaData.fears || [],
-            personaData.apprehensions || [],
-            personaData.motivations || [],
-            personaData.frustrations || [],
-            JSON.stringify(personaData.domain_literacy || {}),
-            personaData.tech_savviness || 'medium',
-            JSON.stringify(personaData.communication_style || {}),
-            JSON.stringify(personaData.speech_patterns || {}),
-            JSON.stringify(personaData.vocabulary_profile || {}),
-            JSON.stringify(personaData.emotional_profile || {}),
-            JSON.stringify(personaData.cognitive_profile || {}),
-            JSON.stringify(personaData.knowledge_bounds || {}),
-            personaData.quote || '',
-            personaData.master_system_prompt || '',
-            personaData.status || 'active',
-            JSON.stringify(personaData.source_meta || {}),
-            personaData.avatar_url || ''
+            personaData.name,                                    // 1
+            personaData.role_title || 'AI Persona',             // 2
+            personaData.company || 'Unknown',                   // 3
+            personaData.location || 'Unknown',                  // 4
+            JSON.stringify(personaData.demographics || {}),     // 5
+            JSON.stringify(personaData.traits || {}),           // 6
+            JSON.stringify(personaData.behaviors || {}),        // 7
+            personaData.objectives || [],                       // 8
+            personaData.needs || [],                            // 9
+            personaData.fears || [],                            // 10
+            personaData.apprehensions || [],                    // 11
+            personaData.motivations || [],                      // 12
+            personaData.frustrations || [],                     // 13
+            JSON.stringify(personaData.domain_literacy || {}),  // 14
+            personaData.tech_savviness || 'medium',             // 15
+            JSON.stringify(personaData.communication_style || {}), // 16
+            JSON.stringify(personaData.speech_patterns || {}),  // 17
+            JSON.stringify(personaData.vocabulary_profile || {}), // 18
+            JSON.stringify(personaData.emotional_profile || {}), // 19
+            JSON.stringify(personaData.cognitive_profile || {}), // 20
+            JSON.stringify(personaData.knowledge_bounds || {}), // 21
+            personaData.quote || '',                            // 22
+            personaData.master_system_prompt || '',             // 23
+            (personaData.status === 'active'),                  // 24 - convert to boolean
+            JSON.stringify(personaData.source_meta || {}),      // 25
+            personaData.avatar_url || ''                        // 26
         ];
 
         const result = await pool.query(query, values);
@@ -396,7 +396,7 @@ router.post('/pdf-upload', upload.single('file'), async (req, res) => {
         console.log(`Agent created successfully from PDF: ${agentId}`);
         
         // Return agent data
-        const query = 'SELECT * FROM agents WHERE id = $1';
+        const query = 'SELECT * FROM ai_agents WHERE id = $1';
         const result = await pool.query(query, [agentId]);
         const agent = result.rows[0];
         const fullAgent = promptBuilder.buildFullProfile(agent);

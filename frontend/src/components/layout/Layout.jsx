@@ -23,9 +23,7 @@ const Layout = ({ children, user, onLogout }) => {
             { name: 'Dashboard', href: '/', icon: HomeIcon },
             { name: 'Generate Agents', href: '/generate', icon: PlusCircleIcon },
             { name: 'Agent Library', href: '/agents', icon: UserGroupIcon },
-            { name: 'Detailed Personas', href: '/detailed-personas', icon: UserCircleIcon },
-            { name: 'Chat Interface', href: '/chat', icon: ChatBubbleLeftRightIcon },
-            { name: 'Design Feedback', href: '/design-feedback', icon: DocumentTextIcon },
+            { name: 'Usability Test', href: '/design-feedback', icon: DocumentTextIcon },
         ];
 
     return (

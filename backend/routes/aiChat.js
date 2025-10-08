@@ -269,7 +269,7 @@ router.post('/feedback', async (req, res) => {
  */
 async function getAgentById(agentId) {
     try {
-        const query = 'SELECT * FROM agents WHERE id = $1';
+        const query = 'SELECT * FROM ai_agents WHERE id = $1 AND is_active = true';
         const result = await pool.query(query, [agentId]);
         return result.rows[0];
     } catch (error) {

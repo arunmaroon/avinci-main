@@ -26,8 +26,8 @@ const Dashboard = () => {
 
     const fetchAgents = async () => {
         try {
-            const response = await api.get('/agent/generate');
-            setAgents(response.data.agents);
+            const response = await api.get('/enhanced-chat/personas');
+            setAgents(response.data.personas);
         } catch (error) {
             console.error('Error fetching agents:', error);
         }

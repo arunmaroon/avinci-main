@@ -23,11 +23,11 @@ router.get('/', async (req, res) => {
             // Short view - minimal fields for card rendering
             query = `
                 SELECT 
-                    id, name, avatar_url, role_title, company, location, quote,
+                    id, name, avatar_url, occupation as role_title, employment_type as company, location, quote,
                     objectives, apprehensions, tech_savviness, domain_literacy,
-                    communication_style, status, created_at
-                FROM agents 
-                WHERE status != 'archived'
+                    communication_style, is_active as status, created_at
+                FROM ai_agents 
+                WHERE is_active = true
                 ORDER BY created_at DESC
                 LIMIT $1 OFFSET $2
             `;
@@ -35,8 +35,8 @@ router.get('/', async (req, res) => {
         } else {
             // Full view - all fields
             query = `
-                SELECT * FROM agents 
-                WHERE status != 'archived'
+                SELECT * FROM ai_agents 
+                WHERE is_active = true
                 ORDER BY created_at DESC
                 LIMIT $1 OFFSET $2
             `;
