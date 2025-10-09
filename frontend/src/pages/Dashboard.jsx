@@ -38,10 +38,12 @@ const Dashboard = () => {
         try {
             const params = selectedAgent ? { agentId: selectedAgent } : {};
             const response = await api.get('/analytics/insights', { params });
-            setAnalytics(response.data.insights);
+            console.log('Analytics response:', response.data);
+            setAnalytics(response.data.insights || {});
         } catch (error) {
             console.error('Error fetching analytics:', error);
             setError('Failed to load analytics');
+            setAnalytics({});
         } finally {
             setLoading(false);
         }
@@ -101,22 +103,26 @@ const Dashboard = () => {
         >
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Sentiment Analysis</h3>
             <div className="space-y-4">
-                {Object.entries(sentiment.distribution).map(([type, percentage]) => (
-                    <div key={type} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full mr-3 ${
-                                type === 'positive' ? 'bg-green-500' :
-                                type === 'negative' ? 'bg-red-500' : 'bg-gray-500'
-                            }`} />
-                            <span className="capitalize text-gray-700">{type}</span>
+                {sentiment?.distribution && typeof sentiment.distribution === 'object' ? 
+                    Object.entries(sentiment.distribution).map(([type, percentage]) => (
+                        <div key={type} className="flex items-center justify-between">
+                            <div className="flex items-center">
+                                <div className={`w-3 h-3 rounded-full mr-3 ${
+                                    type === 'positive' ? 'bg-green-500' :
+                                    type === 'negative' ? 'bg-red-500' : 'bg-gray-500'
+                                }`} />
+                                <span className="capitalize text-gray-700">{type}</span>
+                            </div>
+                            <span className="font-semibold text-gray-900">{percentage}%</span>
                         </div>
-                        <span className="font-semibold text-gray-900">{percentage}%</span>
-                    </div>
-                ))}
+                    )) : (
+                        <p className="text-gray-500">No sentiment data available</p>
+                    )
+                }
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-600">
-                    Average Score: <span className="font-semibold">{sentiment.averageScore}</span>
+                    Average Score: <span className="font-semibold">{sentiment?.averageScore || 'N/A'}</span>
                 </p>
             </div>
         </motion.div>
@@ -209,36 +215,6 @@ const Dashboard = () => {
                     </div>
                 )}
 
-                {/* New Features Banner */}
-                <div className="mb-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-2xl font-bold mb-2 flex items-center">
-                                <SparklesIcon className="h-6 w-6 mr-2" />
-                                Sirius v0.2 - Enhanced Features Available!
-                            </h2>
-                            <p className="text-blue-100 mb-4">
-                                Test the new chat memory, UI feedback, and usability testing capabilities
-                            </p>
-                            <Link 
-                                to="/test-enhanced"
-                                className="inline-flex items-center px-6 py-3 bg-white text-blue-600 rounded-full font-semibold hover:bg-blue-50 transition-colors"
-                            >
-                                Try Enhanced Chat
-                            </Link>
-                        </div>
-                        <div className="hidden md:block">
-                            <div className="text-right text-blue-100">
-                                <div className="text-sm">New Features:</div>
-                                <div className="text-xs space-y-1">
-                                    <div>🧠 Chat Memory</div>
-                                    <div>🎨 UI Feedback</div>
-                                    <div>🧪 Usability Testing</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 {analytics ? (
                     <>
@@ -275,18 +251,20 @@ const Dashboard = () => {
                             <div>
                                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Conversation Themes</h2>
                                 <div className="space-y-4">
-                                    {analytics.themes?.themes?.map((theme, index) => (
+                                {analytics.themes?.themes && Array.isArray(analytics.themes.themes) ? 
+                                    analytics.themes.themes.map((theme, index) => (
                                         <ThemeCard
                                             key={index}
-                                            theme={theme.name}
-                                            percentage={theme.percentage}
-                                            count={theme.count}
+                                            theme={theme?.name || 'Unknown'}
+                                            percentage={theme?.percentage || 0}
+                                            count={theme?.count || 0}
                                         />
-                                    )) || (
+                                    )) : (
                                         <div className="text-center py-8 text-gray-500">
                                             No theme data available
                                         </div>
-                                    )}
+                                    )
+                                }
                                 </div>
                             </div>
 
@@ -304,15 +282,15 @@ const Dashboard = () => {
                         </div>
 
                         {/* Common Phrases */}
-                        {analytics.themes?.commonPhrases && analytics.themes.commonPhrases.length > 0 && (
+                        {analytics.themes?.commonPhrases && Array.isArray(analytics.themes.commonPhrases) && analytics.themes.commonPhrases.length > 0 && (
                             <div className="mt-8">
                                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Common Phrases</h2>
                                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {analytics.themes.commonPhrases.slice(0, 10).map((phrase, index) => (
                                             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                                <span className="text-gray-700 truncate">{phrase.phrase}</span>
-                                                <span className="text-sm text-gray-500 ml-2">{phrase.count}</span>
+                                                <span className="text-gray-700 truncate">{phrase?.phrase || 'Unknown phrase'}</span>
+                                                <span className="text-sm text-gray-500 ml-2">{phrase?.count || 0}</span>
                                             </div>
                                         ))}
                                     </div>

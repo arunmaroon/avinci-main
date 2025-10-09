@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../utils/api';
 
 const DocumentUpload = ({ onGenerateAgents }) => {
   const [numberOfAgents, setNumberOfAgents] = useState(5);
@@ -103,7 +104,7 @@ const DocumentUpload = ({ onGenerateAgents }) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (uploadedFiles.length === 0) {
       alert('Please upload at least one document before generating agents.');
       return;
@@ -118,16 +119,40 @@ const DocumentUpload = ({ onGenerateAgents }) => {
       files: uploadedFiles
     });
     
-    // Trigger the generation process
-    if (onGenerateAgents) {
-      onGenerateAgents({
-        numberOfAgents,
-        techSavviness,
-        englishLevel,
-        fintechSavviness,
-        demographicDiversity,
-        files: uploadedFiles
+    try {
+      // Upload each file to the backend
+      const uploadPromises = uploadedFiles.map(async (file) => {
+        const formData = new FormData();
+        formData.append('transcript', file);
+        
+        const response = await api.post('/transcript-upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        
+        return response.data;
       });
+      
+      // Wait for all uploads to complete
+      const results = await Promise.all(uploadPromises);
+      console.log('Upload results:', results);
+      
+      // Trigger the generation process with results
+      if (onGenerateAgents) {
+        onGenerateAgents({
+          numberOfAgents,
+          techSavviness,
+          englishLevel,
+          fintechSavviness,
+          demographicDiversity,
+          files: uploadedFiles,
+          uploadResults: results
+        });
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert('Error uploading files. Please try again.');
     }
   };
 

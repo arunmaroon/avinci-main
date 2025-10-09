@@ -12,6 +12,8 @@ const useChatStore = create(
             error: null,
             uiContext: null, // Current UI context for feedback
             usabilityResults: null,
+            chatSessions: {}, // Object to store multiple chat sessions
+            currentSessionId: null, // Current active session ID
 
             // Actions
             setCurrentAgent: (agentId) => {
@@ -98,20 +100,31 @@ const useChatStore = create(
 
             uploadUI: async (imageFile) => {
                 const { currentAgentId } = get();
-                if (!currentAgentId) return;
+                if (!currentAgentId) {
+                    console.error('No currentAgentId set for UI upload');
+                    set({ 
+                        error: 'No agent selected for UI upload',
+                        isLoading: false 
+                    });
+                    return;
+                }
 
-                set({ isLoading: true });
+                set({ isLoading: true, error: null });
 
                 try {
                     const formData = new FormData();
                     formData.append('image', imageFile);
                     formData.append('agentId', currentAgentId);
 
-                    const response = await api.post('/api/ai/upload-ui', formData, {
+                    console.log('Uploading UI for agent:', currentAgentId);
+
+                    const response = await api.post('/ai/upload-ui', formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },
                     });
+
+                    console.log('UI upload response:', response.data);
 
                     const ui_path = response.data.ui_path;
                     set({ uiContext: ui_path });
@@ -127,8 +140,9 @@ const useChatStore = create(
 
                 } catch (error) {
                     console.error('Error uploading UI:', error);
+                    const errorMessage = error.response?.data?.error || error.message || 'Failed to upload UI image';
                     set({ 
-                        error: error.message,
+                        error: errorMessage,
                         isLoading: false 
                     });
                 }
@@ -238,13 +252,112 @@ const useChatStore = create(
                     uiContext: null,
                     usabilityResults: null
                 });
+            },
+
+            // Session Management
+            startNewSession: (agentId) => {
+                const sessionId = `session_${Date.now()}_${agentId}`;
+                set({
+                    currentSessionId: sessionId,
+                    currentAgentId: agentId,
+                    chatHistory: [],
+                    uiContext: null,
+                    usabilityResults: null
+                });
+                return sessionId;
+            },
+
+            endCurrentChat: () => {
+                const { currentSessionId, chatHistory, currentAgentId } = get();
+                if (currentSessionId && chatHistory.length > 0) {
+                    // Save current session
+                    set(state => ({
+                        chatSessions: {
+                            ...state.chatSessions,
+                            [currentSessionId]: {
+                                agentId: currentAgentId,
+                                chatHistory: [...chatHistory],
+                                endedAt: new Date().toISOString(),
+                                messageCount: chatHistory.length
+                            }
+                        },
+                        currentSessionId: null,
+                        currentAgentId: null,
+                        chatHistory: [],
+                        uiContext: null,
+                        usabilityResults: null
+                    }));
+                }
+            },
+
+            loadSession: (sessionId) => {
+                const { chatSessions } = get();
+                const session = chatSessions[sessionId];
+                if (session) {
+                    set({
+                        currentSessionId: sessionId,
+                        currentAgentId: session.agentId,
+                        chatHistory: session.chatHistory,
+                        uiContext: null,
+                        usabilityResults: null
+                    });
+                }
+            },
+
+            getAllSessions: () => {
+                const { chatSessions } = get();
+                return Object.entries(chatSessions).map(([id, session]) => ({
+                    id,
+                    ...session
+                }));
+            },
+
+            // Summary functionality
+            generateSummary: async () => {
+                const { chatSessions } = get();
+                const allSessions = Object.values(chatSessions);
+                
+                if (allSessions.length === 0) {
+                    return { error: 'No chat sessions found' };
+                }
+
+                try {
+                    set({ isLoading: true, error: null });
+
+                    // Prepare all chat data for summary
+                    const allChats = allSessions.flatMap(session => 
+                        session.chatHistory.map(msg => ({
+                            ...msg,
+                            sessionId: Object.keys(chatSessions).find(id => chatSessions[id] === session),
+                            agentId: session.agentId
+                        }))
+                    );
+
+                    // Send to backend for AI summary
+                    const response = await api.post('/ai/generate-summary', {
+                        chatSessions: allSessions,
+                        allChats: allChats
+                    });
+
+                    set({ isLoading: false });
+                    return response.data;
+                } catch (error) {
+                    console.error('Error generating summary:', error);
+                    set({ 
+                        error: 'Failed to generate summary',
+                        isLoading: false 
+                    });
+                    return { error: 'Failed to generate summary' };
+                }
             }
         }),
         {
             name: 'chat-store',
             partialize: (state) => ({ 
+                chatHistory: state.chatHistory,
                 currentAgentId: state.currentAgentId,
-                uiContext: state.uiContext
+                uiContext: state.uiContext,
+                chatSessions: state.chatSessions || {}
             })
         }
     )

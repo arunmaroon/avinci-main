@@ -148,21 +148,45 @@ async function parseTranscriptFile(filePath, mimeType) {
             const worksheet = workbook.Sheets[sheetName];
             const data = XLSX.utils.sheet_to_json(worksheet);
 
-            for (const row of data) {
-                if (row.transcript || row.text || row.content) {
-                    transcripts.push({
-                        name: row.name || row.participant || row.user || 'Unknown',
-                        raw_text: row.transcript || row.text || row.content,
-                        demographics: {
-                            age: row.age || null,
-                            gender: row.gender || null,
-                            role_title: row.role || row.title || row.position || null,
-                            company: row.company || row.organization || null,
-                            location: row.location || row.city || null,
-                            education: row.education || null,
-                            income_range: row.income || null
-                        }
-                    });
+            // Check if this is a conversation format (single column with M:/R: prefixes)
+            const firstRow = data[0];
+            const firstKey = Object.keys(firstRow)[0];
+            const firstValue = firstRow[firstKey];
+            
+            if (firstValue && typeof firstValue === 'string' && (firstValue.startsWith('M:') || firstValue.startsWith('R:'))) {
+                // This is a conversation format - extract all text
+                const conversationText = data.map(row => {
+                    const key = Object.keys(row)[0];
+                    return row[key];
+                }).join('\n');
+                
+                // Extract participant name from filename or use default
+                const fileName = path.basename(filePath, path.extname(filePath));
+                const participantName = fileName.replace(/^\d+-?transcript-?/i, '').replace(/[_-]/g, ' ').trim() || 'Transcript Participant';
+                
+                transcripts.push({
+                    name: participantName,
+                    raw_text: conversationText,
+                    demographics: {}
+                });
+            } else {
+                // Standard format - look for transcript columns
+                for (const row of data) {
+                    if (row.transcript || row.text || row.content) {
+                        transcripts.push({
+                            name: row.name || row.participant || row.user || 'Unknown',
+                            raw_text: row.transcript || row.text || row.content,
+                            demographics: {
+                                age: row.age || null,
+                                gender: row.gender || null,
+                                role_title: row.role || row.title || row.position || null,
+                                company: row.company || row.organization || null,
+                                location: row.location || row.city || null,
+                                education: row.education || null,
+                                income_range: row.income || null
+                            }
+                        });
+                    }
                 }
             }
         } else if (mimeType === 'text/csv' || mimeType === 'application/octet-stream') {
@@ -172,21 +196,45 @@ async function parseTranscriptFile(filePath, mimeType) {
             const worksheet = workbook.Sheets[sheetName];
             const data = XLSX.utils.sheet_to_json(worksheet);
 
-            for (const row of data) {
-                if (row.transcript || row.text || row.content) {
-                    transcripts.push({
-                        name: row.name || row.participant || row.user || 'Unknown',
-                        raw_text: row.transcript || row.text || row.content,
-                        demographics: {
-                            age: row.age ? parseInt(row.age) : null,
-                            gender: row.gender || null,
-                            role_title: row.role || row.title || row.position || null,
-                            company: row.company || row.organization || null,
-                            location: row.location || row.city || null,
-                            education: row.education || null,
-                            income_range: row.income || null
-                        }
-                    });
+            // Check if this is a conversation format (single column with M:/R: prefixes)
+            const firstRow = data[0];
+            const firstKey = Object.keys(firstRow)[0];
+            const firstValue = firstRow[firstKey];
+            
+            if (firstValue && typeof firstValue === 'string' && (firstValue.startsWith('M:') || firstValue.startsWith('R:'))) {
+                // This is a conversation format - extract all text
+                const conversationText = data.map(row => {
+                    const key = Object.keys(row)[0];
+                    return row[key];
+                }).join('\n');
+                
+                // Extract participant name from filename or use default
+                const fileName = path.basename(filePath, path.extname(filePath));
+                const participantName = fileName.replace(/^\d+-?transcript-?/i, '').replace(/[_-]/g, ' ').trim() || 'Transcript Participant';
+                
+                transcripts.push({
+                    name: participantName,
+                    raw_text: conversationText,
+                    demographics: {}
+                });
+            } else {
+                // Standard format - look for transcript columns
+                for (const row of data) {
+                    if (row.transcript || row.text || row.content) {
+                        transcripts.push({
+                            name: row.name || row.participant || row.user || 'Unknown',
+                            raw_text: row.transcript || row.text || row.content,
+                            demographics: {
+                                age: row.age ? parseInt(row.age) : null,
+                                gender: row.gender || null,
+                                role_title: row.role || row.title || row.position || null,
+                                company: row.company || row.organization || null,
+                                location: row.location || row.city || null,
+                                education: row.education || null,
+                                income_range: row.income || null
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -260,12 +308,12 @@ async function createPersonaFromTranscript(transcript) {
 async function saveAgent(personaData) {
     try {
         const query = `
-            INSERT INTO agents (
-                name, role_title, company, location, demographics, traits, behaviors,
+            INSERT INTO ai_agents (
+                name, occupation, employment_type, location, demographics, traits, behaviors,
                 objectives, needs, fears, apprehensions, motivations, frustrations,
                 domain_literacy, tech_savviness, communication_style, speech_patterns,
                 vocabulary_profile, emotional_profile, cognitive_profile, knowledge_bounds,
-                quote, master_system_prompt, status, source_meta, avatar_url
+                quote, master_system_prompt, is_active, source_meta, avatar_url
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26
             ) RETURNING id
@@ -273,8 +321,8 @@ async function saveAgent(personaData) {
 
         const values = [
             personaData.name,
-            personaData.role_title || 'AI Persona',
-            personaData.company || 'Unknown',
+            personaData.occupation || personaData.role_title || 'AI Persona',
+            personaData.employment_type || 'full-time',
             personaData.location || 'Unknown',
             JSON.stringify(personaData.demographics || {}),
             JSON.stringify(personaData.traits || {}),
@@ -295,7 +343,7 @@ async function saveAgent(personaData) {
             JSON.stringify(personaData.knowledge_bounds || {}),
             personaData.quote || '',
             personaData.master_system_prompt || '',
-            personaData.status || 'active',
+            personaData.is_active !== false, // Default to true
             JSON.stringify(personaData.source_meta || {}),
             personaData.avatar_url || ''
         ];

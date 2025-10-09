@@ -361,33 +361,324 @@ RULES:
     }
 
     /**
-     * Generate avatar URL based on persona demographics
+     * Generate avatar URL based on persona demographics and traits
      */
     static generateAvatarUrl(persona) {
         const age = persona.demographics?.age || 30;
         const gender = persona.demographics?.gender?.toLowerCase() || 'neutral';
-        const role = persona.role_title?.toLowerCase() || 'professional';
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || 'professional';
+        const location = persona.location?.toLowerCase() || '';
+        const traits = persona.traits || {};
+        const emotionalProfile = persona.emotional_profile || {};
         
-        // Age band
-        let ageBand = 'adult';
-        if (age < 25) ageBand = 'young';
-        else if (age > 50) ageBand = 'mature';
+        // Determine age group for better photo selection
+        let ageGroup = 'adult';
+        if (age < 25) ageGroup = 'young';
+        else if (age > 50) ageGroup = 'mature';
         
-        // Role-based keywords
-        const roleKeywords = {
+        // Determine cultural background for appropriate styling
+        let culturalStyle = 'professional';
+        if (location.includes('india') || location.includes('delhi') || location.includes('mumbai') || 
+            location.includes('bangalore') || location.includes('chennai') || location.includes('punjab') ||
+            location.includes('tamil') || location.includes('gujarat') || location.includes('karnataka')) {
+            culturalStyle = 'indian';
+        }
+        
+        // Role-based styling
+        const roleStyles = {
             'designer': 'creative',
+            'freelance designer': 'creative',
             'developer': 'tech',
+            'software engineer': 'tech',
             'manager': 'business',
-            'freelance': 'independent',
-            'student': 'young'
+            'marketing manager': 'business',
+            'government officer': 'formal',
+            'business owner': 'entrepreneur',
+            'freelance': 'independent'
         };
         
-        const keyword = Object.keys(roleKeywords).find(k => role.includes(k));
-        const vibe = keyword ? roleKeywords[keyword] : 'professional';
+        const roleStyle = Object.keys(roleStyles).find(k => role.includes(k));
+        const style = roleStyle ? roleStyles[roleStyle] : 'professional';
         
-        // This would integrate with an avatar service like Gravatar, UI Avatars, or Unsplash
-        // For now, return a placeholder
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(persona.name)}&background=random&color=fff&size=200`;
+        // Determine personality traits for photo characteristics
+        const personalityTraits = Object.keys(traits);
+        let personalityVibe = 'neutral';
+        
+        if (personalityTraits.some(t => ['creative', 'artistic', 'innovative'].includes(t.toLowerCase()))) {
+            personalityVibe = 'creative';
+        } else if (personalityTraits.some(t => ['confident', 'assertive', 'leader'].includes(t.toLowerCase()))) {
+            personalityVibe = 'confident';
+        } else if (personalityTraits.some(t => ['friendly', 'warm', 'approachable'].includes(t.toLowerCase()))) {
+            personalityVibe = 'friendly';
+        } else if (personalityTraits.some(t => ['serious', 'focused', 'analytical'].includes(t.toLowerCase()))) {
+            personalityVibe = 'serious';
+        }
+        
+        // Generate avatar using multiple strategies with Indian persona focus
+        const avatarStrategies = [
+            // Strategy 1: Unsplash API for high-quality Indian people photos
+            () => {
+                const searchQuery = this.generateUnsplashQuery(persona);
+                return `https://source.unsplash.com/400x400/?${searchQuery}`;
+            },
+            
+            // Strategy 2: Pexels API for diverse Indian people photos
+            () => {
+                const searchQuery = this.generatePexelsQuery(persona);
+                return `https://images.pexels.com/photos/1/pexels-photo-1.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&fit=crop&crop=face&q=80`;
+            },
+            
+            // Strategy 3: Pixabay API for Indian people photos
+            () => {
+                const searchQuery = this.generatePixabayQuery(persona);
+                return `https://pixabay.com/api/?key=YOUR_PIXABAY_KEY&q=${searchQuery}&image_type=photo&category=people&min_width=400&min_height=400&safesearch=true`;
+            },
+            
+            // Strategy 4: Freepik-style curated Indian persona photos
+            () => {
+                return this.getFreepikStylePhoto(persona);
+            },
+            
+            // Strategy 5: UI Avatars with personalized styling (fallback)
+            () => {
+                const bgColor = this.getPersonaBackgroundColor(persona);
+                const textColor = this.getPersonaTextColor(persona);
+                return `https://ui-avatars.com/api/?name=${encodeURIComponent(persona.name)}&background=${bgColor}&color=${textColor}&size=200&bold=true&format=png`;
+            }
+        ];
+        
+        // Use the first strategy as primary, with fallbacks
+        try {
+            return avatarStrategies[0]();
+        } catch (error) {
+            console.error('Avatar generation error:', error);
+            // Fallback to basic UI Avatars
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(persona.name)}&background=random&color=fff&size=200`;
+        }
+    }
+    
+    /**
+     * Get persona-specific background color
+     */
+    static getPersonaBackgroundColor(persona) {
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || '';
+        const traits = persona.traits || {};
+        
+        // Role-based colors
+        if (role.includes('designer') || role.includes('creative')) return 'f97316'; // Orange
+        if (role.includes('developer') || role.includes('engineer')) return '3b82f6'; // Blue
+        if (role.includes('manager') || role.includes('business')) return '10b981'; // Green
+        if (role.includes('government') || role.includes('officer')) return '6b7280'; // Gray
+        if (role.includes('freelance') || role.includes('independent')) return '8b5cf6'; // Purple
+        
+        // Trait-based colors
+        const personalityTraits = Object.keys(traits);
+        if (personalityTraits.some(t => ['creative', 'artistic'].includes(t.toLowerCase()))) return 'ec4899'; // Pink
+        if (personalityTraits.some(t => ['confident', 'leader'].includes(t.toLowerCase()))) return 'dc2626'; // Red
+        if (personalityTraits.some(t => ['friendly', 'warm'].includes(t.toLowerCase()))) return '059669'; // Emerald
+        if (personalityTraits.some(t => ['serious', 'focused'].includes(t.toLowerCase()))) return '374151'; // Dark Gray
+        
+        // Default gradient
+        return 'random';
+    }
+    
+    /**
+     * Get persona-specific text color
+     */
+    static getPersonaTextColor(persona) {
+        const bgColor = this.getPersonaBackgroundColor(persona);
+        // Return white for dark backgrounds, dark for light backgrounds
+        if (bgColor === 'random') return 'fff';
+        return 'fff'; // Default to white
+    }
+    
+    /**
+     * Get DiceBear style based on persona
+     */
+    static getDiceBearStyle(persona) {
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || '';
+        const gender = persona.demographics?.gender?.toLowerCase() || 'neutral';
+        
+        if (role.includes('designer') || role.includes('creative')) return 'avataaars';
+        if (role.includes('developer') || role.includes('engineer')) return 'personas';
+        if (role.includes('manager') || role.includes('business')) return 'micah';
+        if (role.includes('government') || role.includes('officer')) return 'adventurer';
+        
+        return gender === 'female' ? 'avataaars' : 'personas';
+    }
+    
+    /**
+     * Generate consistent seed for persona
+     */
+    static generatePersonaSeed(persona) {
+        const name = persona.name || 'persona';
+        const role = persona.occupation || persona.role_title || '';
+        const location = persona.location || '';
+        return encodeURIComponent(`${name}-${role}-${location}`.toLowerCase().replace(/\s+/g, '-'));
+    }
+    
+    /**
+     * Get Robohash set based on persona
+     */
+    static getRobohashSet(persona) {
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || '';
+        
+        if (role.includes('designer') || role.includes('creative')) return 'set1';
+        if (role.includes('developer') || role.includes('engineer')) return 'set2';
+        if (role.includes('manager') || role.includes('business')) return 'set3';
+        if (role.includes('government') || role.includes('officer')) return 'set4';
+        
+        return 'set1';
+    }
+    
+    /**
+     * Get Robohash background based on persona
+     */
+    static getRobohashBackground(persona) {
+        const traits = persona.traits || {};
+        const personalityTraits = Object.keys(traits);
+        
+        if (personalityTraits.some(t => ['creative', 'artistic'].includes(t.toLowerCase()))) return 'bg1';
+        if (personalityTraits.some(t => ['confident', 'leader'].includes(t.toLowerCase()))) return 'bg2';
+        if (personalityTraits.some(t => ['friendly', 'warm'].includes(t.toLowerCase()))) return 'bg3';
+        
+        return 'bg1';
+    }
+    
+    /**
+     * Generate Unsplash search query for Indian people photos
+     */
+    static generateUnsplashQuery(persona) {
+        const age = persona.demographics?.age || 30;
+        const gender = persona.demographics?.gender?.toLowerCase() || 'neutral';
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || '';
+        const location = persona.location?.toLowerCase() || '';
+        
+        let query = 'indian people';
+        
+        // Add age-specific terms
+        if (age < 25) query += ', young indian';
+        else if (age > 50) query += ', mature indian';
+        else query += ', indian adult';
+        
+        // Add gender-specific terms
+        if (gender === 'male' || gender === 'm') query += ', indian man';
+        else if (gender === 'female' || gender === 'f') query += ', indian woman';
+        
+        // Add role-specific terms
+        if (role.includes('designer') || role.includes('creative')) query += ', indian creative professional';
+        else if (role.includes('developer') || role.includes('engineer')) query += ', indian tech professional';
+        else if (role.includes('manager') || role.includes('business')) query += ', indian business professional';
+        else if (role.includes('government') || role.includes('officer')) query += ', indian formal professional';
+        else if (role.includes('freelance') || role.includes('independent')) query += ', indian freelancer';
+        
+        // Add location-specific terms
+        if (location.includes('delhi') || location.includes('mumbai') || location.includes('bangalore')) {
+            query += ', urban indian professional';
+        } else if (location.includes('punjab') || location.includes('tamil') || location.includes('gujarat')) {
+            query += ', indian regional professional';
+        }
+        
+        return encodeURIComponent(query);
+    }
+    
+    /**
+     * Generate Pexels search query for Indian people photos
+     */
+    static generatePexelsQuery(persona) {
+        const age = persona.demographics?.age || 30;
+        const gender = persona.demographics?.gender?.toLowerCase() || 'neutral';
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || '';
+        
+        let query = 'indian people';
+        
+        // Add age and gender
+        if (age < 30) query += gender === 'female' ? ' young indian woman' : ' young indian man';
+        else if (age > 45) query += gender === 'female' ? ' mature indian woman' : ' mature indian man';
+        else query += gender === 'female' ? ' indian woman' : ' indian man';
+        
+        // Add professional context
+        if (role.includes('designer')) query += ' creative professional';
+        else if (role.includes('developer')) query += ' tech professional';
+        else if (role.includes('manager')) query += ' business professional';
+        else if (role.includes('government')) query += ' formal professional';
+        
+        return encodeURIComponent(query);
+    }
+    
+    /**
+     * Generate Pixabay search query for Indian people photos
+     */
+    static generatePixabayQuery(persona) {
+        const age = persona.demographics?.age || 30;
+        const gender = persona.demographics?.gender?.toLowerCase() || 'neutral';
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || '';
+        
+        let query = 'indian people';
+        
+        // Add demographic details
+        if (age < 25) query += ' young';
+        else if (age > 50) query += ' mature';
+        
+        if (gender === 'male' || gender === 'm') query += ' man';
+        else if (gender === 'female' || gender === 'f') query += ' woman';
+        
+        // Add professional context
+        if (role.includes('professional')) query += ' professional';
+        if (role.includes('business')) query += ' business';
+        if (role.includes('tech')) query += ' technology';
+        
+        return encodeURIComponent(query);
+    }
+    
+    /**
+     * Get Freepik-style curated Indian persona photos
+     */
+    static getFreepikStylePhoto(persona) {
+        const age = persona.demographics?.age || 30;
+        const gender = persona.demographics?.gender?.toLowerCase() || 'neutral';
+        const role = persona.occupation?.toLowerCase() || persona.role_title?.toLowerCase() || '';
+        
+        // Curated photo URLs based on persona characteristics
+        const photoSets = {
+            // Young professionals
+            'young-male-professional': [
+                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face'
+            ],
+            'young-female-professional': [
+                'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face'
+            ],
+            // Mature professionals
+            'mature-male-professional': [
+                'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face'
+            ],
+            'mature-female-professional': [
+                'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop&crop=face',
+                'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop&crop=face'
+            ]
+        };
+        
+        // Determine photo set based on persona
+        let photoSet = 'young-male-professional'; // default
+        
+        if (age < 30) {
+            photoSet = gender === 'female' ? 'young-female-professional' : 'young-male-professional';
+        } else {
+            photoSet = gender === 'female' ? 'mature-female-professional' : 'mature-male-professional';
+        }
+        
+        // Select random photo from the set
+        const photos = photoSets[photoSet] || photoSets['young-male-professional'];
+        const randomIndex = Math.floor(Math.random() * photos.length);
+        
+        return photos[randomIndex];
     }
 
     /**

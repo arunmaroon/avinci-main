@@ -225,7 +225,7 @@ router.patch('/:id/status', async (req, res) => {
             return res.status(400).json({ error: 'Invalid status. Must be active, sleeping, or archived' });
         }
         
-        const query = 'UPDATE agents SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *';
+        const query = 'UPDATE ai_agents SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *';
         const result = await pool.query(query, [status, id]);
         
         if (result.rows.length === 0) {
@@ -250,8 +250,8 @@ router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         
-        const query = 'UPDATE agents SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *';
-        const result = await pool.query(query, ['archived', id]);
+        const query = 'UPDATE ai_agents SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING *';
+        const result = await pool.query(query, [false, id]);
         
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Agent not found' });

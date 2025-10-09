@@ -5,7 +5,8 @@ import {
     FunnelIcon,
     DocumentTextIcon,
     SparklesIcon,
-    PlusIcon
+    PlusIcon,
+    ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import EnhancedAgentCreator from '../components/EnhancedAgentCreator';
@@ -18,6 +19,10 @@ const AgentLibrary = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [ageFilter, setAgeFilter] = useState('all');
+    const [techFilter, setTechFilter] = useState('all');
+    const [englishFilter, setEnglishFilter] = useState('all');
+    const [locationFilter, setLocationFilter] = useState('all');
     const [showEnhancedCreator, setShowEnhancedCreator] = useState(false);
     const [showBulkUploader, setShowBulkUploader] = useState(false);
     const [selectedAgentForChat, setSelectedAgentForChat] = useState(null);
@@ -45,12 +50,34 @@ const AgentLibrary = () => {
     const filteredAgents = agents.filter(agent => {
         const matchesSearch = !searchTerm || 
             agent.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            agent.occupation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             agent.role_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             agent.quote?.toLowerCase().includes(searchTerm.toLowerCase());
         
         const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
         
-        return matchesSearch && matchesStatus;
+        const matchesAge = ageFilter === 'all' || 
+            (ageFilter === 'young' && agent.demographics?.age < 30) ||
+            (ageFilter === 'adult' && agent.demographics?.age >= 30 && agent.demographics?.age < 50) ||
+            (ageFilter === 'mature' && agent.demographics?.age >= 50);
+        
+        const matchesTech = techFilter === 'all' || agent.tech_savviness === techFilter;
+        
+        const getEnglishLevel = (complexity) => {
+            if (!complexity) return 'N/A';
+            if (complexity >= 8) return 'Advanced';
+            if (complexity >= 6) return 'Intermediate';
+            if (complexity >= 4) return 'Basic';
+            return 'Beginner';
+        };
+        
+        const matchesEnglish = englishFilter === 'all' || 
+            getEnglishLevel(agent.vocabulary_profile?.complexity) === englishFilter;
+        
+        const matchesLocation = locationFilter === 'all' || 
+            agent.location?.toLowerCase().includes(locationFilter.toLowerCase());
+        
+        return matchesSearch && matchesStatus && matchesAge && matchesTech && matchesEnglish && matchesLocation;
     });
 
     const handleAddTestAgent = async () => {
@@ -81,8 +108,8 @@ const AgentLibrary = () => {
     };
 
     const handleStartChat = (agent) => {
-        setSelectedAgentForChat(agent);
-        setShowChat(true);
+        // Redirect to Enhanced Chat
+        window.location.href = `/enhanced-chat/${agent.id}`;
     };
 
     const handleBulkAgentsCreated = (createdAgents) => {
@@ -124,6 +151,13 @@ const AgentLibrary = () => {
                 </h1>
                 <div className="flex space-x-4">
                     <button
+                        onClick={() => window.location.href = '/group-chat'}
+                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    >
+                        <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
+                        Group Chat
+                    </button>
+                    <button
                         onClick={handleAddTestAgent}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                     >
@@ -142,27 +176,28 @@ const AgentLibrary = () => {
 
             {/* Search and Filters */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                        <div className="relative">
-                            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search agents by name, role, or quote..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
-                            />
-                        </div>
+                <div className="space-y-4">
+                    {/* Search Bar */}
+                    <div className="relative">
+                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search agents by name, occupation, or quote..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
+                            style={{ '--tw-ring-color': '#144835' }}
+                        />
                     </div>
-                    <div className="flex items-center space-x-4">
+                    
+                    {/* Filter Row */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         <div className="flex items-center space-x-2">
                             <FunnelIcon className="w-5 h-5 text-gray-400" />
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:border-transparent"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
                                 style={{ '--tw-ring-color': '#144835' }}
                             >
                                 <option value="all">All Status</option>
@@ -170,6 +205,86 @@ const AgentLibrary = () => {
                                 <option value="sleeping">Sleeping</option>
                                 <option value="archived">Archived</option>
                             </select>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-500">Age:</span>
+                            <select
+                                value={ageFilter}
+                                onChange={(e) => setAgeFilter(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
+                                style={{ '--tw-ring-color': '#144835' }}
+                            >
+                                <option value="all">All Ages</option>
+                                <option value="young">Young (&lt;30)</option>
+                                <option value="adult">Adult (30-49)</option>
+                                <option value="mature">Mature (50+)</option>
+                            </select>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-500">Tech:</span>
+                            <select
+                                value={techFilter}
+                                onChange={(e) => setTechFilter(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
+                                style={{ '--tw-ring-color': '#144835' }}
+                            >
+                                <option value="all">All Tech Levels</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-500">English:</span>
+                            <select
+                                value={englishFilter}
+                                onChange={(e) => setEnglishFilter(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
+                                style={{ '--tw-ring-color': '#144835' }}
+                            >
+                                <option value="all">All Levels</option>
+                                <option value="Beginner">Beginner</option>
+                                <option value="Basic">Basic</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-500">Location:</span>
+                            <select
+                                value={locationFilter}
+                                onChange={(e) => setLocationFilter(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
+                                style={{ '--tw-ring-color': '#144835' }}
+                            >
+                                <option value="all">All Locations</option>
+                                <option value="delhi">Delhi</option>
+                                <option value="mumbai">Mumbai</option>
+                                <option value="bangalore">Bangalore</option>
+                                <option value="chennai">Chennai</option>
+                                <option value="hyderabad">Hyderabad</option>
+                                <option value="chandigarh">Chandigarh</option>
+                            </select>
+                        </div>
+                        
+                        <div className="flex items-center justify-end">
+                            <button
+                                onClick={() => {
+                                    setSearchTerm('');
+                                    setStatusFilter('all');
+                                    setAgeFilter('all');
+                                    setTechFilter('all');
+                                    setEnglishFilter('all');
+                                    setLocationFilter('all');
+                                }}
+                                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            >
+                                Clear All
+                            </button>
                         </div>
                     </div>
                 </div>
