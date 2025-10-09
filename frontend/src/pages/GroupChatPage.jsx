@@ -23,6 +23,10 @@ const GroupChatPage = () => {
     const [showSummary, setShowSummary] = useState(false);
     const [summary, setSummary] = useState(null);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [currentChatId, setCurrentChatId] = useState(null);
+    const [chatPurpose, setChatPurpose] = useState('');
+    const [showChatHistory, setShowChatHistory] = useState(false);
+    const [endedChats, setEndedChats] = useState([]);
     const { generateSummary, getAllSessions } = useChatStore();
 
     useEffect(() => {
@@ -81,8 +85,73 @@ const GroupChatPage = () => {
 
     const sessions = getAllSessions();
 
+    // Load ended chats from localStorage
+    useEffect(() => {
+        const savedChats = localStorage.getItem('ended_group_chats');
+        if (savedChats) {
+            try {
+                setEndedChats(JSON.parse(savedChats));
+            } catch (error) {
+                console.error('Error loading ended chats:', error);
+            }
+        }
+    }, []);
+
+    // Generate unique chat ID when agents are selected
+    useEffect(() => {
+        if (selectedAgents.length > 0 && !currentChatId) {
+            setCurrentChatId(`group_chat_${Date.now()}_${selectedAgents.map(a => a.id).join('_')}`);
+        }
+    }, [selectedAgents, currentChatId]);
+
     const removeAgent = (agentId) => {
         setSelectedAgents(prev => prev.filter(a => a.id !== agentId));
+    };
+
+    const handleEndChat = async (chatData) => {
+        try {
+            // Generate designer feedback summary
+            const summaryResult = await generateSummary();
+            
+            if (summaryResult.error) {
+                toast.error('Failed to generate summary: ' + summaryResult.error);
+                return;
+            }
+
+            // Create chat record
+            const endedChat = {
+                id: chatData.chatId,
+                purpose: chatData.purpose,
+                agents: chatData.agents,
+                messageCount: chatData.messageCount,
+                endedAt: chatData.endedAt,
+                summary: summaryResult.summary,
+                sessionCount: summaryResult.sessionCount,
+                messageCount: summaryResult.messageCount
+            };
+
+            // Save to localStorage
+            const updatedChats = [...endedChats, endedChat];
+            setEndedChats(updatedChats);
+            localStorage.setItem('ended_group_chats', JSON.stringify(updatedChats));
+
+            // Clear current chat
+            setSelectedAgents([]);
+            setCurrentChatId(null);
+            setChatPurpose('');
+
+            toast.success('Chat ended and summary generated successfully!');
+        } catch (error) {
+            console.error('Error ending chat:', error);
+            toast.error('Failed to end chat');
+        }
+    };
+
+    const startNewChat = () => {
+        setSelectedAgents([]);
+        setCurrentChatId(null);
+        setChatPurpose('');
+        setShowChatHistory(false);
     };
 
     if (loading) {
@@ -123,6 +192,28 @@ const GroupChatPage = () => {
                         </div>
                         
                             <div className="flex items-center space-x-3">
+                                {/* Chat History Button */}
+                                {endedChats.length > 0 && (
+                                    <Button
+                                        onClick={() => setShowChatHistory(true)}
+                                        className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm"
+                                    >
+                                        <DocumentTextIcon className="h-4 w-4" />
+                                        <span>Chat History ({endedChats.length})</span>
+                                    </Button>
+                                )}
+
+                                {/* New Chat Button */}
+                                {selectedAgents.length > 0 && (
+                                    <Button
+                                        onClick={startNewChat}
+                                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+                                    >
+                                        <PlusIcon className="h-4 w-4" />
+                                        <span>New Chat</span>
+                                    </Button>
+                                )}
+
                                 {/* Summary Button */}
                                 {sessions.length > 0 && (
                                     <Button
@@ -208,6 +299,9 @@ const GroupChatPage = () => {
                                     <GroupChat 
                                         agents={selectedAgents}
                                         onAddAgents={() => setShowAgentSelector(true)}
+                                        chatPurpose={chatPurpose}
+                                        onEndChat={handleEndChat}
+                                        chatId={currentChatId}
                                     />
                                 </Card>
                             </div>
@@ -350,6 +444,119 @@ const GroupChatPage = () => {
                                         }}
                                     >
                                         Copy Summary
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Chat History Modal */}
+            {showChatHistory && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[80vh] overflow-hidden">
+                        <div className="p-6 border-b border-gray-200">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">Chat History</h2>
+                                <button
+                                    onClick={() => setShowChatHistory(false)}
+                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <XMarkIcon className="h-6 w-6" />
+                                </button>
+                            </div>
+                            <p className="text-gray-600 mt-2">
+                                View all ended group chats and their designer feedback summaries
+                            </p>
+                        </div>
+                        
+                        <div className="p-6 max-h-96 overflow-y-auto">
+                            {endedChats.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <DocumentTextIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Chat History</h3>
+                                    <p className="text-gray-600">Start a group chat and end it to see the history here.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {endedChats.map((chat) => (
+                                        <div key={chat.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-gray-900 mb-2">
+                                                        {chat.purpose || 'No purpose set'}
+                                                    </h3>
+                                                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                                                        <span>{chat.agents.length} participants</span>
+                                                        <span>{chat.messageCount} messages</span>
+                                                        <span>{new Date(chat.endedAt).toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-2 mb-3">
+                                                        {chat.agents.map((agent) => (
+                                                            <div key={agent.id} className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1">
+                                                                <img
+                                                                    src={agent.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`}
+                                                                    alt={agent.name}
+                                                                    className="w-5 h-5 rounded-full object-cover"
+                                                                />
+                                                                <span className="text-sm text-gray-700">{agent.name}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="bg-gray-50 rounded-lg p-3">
+                                                        <h4 className="font-medium text-gray-900 mb-2">Designer Feedback Summary:</h4>
+                                                        <p className="text-sm text-gray-700 line-clamp-3">
+                                                            {chat.summary}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col space-y-2 ml-4">
+                                                    <Button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(chat.summary);
+                                                            toast.success('Summary copied to clipboard');
+                                                        }}
+                                                        className="text-xs px-3 py-1"
+                                                    >
+                                                        Copy Summary
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => {
+                                                            // Start new chat with same agents
+                                                            setSelectedAgents(chat.agents);
+                                                            setChatPurpose(chat.purpose);
+                                                            setShowChatHistory(false);
+                                                        }}
+                                                        variant="secondary"
+                                                        className="text-xs px-3 py-1"
+                                                    >
+                                                        Continue Chat
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="p-6 border-t border-gray-200 bg-gray-50">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm text-gray-600">
+                                    {endedChats.length} ended chats
+                                </div>
+                                <div className="flex space-x-3">
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => setShowChatHistory(false)}
+                                    >
+                                        Close
+                                    </Button>
+                                    <Button
+                                        onClick={startNewChat}
+                                    >
+                                        Start New Chat
                                     </Button>
                                 </div>
                             </div>

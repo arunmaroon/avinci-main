@@ -12,14 +12,39 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 
-const GroupChat = ({ agents, onAddAgents }) => {
+const GroupChat = ({ agents, onAddAgents, chatPurpose, onEndChat, chatId }) => {
     const [message, setMessage] = useState('');
     const [chatHistory, setChatHistory] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [currentRespondingAgent, setCurrentRespondingAgent] = useState(null);
     const [uiContext, setUiContext] = useState(null);
+    const [showPurposeModal, setShowPurposeModal] = useState(false);
+    const [showEndChatModal, setShowEndChatModal] = useState(false);
+    const [purpose, setPurpose] = useState(chatPurpose || '');
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
+
+    // Load chat history from localStorage on component mount
+    useEffect(() => {
+        if (chatId) {
+            const savedHistory = localStorage.getItem(`group_chat_${chatId}`);
+            if (savedHistory) {
+                try {
+                    const parsedHistory = JSON.parse(savedHistory);
+                    setChatHistory(parsedHistory);
+                } catch (error) {
+                    console.error('Error loading chat history:', error);
+                }
+            }
+        }
+    }, [chatId]);
+
+    // Save chat history to localStorage whenever it changes
+    useEffect(() => {
+        if (chatId && chatHistory.length > 0) {
+            localStorage.setItem(`group_chat_${chatId}`, JSON.stringify(chatHistory));
+        }
+    }, [chatHistory, chatId]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,7 +83,8 @@ const GroupChat = ({ agents, onAddAgents }) => {
                         agentId: agent.id,
                         query: message,
                         ui_path: uiContext,
-                        chat_history: agentSpecificHistory
+                        chat_history: agentSpecificHistory,
+                        chat_purpose: purpose
                     });
 
                     if (response.data && response.data.success && response.data.response) {
@@ -297,8 +323,24 @@ const GroupChat = ({ agents, onAddAgents }) => {
                         <PhotoIcon className="h-5 w-5" />
                     </button>
                     <button
+                        onClick={() => setShowPurposeModal(true)}
+                        className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Set Chat Purpose"
+                    >
+                        <UserGroupIcon className="h-5 w-5" />
+                    </button>
+                    {onEndChat && (
+                        <button
+                            onClick={() => setShowEndChatModal(true)}
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="End Chat"
+                        >
+                            <XMarkIcon className="h-5 w-5" />
+                        </button>
+                    )}
+                    <button
                         onClick={clearHistory}
-                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                         title="Clear Chat"
                     >
                         <XMarkIcon className="h-5 w-5" />
@@ -327,6 +369,112 @@ const GroupChat = ({ agents, onAddAgents }) => {
                     </Button>
                 </div>
             </div>
+
+            {/* Purpose Modal */}
+            {showPurposeModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+                        <div className="p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-bold text-gray-900">Set Chat Purpose</h2>
+                            <p className="text-gray-600 mt-2">
+                                Define the purpose of this group chat. Agents will read this before responding.
+                            </p>
+                        </div>
+                        
+                        <div className="p-6">
+                            <textarea
+                                value={purpose}
+                                onChange={(e) => setPurpose(e.target.value)}
+                                placeholder="e.g., Review the new mobile app design for usability issues, accessibility concerns, and user experience improvements..."
+                                className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            />
+                        </div>
+                        
+                        <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setShowPurposeModal(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowPurposeModal(false);
+                                    toast.success('Chat purpose set successfully');
+                                }}
+                            >
+                                Set Purpose
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* End Chat Modal */}
+            {onEndChat && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+                        <div className="p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-bold text-gray-900">End Group Chat</h2>
+                            <p className="text-gray-600 mt-2">
+                                This will generate a designer feedback summary and save the chat session.
+                            </p>
+                        </div>
+                        
+                        <div className="p-6">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h3 className="font-semibold text-blue-900 mb-2">Chat Purpose:</h3>
+                                <p className="text-blue-800">{purpose || 'No purpose set'}</p>
+                            </div>
+                            
+                            <div className="mt-4">
+                                <h3 className="font-semibold text-gray-900 mb-2">Participants:</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {agents.map((agent) => (
+                                        <div key={agent.id} className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1">
+                                            <img
+                                                src={agent.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`}
+                                                alt={agent.name}
+                                                className="w-5 h-5 rounded-full object-cover"
+                                            />
+                                            <span className="text-sm text-gray-700">{agent.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="mt-4">
+                                <h3 className="font-semibold text-gray-900 mb-2">Messages:</h3>
+                                <p className="text-gray-600">{chatHistory.length} total messages</p>
+                            </div>
+                        </div>
+                        
+                        <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setShowEndChatModal(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    onEndChat({
+                                        chatId,
+                                        purpose,
+                                        agents,
+                                        chatHistory,
+                                        messageCount: chatHistory.length,
+                                        endedAt: new Date().toISOString()
+                                    });
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                                End Chat & Generate Summary
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

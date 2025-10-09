@@ -66,7 +66,7 @@ const getOpenAI = () => {
  */
 router.post('/generate', async (req, res) => {
     try {
-        const { agentId, query, ui_path, chat_history = [] } = req.body;
+        const { agentId, query, ui_path, chat_history = [], chat_purpose } = req.body;
         
         if (!agentId || !query) {
             return res.status(400).json({ 
@@ -81,7 +81,7 @@ router.post('/generate', async (req, res) => {
         }
 
         // Build enhanced context with UI feedback capabilities
-        const context = buildEnhancedContext(agent, chat_history, query, ui_path);
+        const context = buildEnhancedContext(agent, chat_history, query, ui_path, chat_purpose);
         
         // Generate response using OpenAI with vision if UI is provided
         const response = await generateEnhancedResponse(context, query, ui_path);
@@ -315,7 +315,7 @@ async function getConversationHistory(agentId, limit = 10) {
 /**
  * Build enhanced conversation context with UI feedback capabilities
  */
-function buildEnhancedContext(agent, chatHistory, query, ui_path) {
+function buildEnhancedContext(agent, chatHistory, query, ui_path, chat_purpose) {
     const { 
         demographics, 
         master_system_prompt, 
@@ -340,6 +340,13 @@ function buildEnhancedContext(agent, chatHistory, query, ui_path) {
     
     // Use the master system prompt as the base (it contains comprehensive persona data)
     let context = `${master_system_prompt || 'You are a helpful AI assistant.'}\n\n`;
+    
+    // Add chat purpose context if provided
+    if (chat_purpose && chat_purpose.trim()) {
+        context += `\n🎯 GROUP CHAT PURPOSE:\n`;
+        context += `This group chat has a specific purpose: "${chat_purpose}"\n`;
+        context += `Please keep your responses focused on this purpose and provide relevant insights.\n\n`;
+    }
     
     // Add persona-specific UI analysis context
     if (ui_path) {
