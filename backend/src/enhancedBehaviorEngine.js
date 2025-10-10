@@ -14,6 +14,26 @@ function humanize(persona, text, context = {}) {
   let humanizedText = text;
   const { previousMessage, conversationLength = 0, timeOfDay = 'day' } = context;
 
+  // 0. Remove generic AI language patterns
+  const genericPatterns = [
+    /How may I assist you today\?/gi,
+    /How can I help you\?/gi,
+    /What can I do for you\?/gi,
+    /Is there anything else I can help with\?/gi,
+    /I'm here to help/gi,
+    /I'm an AI assistant/gi,
+    /As an AI/gi,
+    /I'm designed to/gi,
+    /My purpose is to/gi
+  ];
+  
+  genericPatterns.forEach(pattern => {
+    humanizedText = humanizedText.replace(pattern, '');
+  });
+  
+  // Clean up any double spaces or awkward punctuation
+  humanizedText = humanizedText.replace(/\s+/g, ' ').trim();
+
   // 1. Add filler words based on persona patterns and context
   if (persona.speech_patterns?.filler_words && Math.random() < 0.15) {
     const fillerWords = persona.speech_patterns.filler_words;
@@ -339,4 +359,8 @@ module.exports = {
   generateTypingProgress,
   generatePersonaResponse
 };
+
+
+
+
 

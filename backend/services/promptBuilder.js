@@ -28,10 +28,24 @@ class PromptBuilder {
         const partialTopics = (persona.knowledge_bounds?.partial || []).join(', ') || 'none';
         const unknownTopics = (persona.knowledge_bounds?.unknown || []).join(', ') || 'none';
 
+        // Determine language mixing based on English proficiency
+        const englishSavvy = persona.english_savvy || persona.communication_style?.english_proficiency || 'Medium';
+        const nativeLanguage = persona.cultural_background?.primary_language || persona.native_language || 'Telugu';
+        
+        let languageInstructions = '';
+        if (englishSavvy.toLowerCase() === 'high' || englishSavvy.toLowerCase() === 'fluent') {
+            languageInstructions = `\nLANGUAGE: Speak ONLY in English. You are fluent and comfortable with English.`;
+        } else if (englishSavvy.toLowerCase() === 'low' || englishSavvy.toLowerCase() === 'basic') {
+            languageInstructions = `\nLANGUAGE: Mix ${nativeLanguage} and English naturally. Use ${nativeLanguage} words frequently, especially for common expressions, emotions, and cultural references. You're more comfortable in ${nativeLanguage} but try to use English too. Example: "Chala baagundi! This feature is very useful kada?" or "Naaku ardham kaaledu, can you explain again?"`;
+        } else {
+            languageInstructions = `\nLANGUAGE: Primarily English with occasional ${nativeLanguage} words for emphasis or when expressing emotions. Example: "This is good, kani I need more details."`;
+        }
+
         return `YOU ARE ${persona.name} — a real human persona, not an AI, and you must never break character.
 
 IDENTITY:
 - Role: ${persona.role_title ?? 'N/A'} at ${persona.company ?? 'N/A'} in ${persona.location ?? 'N/A'}; Age: ${persona.demographics?.age ?? 'N/A'}; Gender: ${persona.demographics?.gender ?? 'N/A'}.
+- Native Language: ${nativeLanguage}; English Proficiency: ${englishSavvy}.
 
 OBJECTIVES: ${objectives}.
 NEEDS: ${needs}.
@@ -42,7 +56,8 @@ HOW YOU SPEAK (REPLICATE EXACTLY):
 - Filler words: ${fillerWords}.
 - Common phrases:
 ${quotes}
-${verbatim}
+${verbatim}${languageInstructions}
+
 VOCABULARY CONSTRAINTS:
 - Complexity: ${persona.vocabulary_profile?.complexity || 5}/10.
 - Avoid: ${avoidedWords}.
@@ -56,13 +71,18 @@ KNOWLEDGE LIMITS:
 - Partial: ${partialTopics}.
 - Unknown: ${unknownTopics}.
 
-RULES:
-1) Never say "as an AI"; you are ${persona.name} and remain in character at all times.
-2) Use your own filler words/phrases naturally and occasionally self-correct if that is your pattern.
-3) If topic ∈ Partial/Unknown, show confusion, ask clarifying questions, and request simpler explanations.
-4) Match your sentence length and formality; keep vocabulary within constraints and avoid "avoid" words.
-5) Reflect your objectives/needs/fears when relevant and react to triggers appropriately.
-6) Reference earlier turns briefly to maintain continuity without repeating yourself verbatim.`;
+    RULES:
+    1) Never say "as an AI"; you are ${persona.name} and remain in character at all times.
+    2) Use your own filler words/phrases naturally and occasionally self-correct if that is your pattern.
+    3) If topic ∈ Partial/Unknown, show confusion, ask clarifying questions, and request simpler explanations.
+    4) Match your sentence length and formality; keep vocabulary within constraints and avoid "avoid" words.
+    5) Reflect your objectives/needs/fears when relevant and react to triggers appropriately.
+    6) Reference earlier turns briefly to maintain continuity without repeating yourself verbatim.
+    7) NEVER ask generic questions like "How can I help you?", "What can I do for you?", "How may I assist you today?", "Is there anything else I can help with?" — only ask questions when you genuinely need specific information or clarification.
+    8) Provide direct, substantive feedback and insights. Don't prompt for more input unless you're truly confused about something specific.
+    9) When reviewing designs or content, give your honest opinion and specific suggestions WITHOUT asking if the user wants more feedback.
+    10) NEVER use AI assistant language patterns. Speak as a real person with your own personality, background, and communication style.
+    11) Start conversations naturally based on your persona - don't wait for prompts or ask how you can help.`;
     }
 
     /**
@@ -139,12 +159,45 @@ RULES:
         const location = persona.location || 'Unknown';
         const role = persona.role_title || 'Professional';
         const company = persona.company || 'Unknown Company';
+        const behaviors = persona.behaviors || {};
+        const voice = persona.voice || persona.speech_patterns || {};
+        const fintechPrefs = persona.fintech_preferences || behaviors.fintech_preferences || {};
+        const emotionalProfile = persona.emotional_profile || {
+            triggers: [],
+            responses: []
+        };
+        const socialContext = persona.social_context || {
+            family: demographics.family_status || 'Not specified',
+            friends: 'Not specified',
+            community_values: []
+        };
+        const culturalBackground = persona.cultural_background || {
+            heritage: demographics.region || '',
+            beliefs: []
+        };
+        const decisionMaking = persona.decision_making || {
+            style: persona.cognitive_profile?.decision_style || 'Pragmatic',
+            influences: persona.cognitive_profile?.learning_preference ? [persona.cognitive_profile.learning_preference] : []
+        };
+        const lifeEvents = Array.isArray(persona.life_events) ? persona.life_events : [];
+        const hobbies = behaviors.hobbies || behaviors.interests || persona.hobbies || [];
+        const background = persona.background || persona.background_story || demographics.background || '';
+        const uiPainPoints = persona.ui_pain_points || behaviors.ui_pain_points || [];
+        const keyQuotes = persona.key_quotes || voice.common_phrases || [];
+        const extrapolationRules = persona.extrapolation_rules || persona.knowledge_bounds?.extrapolation_rules || [];
+        const dailyRoutine = persona.daily_routine || behaviors.daily_routine || (persona.daily_life?.schedule || []);
+        const painPoints = persona.pain_points || persona.fears || [];
+        const goals = persona.goals || persona.objectives || [];
+        const motivations = persona.motivations || [];
         
         return {
             // Header Section
             id: persona.id,
             name: persona.name,
             title: `${role} at ${company}`,
+            role_title: role,
+            occupation: persona.occupation || role,
+            company: company,
             location: location,
             age: age,
             gender: gender,
@@ -160,22 +213,53 @@ RULES:
                 location: location,
                 occupation: role,
                 company: company,
-                education: demographics.education || 'Bachelor\'s Degree',
-                income_range: demographics.income_range || '₹5-10 Lakhs',
+                education: demographics.education || persona.education || 'Bachelor\'s Degree',
+                income_range: demographics.income_range || persona.income_range || '₹5-10 Lakhs',
                 family_status: demographics.family_status || 'Single',
                 tech_savviness: persona.tech_savviness || 'Medium',
                 english_proficiency: demographics.english_proficiency || 'Intermediate'
             },
+
+            // Expanded background
+            background,
+            personality_profile: Array.isArray(persona.personality) ? persona.personality : persona.traits || ['Analytical', 'Goal-oriented', 'Collaborative'],
+            hobbies,
+            fintech_preferences: fintechPrefs,
+            pain_points: Array.isArray(painPoints) ? painPoints : [],
+            ui_pain_points: Array.isArray(uiPainPoints) ? uiPainPoints : [],
+            key_quotes: Array.isArray(keyQuotes) ? keyQuotes : [],
+            goals: Array.isArray(goals) ? goals : [],
+            motivations: Array.isArray(motivations) ? motivations : [],
+            extrapolation_rules: Array.isArray(extrapolationRules) ? extrapolationRules : [],
+            emotional_profile_extended: {
+                triggers: Array.isArray(emotionalProfile.triggers) ? emotionalProfile.triggers : [],
+                responses: Array.isArray(emotionalProfile.responses) ? emotionalProfile.responses : []
+            },
+            social_context: {
+                family: socialContext.family || demographics.family_status || 'Not specified',
+                friends: socialContext.friends || 'Not specified',
+                community_values: Array.isArray(socialContext.community_values) ? socialContext.community_values : []
+            },
+            cultural_background: {
+                heritage: culturalBackground.heritage || demographics.region || location,
+                beliefs: Array.isArray(culturalBackground.beliefs) ? culturalBackground.beliefs : []
+            },
+            daily_routine: Array.isArray(dailyRoutine) ? dailyRoutine : [],
+            decision_making: {
+                style: decisionMaking.style || 'Pragmatic',
+                influences: Array.isArray(decisionMaking.influences) ? decisionMaking.influences : []
+            },
+            life_events: lifeEvents,
             
-            // Goals & Motivations
-            goals: {
+            // Goals & Motivations (legacy detail)
+            goals_detail: {
                 primary: (persona.objectives || []).slice(0, 3),
                 secondary: (persona.objectives || []).slice(3, 6),
-                motivations: persona.motivations || ['Career growth', 'Financial stability', 'Work-life balance']
+                motivations: Array.isArray(motivations) && motivations.length > 0 ? motivations : ['Career growth', 'Financial stability', 'Work-life balance']
             },
             
-            // Pain Points & Challenges
-            pain_points: {
+            // Pain Points & Challenges (legacy detail)
+            pain_points_detail: {
                 primary: (persona.fears || []).slice(0, 3),
                 secondary: (persona.apprehensions || []).slice(0, 3),
                 frustrations: persona.frustrations || ['Complex processes', 'Poor user experience', 'Lack of support']
@@ -232,9 +316,26 @@ RULES:
             },
             
             // Status
-            status: persona.status || 'active',
+            status: persona.status || persona.is_active || 'active',
             created_at: persona.created_at,
-            last_updated: new Date().toISOString()
+            last_updated: new Date().toISOString(),
+            
+            // Raw database fields (ensure all data is passed through)
+            objectives: persona.objectives || [],
+            needs: persona.needs || [],
+            fears: persona.fears || [],
+            apprehensions: persona.apprehensions || [],
+            frustrations: persona.frustrations || [],
+            traits: persona.traits || {},
+            communication_style: persona.communication_style || {},
+            speech_patterns: persona.speech_patterns || {},
+            vocabulary_profile: persona.vocabulary_profile || {},
+            emotional_profile: persona.emotional_profile || {},
+            cognitive_profile: persona.cognitive_profile || {},
+            knowledge_bounds: persona.knowledge_bounds || {},
+            domain_literacy: persona.domain_literacy || {},
+            tech_savviness: persona.tech_savviness || 'medium',
+            master_system_prompt: persona.master_system_prompt
         };
     }
 
@@ -453,7 +554,7 @@ RULES:
         } catch (error) {
             console.error('Avatar generation error:', error);
             // Fallback to basic UI Avatars
-            return `https://ui-avatars.com/api/?name=${encodeURIComponent(persona.name)}&background=random&color=fff&size=200`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(persona.name)}&background=random&color=fff&size=200`;
         }
     }
     

@@ -33,22 +33,36 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
     fileFilter: (req, file, cb) => {
+        console.log('File upload attempt:', {
+            filename: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size
+        });
+        
         const allowedTypes = [
             'text/csv',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'text/plain',
             'application/json',
-            'application/octet-stream' // Fallback for CSV files
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/msword',
+            'application/pdf',
+            'application/octet-stream', // Fallback for various files
+            'application/x-csv', // Alternative CSV type
+            'text/x-csv', // Another CSV variant
         ];
         
-        const allowedExtensions = ['.csv', '.xlsx', '.xls', '.txt', '.json'];
+        const allowedExtensions = ['.csv', '.xlsx', '.xls', '.txt', '.json', '.pdf', '.doc', '.docx', '.rtf', '.odt', '.md', '.html', '.htm'];
         const fileExtension = path.extname(file.originalname).toLowerCase();
         
+        // Accept if either MIME type matches OR file extension is allowed
         if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
+            console.log('✅ File accepted:', file.originalname);
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type. Only CSV, Excel, TXT, and JSON files are allowed.'));
+            console.log('❌ File rejected:', file.originalname, 'MIME:', file.mimetype, 'Ext:', fileExtension);
+            cb(new Error(`Invalid file type: ${file.originalname}. Allowed: CSV, Excel, TXT, JSON, PDF, DOCX, and more.`));
         }
     }
 });

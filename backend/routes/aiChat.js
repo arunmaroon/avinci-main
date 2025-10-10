@@ -406,7 +406,10 @@ function buildEnhancedContext(agent, chatHistory, query, ui_path) {
         // My daily routine and how UI fits
         if (behaviors && behaviors.daily_routine) {
             context += `MY DAILY ROUTINE (how this UI fits my life):\n`;
-            behaviors.daily_routine.slice(0, 5).forEach(activity => {
+            const dailyRoutine = Array.isArray(behaviors.daily_routine) 
+                ? behaviors.daily_routine 
+                : [behaviors.daily_routine];
+            dailyRoutine.slice(0, 5).forEach(activity => {
                 context += `- ${activity}\n`;
             });
             context += `- I need this UI to work with my busy schedule\n\n`;
@@ -793,11 +796,64 @@ async function simulateImageAnalysis(agent, image) {
 }
 
 /**
- * POST /api/ai/generate-summary - Generate summary of all chat sessions
- * Body: { chatSessions, allChats }
+ * POST /api/ai/generate-summary - Generate summary of chat session(s)
+ * Body: { chatHistory, chatPurpose, agents } for group chat OR { chatSessions, allChats } for all sessions
  */
 router.post('/generate-summary', async (req, res) => {
     try {
+        // Handle group chat summary
+        if (req.body.chatHistory && req.body.agents) {
+            const { chatHistory, chatPurpose, agents } = req.body;
+            
+            if (!chatHistory || chatHistory.length === 0) {
+                return res.status(400).json({ 
+                    error: 'No chat history provided' 
+                });
+            }
+
+            // Build group chat summary prompt
+            let summaryPrompt = `# GROUP CHAT SUMMARY
+
+You are analyzing a group discussion between multiple personas about: "${chatPurpose}"
+
+## PARTICIPANTS:
+${agents.map(a => `- ${a.name} (${a.occupation})`).join('\n')}
+
+## CONVERSATION (${chatHistory.length} messages):
+${chatHistory.map(msg => {
+    if (msg.type === 'user') return `User: ${msg.content}`;
+    if (msg.type === 'agent') return `${msg.agent?.name}: ${msg.content}`;
+    return `System: ${msg.content}`;
+}).join('\n\n')}
+
+## SUMMARY REQUIREMENTS:
+Provide a concise 3-4 sentence summary covering:
+1. Main topics discussed
+2. Key insights from each persona
+3. Consensus or disagreements
+4. Actionable recommendations`;
+
+            const response = await getOpenAI().chat.completions.create({
+                model: "gpt-4o",
+                messages: [
+                    { role: "system", content: "You are a professional meeting summarizer." },
+                    { role: "user", content: summaryPrompt }
+                ],
+                temperature: 0.7,
+                max_tokens: 500
+            });
+
+            const summary = response.choices[0].message.content;
+            
+            return res.json({
+                success: true,
+                summary: summary,
+                messageCount: chatHistory.length,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Handle all sessions summary (original functionality)
         const { chatSessions, allChats } = req.body;
         
         if (!chatSessions || chatSessions.length === 0) {

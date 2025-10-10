@@ -1,16 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
 const { analyzeTranscript, synthesizePersona, buildMasterPrompt } = require('../src/transcriptAnalysis');
-const { humanize, computeDelay, detectEmotion } = require('../src/behaviorEngine');
-
-// Database connection
-const pool = new Pool({
-  user: 'arun.murugesan',
-  host: 'localhost',
-  database: 'avinci',
-  port: 5432,
-});
+const { pool } = require('../models/database');
+const avatarService = require('../services/avatarService');
+const promptBuilder = require('../services/promptBuilder');
 
 /**
  * GET /personas?view=short
@@ -34,8 +27,9 @@ router.get('/', async (req, res) => {
       `;
       
       const result = await pool.query(query);
+      const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
       
-      const agents = result.rows.map(agent => ({
+      const agents = agentsWithAvatars.map(agent => ({
         id: agent.id,
         name: agent.name,
         avatar_url: agent.avatar_url,
@@ -59,7 +53,9 @@ router.get('/', async (req, res) => {
       // Return full agent data
       const query = 'SELECT * FROM ai_agents WHERE is_active = true ORDER BY created_at DESC';
       const result = await pool.query(query);
-      res.json({ success: true, agents: result.rows });
+      const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
+      const personas = agentsWithAvatars.map(agent => promptBuilder.buildDetailedPersona(agent));
+      res.json({ success: true, personas });
     }
   } catch (error) {
     console.error('Error fetching personas:', error);
@@ -82,8 +78,10 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Persona not found' });
     }
     
-    const agent = result.rows[0];
-    res.json({ success: true, agent });
+    const agentRow = result.rows[0];
+    const agentWithAvatar = await avatarService.ensureAgentAvatar(agentRow);
+    const persona = promptBuilder.buildDetailedPersona(agentWithAvatar);
+    res.json({ success: true, agent: persona });
   } catch (error) {
     console.error('Error fetching persona:', error);
     res.status(500).json({ error: 'Failed to fetch persona', details: error.message });

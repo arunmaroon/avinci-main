@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
 const { generatePersonaResponse } = require('../src/enhancedBehaviorEngine');
+const avatarService = require('../services/avatarService');
 
 // Database connection
 const pool = new Pool({
@@ -326,20 +327,22 @@ router.get('/personas', async (req, res) => {
   try {
     const query = `
       SELECT id, name, occupation, location, quote, communication_style, 
-             emotional_profile, tech_savviness, demographics
+             emotional_profile, tech_savviness, demographics, avatar_url
       FROM ai_agents 
       WHERE is_active = true
       ORDER BY created_at DESC
     `;
     
     const result = await pool.query(query);
+    const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
     
-    const personas = result.rows.map(agent => ({
+    const personas = agentsWithAvatars.map(agent => ({
       id: agent.id,
       name: agent.name,
       occupation: agent.occupation,
       location: agent.location,
       quote: agent.quote,
+      avatar_url: agent.avatar_url,
       communication_style: agent.communication_style,
       emotional_profile: agent.emotional_profile,
       tech_savviness: agent.tech_savviness,
@@ -382,7 +385,8 @@ router.get('/personas/:id', async (req, res) => {
       return res.status(404).json({ error: 'Persona not found' });
     }
     
-    const agent = result.rows[0];
+    const agentRow = result.rows[0];
+    const agent = await avatarService.ensureAgentAvatar(agentRow);
     
     res.json({
       success: true,
@@ -441,4 +445,3 @@ function detectEmotion(message, persona = null) {
 }
 
 module.exports = router;
-

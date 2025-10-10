@@ -13,6 +13,7 @@ const providerGateway = require('../services/providerGateway');
 const behaviorEngine = require('../services/behaviorEngine');
 const promptBuilder = require('../services/promptBuilder');
 const IndianDemographicsService = require('../services/indianDemographics');
+const avatarService = require('../services/avatarService');
 
 // Configure multer for PDF uploads
 const upload = multer({
@@ -70,7 +71,8 @@ router.get('/', async (req, res) => {
             `;
             
             const result = await pool.query(query);
-            const shortAgents = result.rows.map(agent => {
+            const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
+            const shortAgents = agentsWithAvatars.map(agent => {
                 const goals = agent.objectives || [];
                 const challenges = [...(agent.fears || []), ...(agent.apprehensions || [])];
                 const demographics = agent.demographics || {};
@@ -103,7 +105,8 @@ router.get('/', async (req, res) => {
             // Return full view (default)
             const query = 'SELECT * FROM ai_agents WHERE is_active = true ORDER BY created_at DESC';
             const result = await pool.query(query);
-            const fullAgents = result.rows.map(agent => promptBuilder.buildFullProfile(agent));
+            const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
+            const fullAgents = agentsWithAvatars.map(agent => promptBuilder.buildFullProfile(agent));
             res.json(fullAgents);
         }
     } catch (error) {
@@ -127,8 +130,9 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Agent not found' });
         }
         
-        const agent = result.rows[0];
-        const fullAgent = promptBuilder.buildFullProfile(agent);
+        const agentRow = result.rows[0];
+        const agentWithAvatar = await avatarService.ensureAgentAvatar(agentRow);
+        const fullAgent = promptBuilder.buildFullProfile(agentWithAvatar);
         
         res.json(fullAgent);
     } catch (error) {
@@ -201,8 +205,9 @@ router.post('/', async (req, res) => {
         // Return full agent data
         const query = 'SELECT * FROM ai_agents WHERE id = $1';
         const result = await pool.query(query, [agentId]);
-        const agent = result.rows[0];
-        const fullAgent = promptBuilder.buildFullProfile(agent);
+        const agentRow = result.rows[0];
+        const agentWithAvatar = await avatarService.ensureAgentAvatar(agentRow);
+        const fullAgent = promptBuilder.buildFullProfile(agentWithAvatar);
         
         res.status(201).json(fullAgent);
         
