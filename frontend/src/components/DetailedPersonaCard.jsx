@@ -45,9 +45,12 @@ const DetailedPersonaCard = ({ persona }) => {
                 <div className="flex items-start space-x-6">
                     <div className="flex-shrink-0">
                         <img 
-                            src={avatar_url} 
+                            src={avatar_url || persona.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Persona')}&background=random&color=fff&size=200`} 
                             alt={name}
                             className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
+                            onError={(e) => {
+                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'Persona')}&background=random&color=fff&size=200`;
+                            }}
                         />
                     </div>
                     <div className="flex-1">
@@ -93,26 +96,32 @@ const DetailedPersonaCard = ({ persona }) => {
                                 <UserGroupIcon className="w-5 h-5 mr-2 text-blue-600" />
                                 Demographics
                             </h3>
-                            <div className="space-y-2">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Education:</span>
-                                    <span className="font-medium">{demographics?.education}</span>
+                            <div className="space-y-3">
+                                <div className="text-sm text-gray-700">
+                                    <span className="font-medium">{demographics?.education || 'Education not specified'}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Income:</span>
-                                    <span className="font-medium">{demographics?.income_range}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Family:</span>
-                                    <span className="font-medium">{demographics?.family_status}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Tech Savvy:</span>
-                                    <span className="font-medium">{demographics?.tech_savviness}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">English:</span>
-                                    <span className="font-medium">{demographics?.english_proficiency}</span>
+                                
+                                <div className="flex flex-wrap gap-2">
+                                    {demographics?.income_range && (
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                            {demographics.income_range}
+                                        </span>
+                                    )}
+                                    {demographics?.family_status && (
+                                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                            {demographics.family_status}
+                                        </span>
+                                    )}
+                                    {demographics?.tech_savviness && (
+                                        <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                                            Tech: {demographics.tech_savviness}
+                                        </span>
+                                    )}
+                                    {demographics?.english_proficiency && (
+                                        <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+                                            English: {demographics.english_proficiency}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

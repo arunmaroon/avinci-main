@@ -4,327 +4,454 @@ import { toast } from 'react-hot-toast';
 import { 
     PaperAirplaneIcon, 
     PhotoIcon, 
-    PlayIcon,
-    XMarkIcon,
-    CheckCircleIcon,
-    ExclamationTriangleIcon,
     UserGroupIcon
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
+import useChatStore from '../stores/chatStore';
+import { getAvatarSrc, handleAvatarError } from '../utils/avatar';
 
-const GroupChat = ({ agents, onAddAgents }) => {
+const GroupChat = ({ agents, onAddAgents, chatPurpose, isChatActive, onChatReset }) => {
     const [message, setMessage] = useState('');
-    const [chatHistory, setChatHistory] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [currentRespondingAgent, setCurrentRespondingAgent] = useState(null);
-    const [uiContext, setUiContext] = useState(null);
+    const [uploadedImagePath, setUploadedImagePath] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
+    const hasInitialized = useRef(false);
+
+    // Split selectors to prevent unnecessary re-renders (objects returned from selectors cause infinite loops)
+    const activeGroupId = useChatStore((state) => state.activeGroupId);
+    const groupChatHistory = useChatStore((state) => state.groupChatHistory);
+    const startGroupChatSession = useChatStore((state) => state.startGroupChatSession);
+    const appendGroupMessage = useChatStore((state) => state.appendGroupMessage);
+    const saveGroupChatHistory = useChatStore((state) => state.saveGroupChatHistory);
+    const loadGroupChatHistory = useChatStore((state) => state.loadGroupChatHistory);
+    const endGroupChatSession = useChatStore((state) => state.endGroupChatSession);
+    const loadSavedGroupSession = useChatStore((state) => state.loadSavedGroupSession);
+    const getGroupSessions = useChatStore((state) => state.getGroupSessions);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatHistory]);
+    }, [groupChatHistory]);
+
+    // Load chat history on mount if there's an active session
+    useEffect(() => {
+        if (activeGroupId) {
+            loadGroupChatHistory(activeGroupId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (isChatActive && !activeGroupId && !hasInitialized.current) {
+            hasInitialized.current = true;
+            const newGroupId = startGroupChatSession(agents, chatPurpose);
+            loadGroupChatHistory(newGroupId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isChatActive]);
+
+    const chatReady = isChatActive && agents.length >= 2;
+    const hasMessages = groupChatHistory.length > 0;
 
     const sendMessage = async () => {
-        if (!message.trim() || isLoading) return;
+        if (!message.trim() || isLoading || !chatReady) {
+            if (!chatReady) toast.error('Set the chat purpose and press Start Chat to begin.');
+            return;
+        }
 
         const userMessage = {
             id: Date.now(),
             type: 'user',
             content: message,
             timestamp: new Date().toISOString(),
-            ui_path: uiContext
         };
 
-        setChatHistory(prev => [...prev, userMessage]);
+        appendGroupMessage(userMessage);
         setMessage('');
         setIsLoading(true);
 
         try {
-            // Send message to all agents sequentially
-            const agentResponses = [];
-            
             for (let i = 0; i < agents.length; i++) {
                 const agent = agents[i];
                 setCurrentRespondingAgent(agent);
-                
+
+                const agentHistory = groupChatHistory.filter(
+                    (msg) => msg.type === 'user' || (msg.type === 'agent' && msg.agent?.id === agent.id)
+                );
+
                 try {
-                    // Only pass user messages and this agent's own responses to maintain persona isolation
-                    const agentSpecificHistory = chatHistory.filter(msg => 
-                        msg.type === 'user' || (msg.type === 'agent' && msg.agent && msg.agent.id === agent.id)
-                    );
-                    
                     const response = await api.post('/ai/generate', {
                         agentId: agent.id,
                         query: message,
-                        ui_path: uiContext,
-                        chat_history: agentSpecificHistory
+                        chat_history: agentHistory,
+                        chat_purpose: chatPurpose,
+                        ui_path: uploadedImagePath, // Pass image context to agents
                     });
 
-                    if (response.data && response.data.success && response.data.response) {
-                        agentResponses.push({
-                            id: Date.now() + i,
-                            type: 'agent',
-                            agent: agent,
-                            content: response.data.response,
-                            timestamp: new Date().toISOString(),
-                            ui_path: uiContext
-                        });
-                    }
-                } catch (error) {
-                    console.error(`Error getting response from ${agent.name}:`, error);
-                    agentResponses.push({
+                    appendGroupMessage({
                         id: Date.now() + i,
                         type: 'agent',
-                        agent: agent,
-                        content: `Sorry, I encountered an error. Please try again.`,
+                        agent,
+                        content: response.data?.response || '…',
                         timestamp: new Date().toISOString(),
-                        ui_path: uiContext,
-                        isError: true
+                    });
+                } catch (error) {
+                    console.error(`Error getting response from ${agent.name}:`, error);
+                    appendGroupMessage({
+                        id: Date.now() + i,
+                        type: 'agent',
+                        agent,
+                        content: 'Sorry, I encountered an error. Please try again.',
+                        timestamp: new Date().toISOString(),
+                        isError: true,
                     });
                 }
-                
-                // Add a small delay between agent responses for better UX
-                if (i < agents.length - 1) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
+
+                if (i < agents.length - 1) await new Promise((resolve) => setTimeout(resolve, 600));
             }
 
-            setChatHistory(prev => [...prev, ...agentResponses]);
             setCurrentRespondingAgent(null);
             setIsLoading(false);
-
+            saveGroupChatHistory();
         } catch (error) {
             console.error('Error in group chat:', error);
             setCurrentRespondingAgent(null);
             setIsLoading(false);
-            toast.error('Failed to send message');
         }
     };
 
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
+    const handleUpload = () => {
+        if (!chatReady) {
+            toast.error('Set the chat purpose and press Start Chat to begin.');
+            return;
         }
+        fileInputRef.current?.click();
     };
 
-    const uploadUI = async (file) => {
+    const handleFileChange = async (event) => {
+        const file = event.target.files?.[0];
         if (!file) return;
 
-        if (agents.length === 0) {
-            toast.error('No agents selected for UI upload');
+        // Validate file type and size
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file (PNG, JPG, etc.)');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image size must be less than 5MB');
             return;
         }
 
-        setIsLoading(true);
+        setIsUploading(true);
         try {
             const formData = new FormData();
             formData.append('image', file);
-            formData.append('agentId', agents[0].id); // Use first agent for upload
-
-            console.log('Uploading UI for group chat with agent:', agents[0].id);
+            formData.append('agentId', agents[0]?.id || 'group'); // Use first agent ID or 'group'
 
             const response = await api.post('/ai/upload-ui', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            console.log('Group chat UI upload response:', response.data);
+            const imagePath = response.data.ui_path;
+            setUploadedImagePath(imagePath);
 
-            const ui_path = response.data.ui_path;
-            setUiContext(ui_path);
-
-            // Add UI upload message
-            const uiMessage = {
+            appendGroupMessage({
                 id: Date.now(),
-                type: 'user',
-                content: `Uploaded UI image: ${file.name}`,
+                type: 'system',
+                content: `Uploaded reference: ${file.name}`,
+                imagePath: imagePath,
                 timestamp: new Date().toISOString(),
-                ui_path
-            };
-
-            setChatHistory(prev => [...prev, uiMessage]);
-            toast.success('UI uploaded successfully!');
-            setIsLoading(false);
-
+            });
+            saveGroupChatHistory();
+            toast.success('Image uploaded successfully');
         } catch (error) {
-            console.error('Error uploading UI:', error);
-            const errorMessage = error.response?.data?.error || error.message || 'Failed to upload UI image';
-            toast.error(`UI upload failed: ${errorMessage}`);
+            console.error('Error uploading image:', error);
+            toast.error('Failed to upload image. Please try again.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleEndChat = async () => {
+        if (groupChatHistory.length === 0) {
+            endGroupChatSession();
+            onChatReset?.();
+            toast.info('Chat session ended');
+            return;
+        }
+
+        // Show generating toast
+        const generatingToast = toast.loading('Generating chat summary...');
+        setIsLoading(true);
+
+        try {
+            console.log('Ending chat with:', {
+                historyLength: groupChatHistory.length,
+                purpose: chatPurpose,
+                agentCount: agents.length
+            });
+
+            // Generate summary
+            const response = await api.post('/ai/generate-summary', {
+                chatHistory: groupChatHistory,
+                chatPurpose: chatPurpose,
+                agents: agents.map(a => ({ id: a.id, name: a.name, occupation: a.occupation }))
+            });
+
+            console.log('Summary response:', response.data);
+
+            const summary = response.data?.summary || 'No summary available';
+
+            // Save summary to localStorage BEFORE ending session
+            if (activeGroupId) {
+                const summaryData = {
+                    sessionId: activeGroupId,
+                    summary: summary,
+                    timestamp: new Date().toISOString(),
+                    messageCount: groupChatHistory.length
+                };
+                localStorage.setItem(`group_summary_${activeGroupId}`, JSON.stringify(summaryData));
+                console.log('Summary saved to localStorage:', summaryData);
+            }
+
+            // End session (this moves it to groupSessions)
+            endGroupChatSession();
+            
+            // Dismiss loading toast
+            toast.dismiss(generatingToast);
+            
+            // Show summary in a toast
+            toast.success(
+                <div className="max-w-md">
+                    <p className="font-semibold mb-2">✅ Chat Ended - Summary Generated</p>
+                    <p className="text-sm text-slate-600 leading-relaxed">{summary.substring(0, 180)}...</p>
+                    <p className="mt-2 text-xs text-slate-500">View full summary in Chat Archive</p>
+                </div>,
+                { duration: 10000 }
+            );
+
+            // Reset chat UI
+            onChatReset?.();
+        } catch (error) {
+            console.error('Error generating summary:', error);
+            toast.dismiss(generatingToast);
+            toast.error(`Failed to generate summary: ${error.message || 'Unknown error'}`);
+            
+            // Still end the session even if summary fails
+            endGroupChatSession();
+            onChatReset?.();
+        } finally {
             setIsLoading(false);
         }
     };
 
-    const clearHistory = () => {
-        setChatHistory([]);
-        setUiContext(null);
-        toast.success('Chat history cleared');
-    };
-
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            uploadUI(file);
-        }
-    };
+    const savedSessions = getGroupSessions();
 
     return (
-        <div className="flex flex-col h-full">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {chatHistory.length === 0 ? (
-                    <div className="text-center py-12">
-                        <UserGroupIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Start a Group Discussion</h3>
-                        <p className="text-gray-600 mb-6">
-                            Ask a question and get responses from all {agents.length} selected agents
-                        </p>
-                        <div className="flex flex-wrap justify-center gap-2">
-                            {agents.map((agent) => (
-                                <div
-                                    key={agent.id}
-                                    className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-2"
-                                >
-                                    <img
-                                        src={agent.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`}
-                                        alt={agent.name}
-                                        className="w-6 h-6 rounded-full object-cover"
-                                        onError={(e) => {
-                                            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`;
-                                        }}
-                                    />
-                                    <span className="text-sm font-medium text-gray-700">{agent.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    chatHistory.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-3xl ${msg.type === 'user' ? 'order-2' : 'order-1'}`}>
-                                {msg.type === 'agent' && (
-                                    <div className="flex items-center space-x-2 mb-2">
-                                        <img
-                                            src={msg.agent.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.agent.name)}&background=random&color=fff&size=200`}
-                                            alt={msg.agent.name}
-                                            className="w-6 h-6 rounded-full object-cover"
-                                            onError={(e) => {
-                                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.agent.name)}&background=random&color=fff&size=200`;
-                                            }}
-                                        />
-                                        <span className="text-sm font-medium text-gray-700">{msg.agent.name}</span>
-                                        <span className="text-xs text-gray-500">
-                                            {msg.agent.occupation || msg.agent.role_title}
-                                        </span>
-                                    </div>
-                                )}
-                                <div
-                                    className={`px-4 py-3 rounded-lg ${
-                                        msg.type === 'user'
-                                            ? 'bg-blue-600 text-white'
-                                            : msg.isError
-                                            ? 'bg-red-50 border border-red-200 text-red-800'
-                                            : 'bg-white border border-gray-200 text-gray-900'
-                                    }`}
-                                >
-                                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                                    {msg.ui_path && (
-                                        <div className="mt-2">
-                                            <img
-                                                src={`http://localhost:9001/${msg.ui_path}`}
-                                                alt="Uploaded UI"
-                                                className="max-w-xs rounded-lg border border-gray-200"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    {new Date(msg.timestamp).toLocaleTimeString()}
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-                
-                {/* Loading indicator for current responding agent */}
-                {currentRespondingAgent && (
-                    <div className="flex justify-start">
-                        <div className="max-w-3xl">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <img
-                                    src={currentRespondingAgent.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRespondingAgent.name)}&background=random&color=fff&size=200`}
-                                    alt={currentRespondingAgent.name}
-                                    className="w-6 h-6 rounded-full object-cover"
-                                    onError={(e) => {
-                                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentRespondingAgent.name)}&background=random&color=fff&size=200`;
-                                    }}
-                                />
-                                <span className="text-sm font-medium text-gray-700">{currentRespondingAgent.name}</span>
-                                <span className="text-xs text-gray-500">is typing...</span>
-                            </div>
-                            <div className="bg-gray-100 border border-gray-200 rounded-lg px-4 py-3">
-                                <div className="flex space-x-1">
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input Area */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-                {/* Action Buttons */}
-                <div className="flex items-center space-x-2 mb-3">
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                    />
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Upload UI Image"
-                    >
-                        <PhotoIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                        onClick={clearHistory}
-                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Clear Chat"
-                    >
-                        <XMarkIcon className="h-5 w-5" />
-                    </button>
+        <div className="flex h-full flex-col rounded-3xl border border-white/70 bg-white/90 shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between border-b border-slate-200/70 bg-white/60 px-6 py-4">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Collaborative Panel</p>
+                    <h2 className="text-lg font-semibold text-slate-900">Persona Discussion Stream</h2>
                 </div>
-
-                {/* Message Input */}
-                <div className="flex space-x-3">
-                    <div className="flex-1">
-                        <textarea
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Ask all agents a question..."
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                            rows={2}
-                            disabled={isLoading}
-                        />
+                <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500">
+                        <UserGroupIcon className="h-4 w-4 text-slate-400" />
+                        {agents.length} persona{agents.length === 1 ? '' : 's'} active
                     </div>
                     <Button
-                        onClick={sendMessage}
-                        disabled={!message.trim() || isLoading}
-                        className="px-6 py-3"
+                        variant="secondary"
+                        onClick={() => {
+                            const latest = savedSessions[savedSessions.length - 1];
+                            if (latest) {
+                                loadSavedGroupSession(latest.id);
+                                toast.success('Previous group chat session restored.');
+                            } else {
+                                toast.error('No saved group sessions found.');
+                            }
+                        }}
                     >
-                        <PaperAirplaneIcon className="h-5 w-5" />
+                        Load Last Session
                     </Button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-8 py-8 bg-gradient-to-b from-slate-50/30 to-white">
+                {groupChatHistory.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center text-center">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 shadow-sm">
+                            <UserGroupIcon className="h-10 w-10" />
+                        </div>
+                        <h3 className="mt-6 text-xl font-bold text-slate-800">Start the conversation</h3>
+                        <p className="mt-3 text-base text-slate-600 max-w-md leading-relaxed">
+                            Ask a question or upload a reference to hear perspectives from each persona.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="mx-auto max-w-4xl space-y-8">
+                        {groupChatHistory.map((msg) => (
+                            <div key={msg.id} className="flex gap-5 group">
+                                {msg.type === 'agent' ? (
+                                    <div className="flex-shrink-0">
+                                        <img
+                                            src={getAvatarSrc(msg.agent?.avatar_url, msg.agent?.name, { size: 160 })}
+                                            alt={msg.agent?.name}
+                                            className="h-12 w-12 rounded-2xl object-cover ring-2 ring-white shadow-md"
+                                            onError={(e) => handleAvatarError(e, msg.agent?.name, { size: 160 })}
+                                        />
+                                    </div>
+                                ) : msg.type === 'system' ? (
+                                    <div className="flex-shrink-0 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-md">
+                                        <PhotoIcon className="h-6 w-6 text-white" />
+                                    </div>
+                                ) : (
+                                    <div className="flex-shrink-0 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 shadow-md">
+                                        <span className="text-sm font-bold text-white">You</span>
+                                    </div>
+                                )}
+
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-baseline gap-3 mb-2">
+                                        <p className="text-base font-bold text-slate-800">
+                                            {msg.type === 'agent' ? msg.agent?.name : msg.type === 'system' ? 'System' : 'You'}
+                                        </p>
+                                        {msg.type === 'agent' && msg.agent?.occupation && (
+                                            <span className="text-xs text-slate-500 font-medium">
+                                                {msg.agent.occupation}
+                                            </span>
+                                        )}
+                                        <span className="text-xs text-slate-400 ml-auto">
+                                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div
+                                        className={`rounded-2xl px-6 py-5 shadow-sm transition-all group-hover:shadow-md ${
+                                            msg.type === 'agent'
+                                                ? 'bg-white border border-slate-200/80'
+                                                : msg.type === 'system'
+                                                ? 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/80'
+                                                : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                                        } ${msg.isError ? 'border-red-300 bg-red-50' : ''}`}
+                                    >
+                                        <div className={`text-[15px] leading-[1.8] ${
+                                            msg.type === 'agent' ? 'text-slate-700' :
+                                            msg.type === 'system' ? 'text-amber-900 font-medium' : 
+                                            'text-white'
+                                        }`}>
+                                            {msg.content.split('\n').map((paragraph, idx) => (
+                                                <p key={idx} className={idx > 0 ? 'mt-4' : ''}>
+                                                    {paragraph}
+                                                </p>
+                                            ))}
+                                        </div>
+                                        {msg.imagePath && (
+                                            <div className="mt-5 pt-5 border-t border-slate-200">
+                                                <img
+                                                    src={`http://localhost:9001${msg.imagePath}`}
+                                                    alt="Uploaded reference"
+                                                    className="rounded-xl max-w-md border border-slate-200 shadow-lg hover:shadow-xl transition-shadow"
+                                                    onError={(e) => {
+                                                        console.error('Failed to load image:', msg.imagePath);
+                                                        e.target.style.display = 'none';
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
+                )}
+            </div>
+
+            <div className="border-t border-slate-200/80 bg-gradient-to-b from-white to-slate-50/50 backdrop-blur-sm">
+                <div className="mx-auto max-w-4xl px-6 py-5">
+                    {/* Status & Upload Bar */}
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
+                            <button
+                                onClick={handleUpload}
+                                disabled={!chatReady || isUploading}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 text-sm font-medium shadow-sm hover:border-indigo-300 hover:text-indigo-600 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <PhotoIcon className="h-4 w-4" />
+                                <span>{isUploading ? 'Uploading...' : uploadedImagePath ? '✓ Image loaded' : 'Add image'}</span>
+                            </button>
+                        </div>
+                        {currentRespondingAgent && (
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-xs font-medium text-emerald-700">
+                                    {currentRespondingAgent.name} is typing...
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Message Input */}
+                    <div className="flex gap-3 items-end">
+                        <div className="flex-1">
+                            <textarea
+                                rows={2}
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey && chatReady && !isLoading) {
+                                        e.preventDefault();
+                                        sendMessage();
+                                    }
+                                }}
+                                placeholder={chatReady ? 'Type your message... (Shift+Enter for new line)' : 'Set the chat purpose and start chat to begin.'}
+                                className="w-full resize-none rounded-2xl border-2 border-slate-200 bg-white px-5 py-3.5 text-[15px] leading-relaxed text-slate-700 placeholder:text-slate-400 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100/50 transition-all disabled:bg-slate-50 disabled:text-slate-400"
+                                disabled={!chatReady}
+                            />
+                        </div>
+                        <button
+                            onClick={sendMessage}
+                            disabled={!chatReady || isLoading || !message.trim()}
+                            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                            <PaperAirplaneIcon className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                        <span className="text-xs text-slate-500">
+                            💾 Chat saves automatically • Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono text-[10px]">⏎</kbd> to send
+                        </span>
+                        {hasMessages && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleEndChat}
+                                    disabled={isLoading}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? 'Ending...' : 'End session'}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        saveGroupChatHistory();
+                                        toast.success('Group chat saved.');
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-indigo-50 text-xs font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors"
+                                >
+                                    Save progress
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

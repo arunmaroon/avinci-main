@@ -196,7 +196,7 @@ const EnhancedChatPage = () => {
                                             }`}
                                         >
                                             <img
-                                                src={agentOption.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(agentOption.name)}&background=random&color=fff&size=200`}
+                                                src={agentOption.avatar_url || `https://i.pravatar.cc/150?img=${agentOption.id % 70}`}
                                                 alt={agentOption.name}
                                                 className="w-8 h-8 rounded-full object-cover"
                                                 onError={(e) => {

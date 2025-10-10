@@ -1,31 +1,73 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import api from '../utils/api';
 
-const useChatStore = create(
-    persist(
-        (set, get) => ({
-            // State
-            chatHistory: [], // Array of {role: 'user'/'agent', content: string, ui_path: string|null, timestamp: string}
+const useChatStore = create((set, get) => ({
+            // Single-agent chat state
+            chatHistory: [],
             currentAgentId: null,
             isLoading: false,
             error: null,
-            uiContext: null, // Current UI context for feedback
+            uiContext: null,
             usabilityResults: null,
-            chatSessions: {}, // Object to store multiple chat sessions
-            currentSessionId: null, // Current active session ID
 
-            // Actions
+            // Group chat state
+            activeGroupId: null,
+            activeGroupAgents: [],
+            groupChatHistory: [],
+            groupPurpose: '',
+
+            // Session history
+            chatSessions: {},
+            groupSessions: {},
+            currentSessionId: null,
+
+            // ---------- Single-Agent Chat Methods ----------
             setCurrentAgent: (agentId) => {
-                // Save current agent's history before switching
                 get().saveChatHistory();
-                
-                // Clear current chat history
-                set({ chatHistory: [] });
-                
-                // Set new agent and load their history
-                set({ currentAgentId: agentId });
+                set({ chatHistory: [], currentAgentId: agentId });
                 get().loadChatHistory(agentId);
+            },
+
+            getAllSessions: () => {
+                const { chatSessions } = get();
+                return Object.entries(chatSessions).map(([id, session]) => ({ id, ...session }));
+            },
+
+            loadSession: (sessionId) => {
+                const { chatSessions } = get();
+                const session = chatSessions[sessionId];
+                if (session) {
+                    set({
+                        currentSessionId: sessionId,
+                        currentAgentId: session.agentId,
+                        chatHistory: session.chatHistory,
+                        uiContext: null,
+                        usabilityResults: null,
+                    });
+                }
+            },
+
+            saveChatSession: (session) => {
+                if (!session || !session.id) return;
+                set((state) => ({
+                    chatSessions: {
+                        ...state.chatSessions,
+                        [session.id]: {
+                            ...session,
+                            messageCount: session.chatHistory?.length || session.messageCount || 0,
+                            endedAt: session.endedAt || new Date().toISOString(),
+                        },
+                    },
+                }));
+            },
+
+            deleteChatSession: (sessionId) => {
+                if (!sessionId) return;
+                set((state) => {
+                    const updated = { ...(state.chatSessions || {}) };
+                    delete updated[sessionId];
+                    return { chatSessions: updated };
+                });
             },
 
             appendMessage: ({ role, content, ui_path = null, timestamp = new Date().toISOString() }) => {
@@ -34,32 +76,18 @@ const useChatStore = create(
                     role,
                     content,
                     ui_path,
-                    timestamp
+                    timestamp,
                 };
 
-                set(state => ({
-                    chatHistory: [...state.chatHistory, message]
-                }));
-
-                // Persist to localStorage
+                set((state) => ({ chatHistory: [...state.chatHistory, message] }));
                 get().saveChatHistory();
             },
 
             sendMessage: async (message, ui_path = null) => {
                 const { currentAgentId, chatHistory } = get();
-                
-                if (!currentAgentId) {
-                    console.error('No currentAgentId set!');
-                    return;
-                }
+                if (!currentAgentId) return;
 
-                // Add user message immediately
-                get().appendMessage({
-                    role: 'user',
-                    content: message,
-                    ui_path
-                });
-
+                get().appendMessage({ role: 'user', content: message, ui_path });
                 set({ isLoading: true, error: null });
 
                 try {
@@ -67,45 +95,31 @@ const useChatStore = create(
                         agentId: currentAgentId,
                         query: message,
                         ui_path,
-                        chat_history: chatHistory
+                        chat_history: chatHistory,
                     });
 
-                    // Check if response is successful
-                    if (response.data && response.data.success && response.data.response) {
-                        // Add agent response
-                        get().appendMessage({
-                            role: 'agent',
-                            content: response.data.response,
-                            ui_path
-                        });
+                    if (response.data?.success && response.data.response) {
+                        get().appendMessage({ role: 'agent', content: response.data.response, ui_path });
                     } else {
                         throw new Error('Invalid response format');
                     }
 
                     set({ isLoading: false });
-
                 } catch (error) {
                     console.error('Error sending message:', error);
                     get().appendMessage({
                         role: 'error',
                         content: 'Sorry, I encountered an error. Please try again.',
-                        ui_path
+                        ui_path,
                     });
-                    set({ 
-                        error: error.message,
-                        isLoading: false 
-                    });
+                    set({ error: error.message, isLoading: false });
                 }
             },
 
             uploadUI: async (imageFile) => {
                 const { currentAgentId } = get();
                 if (!currentAgentId) {
-                    console.error('No currentAgentId set for UI upload');
-                    set({ 
-                        error: 'No agent selected for UI upload',
-                        isLoading: false 
-                    });
+                    set({ error: 'No agent selected for UI upload', isLoading: false });
                     return;
                 }
 
@@ -116,35 +130,22 @@ const useChatStore = create(
                     formData.append('image', imageFile);
                     formData.append('agentId', currentAgentId);
 
-                    console.log('Uploading UI for agent:', currentAgentId);
-
                     const response = await api.post('/ai/upload-ui', formData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                        },
+                        headers: { 'Content-Type': 'multipart/form-data' },
                     });
-
-                    console.log('UI upload response:', response.data);
 
                     const ui_path = response.data.ui_path;
                     set({ uiContext: ui_path });
 
-                    // Add UI upload message
                     get().appendMessage({
                         role: 'user',
                         content: `Uploaded UI image: ${imageFile.name}`,
-                        ui_path
+                        ui_path,
                     });
-
                     set({ isLoading: false });
-
                 } catch (error) {
-                    console.error('Error uploading UI:', error);
                     const errorMessage = error.response?.data?.error || error.message || 'Failed to upload UI image';
-                    set({ 
-                        error: errorMessage,
-                        isLoading: false 
-                    });
+                    set({ error: errorMessage, isLoading: false });
                 }
             },
 
@@ -158,33 +159,18 @@ const useChatStore = create(
                     const response = await api.post('/api/agent/usability', {
                         agentId: currentAgentId,
                         task,
-                        ui_path: ui_path || get().uiContext
+                        ui_path: ui_path || get().uiContext,
                     });
 
-                    set({ 
-                        usabilityResults: response.data,
-                        isLoading: false 
-                    });
-
-                    // Add usability test message
-                    get().appendMessage({
-                        role: 'system',
-                        content: `Ran usability test: ${task}`,
-                        ui_path
-                    });
-
+                    set({ usabilityResults: response.data, isLoading: false });
+                    get().appendMessage({ role: 'system', content: `Ran usability test: ${task}`, ui_path });
                 } catch (error) {
-                    console.error('Error running usability test:', error);
-                    set({ 
-                        error: error.message,
-                        isLoading: false 
-                    });
+                    set({ error: error.message, isLoading: false });
                 }
             },
 
             loadChatHistory: (agentId) => {
                 if (!agentId) return;
-                
                 const stored = localStorage.getItem(`chat_history_${agentId}`);
                 if (stored) {
                     try {
@@ -195,7 +181,6 @@ const useChatStore = create(
                         set({ chatHistory: [] });
                     }
                 } else {
-                    // No history found for this agent, start fresh
                     set({ chatHistory: [] });
                 }
             },
@@ -216,13 +201,10 @@ const useChatStore = create(
             },
 
             clearHistoryForAgent: (agentId) => {
-                if (agentId) {
-                    localStorage.removeItem(`chat_history_${agentId}`);
-                    // If this is the current agent, also clear the current history
-                    const { currentAgentId } = get();
-                    if (currentAgentId === agentId) {
-                        set({ chatHistory: [] });
-                    }
+                if (!agentId) return;
+                localStorage.removeItem(`chat_history_${agentId}`);
+                if (get().currentAgentId === agentId) {
+                    set({ chatHistory: [] });
                 }
             },
 
@@ -233,15 +215,162 @@ const useChatStore = create(
                         return JSON.parse(stored);
                     } catch (error) {
                         console.error('Error loading chat history for agent:', error);
-                        return [];
                     }
                 }
                 return [];
             },
 
-            clearError: () => {
-                set({ error: null });
+            // ---------- Group Chat Methods ----------
+            startGroupChatSession: (agents, purpose) => {
+                const groupId = `group_${Date.now()}`;
+                set({
+                    activeGroupId: groupId,
+                    activeGroupAgents: agents,
+                    groupChatHistory: [],
+                    groupPurpose: purpose,
+                });
+
+                localStorage.setItem(
+                    `group_chat_${groupId}`,
+                    JSON.stringify({
+                        agents,
+                        purpose,
+                        messages: [],
+                        startedAt: new Date().toISOString(),
+                    })
+                );
+
+                return groupId;
             },
+
+            appendGroupMessage: (message) => {
+                set((state) => ({ groupChatHistory: [...state.groupChatHistory, message] }));
+                get().saveGroupChatHistory();
+            },
+
+            saveGroupChatHistory: () => {
+                const { activeGroupId, activeGroupAgents, groupChatHistory, groupPurpose } = get();
+                if (!activeGroupId) return;
+
+                localStorage.setItem(
+                    `group_chat_${activeGroupId}`,
+                    JSON.stringify({ agents: activeGroupAgents, purpose: groupPurpose, messages: groupChatHistory })
+                );
+            },
+
+            loadGroupChatHistory: (groupId) => {
+                if (!groupId) return;
+                const stored = localStorage.getItem(`group_chat_${groupId}`);
+                if (!stored) return;
+
+                try {
+                    const parsed = JSON.parse(stored);
+                    set({
+                        activeGroupId: groupId,
+                        activeGroupAgents: parsed.agents || [],
+                        groupPurpose: parsed.purpose || '',
+                        groupChatHistory: parsed.messages || [],
+                    });
+                } catch (error) {
+                    console.error('Error loading group chat history:', error);
+                }
+            },
+
+            endGroupChatSession: () => {
+                const { activeGroupId, activeGroupAgents, groupChatHistory, groupPurpose } = get();
+                if (!activeGroupId || groupChatHistory.length === 0) {
+                    set({
+                        activeGroupId: null,
+                        activeGroupAgents: [],
+                        groupChatHistory: [],
+                        groupPurpose: '',
+                    });
+                    return;
+                }
+
+                const sessionId = `group_${activeGroupId}`;
+                const sessionData = {
+                    id: sessionId,
+                    agents: activeGroupAgents,
+                    purpose: groupPurpose,
+                    chatHistory: [...groupChatHistory],
+                    endedAt: new Date().toISOString(),
+                };
+
+                set((state) => ({
+                    groupSessions: {
+                        ...state.groupSessions,
+                        [sessionId]: sessionData,
+                    },
+                    activeGroupId: null,
+                    activeGroupAgents: [],
+                    groupChatHistory: [],
+                    groupPurpose: '',
+                }));
+
+                localStorage.setItem(`group_session_${sessionId}`, JSON.stringify(sessionData));
+                localStorage.removeItem(`group_chat_${activeGroupId}`);
+            },
+
+            loadSavedGroupSession: (sessionId) => {
+                const stored = localStorage.getItem(`group_session_${sessionId}`);
+                if (!stored) return;
+
+                try {
+                    const parsed = JSON.parse(stored);
+                    set({
+                        activeGroupId: parsed.id,
+                        activeGroupAgents: parsed.agents || [],
+                        groupPurpose: parsed.purpose || '',
+                        groupChatHistory: parsed.chatHistory || [],
+                    });
+                } catch (error) {
+                    console.error('Error loading saved group session:', error);
+                }
+            },
+
+            getGroupSessions: () => {
+                const { groupSessions } = get();
+                return Object.entries(groupSessions).map(([id, session]) => ({ id, ...session }));
+            },
+
+            loadLastActiveGroupChat: () => {
+                // Find the most recent active group chat in localStorage
+                const keys = Object.keys(localStorage).filter(key => key.startsWith('group_chat_'));
+                if (keys.length === 0) return null;
+
+                // Sort by timestamp in the key (group_chat_{timestamp})
+                const latestKey = keys.sort().reverse()[0];
+                const groupId = latestKey.replace('group_chat_', '');
+                
+                try {
+                    const stored = localStorage.getItem(latestKey);
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        set({
+                            activeGroupId: groupId,
+                            activeGroupAgents: parsed.agents || [],
+                            groupPurpose: parsed.purpose || '',
+                            groupChatHistory: parsed.messages || [],
+                        });
+                        return groupId;
+                    }
+                } catch (error) {
+                    console.error('Error loading last active group chat:', error);
+                }
+                return null;
+            },
+
+            clearGroupChatHistory: () => {
+                const { activeGroupId } = get();
+                set({ groupChatHistory: [] });
+                if (activeGroupId) {
+                    localStorage.removeItem(`group_chat_${activeGroupId}`);
+                }
+            },
+
+            // ---------- Shared Utilities ----------
+            clearError: () => set({ error: null }),
 
             reset: () => {
                 set({
@@ -250,117 +379,13 @@ const useChatStore = create(
                     isLoading: false,
                     error: null,
                     uiContext: null,
-                    usabilityResults: null
+                    usabilityResults: null,
+                    activeGroupId: null,
+                    activeGroupAgents: [],
+                    groupChatHistory: [],
+                    groupPurpose: '',
                 });
             },
-
-            // Session Management
-            startNewSession: (agentId) => {
-                const sessionId = `session_${Date.now()}_${agentId}`;
-                set({
-                    currentSessionId: sessionId,
-                    currentAgentId: agentId,
-                    chatHistory: [],
-                    uiContext: null,
-                    usabilityResults: null
-                });
-                return sessionId;
-            },
-
-            endCurrentChat: () => {
-                const { currentSessionId, chatHistory, currentAgentId } = get();
-                if (currentSessionId && chatHistory.length > 0) {
-                    // Save current session
-                    set(state => ({
-                        chatSessions: {
-                            ...state.chatSessions,
-                            [currentSessionId]: {
-                                agentId: currentAgentId,
-                                chatHistory: [...chatHistory],
-                                endedAt: new Date().toISOString(),
-                                messageCount: chatHistory.length
-                            }
-                        },
-                        currentSessionId: null,
-                        currentAgentId: null,
-                        chatHistory: [],
-                        uiContext: null,
-                        usabilityResults: null
-                    }));
-                }
-            },
-
-            loadSession: (sessionId) => {
-                const { chatSessions } = get();
-                const session = chatSessions[sessionId];
-                if (session) {
-                    set({
-                        currentSessionId: sessionId,
-                        currentAgentId: session.agentId,
-                        chatHistory: session.chatHistory,
-                        uiContext: null,
-                        usabilityResults: null
-                    });
-                }
-            },
-
-            getAllSessions: () => {
-                const { chatSessions } = get();
-                return Object.entries(chatSessions).map(([id, session]) => ({
-                    id,
-                    ...session
-                }));
-            },
-
-            // Summary functionality
-            generateSummary: async () => {
-                const { chatSessions } = get();
-                const allSessions = Object.values(chatSessions);
-                
-                if (allSessions.length === 0) {
-                    return { error: 'No chat sessions found' };
-                }
-
-                try {
-                    set({ isLoading: true, error: null });
-
-                    // Prepare all chat data for summary
-                    const allChats = allSessions.flatMap(session => 
-                        session.chatHistory.map(msg => ({
-                            ...msg,
-                            sessionId: Object.keys(chatSessions).find(id => chatSessions[id] === session),
-                            agentId: session.agentId
-                        }))
-                    );
-
-                    // Send to backend for AI summary
-                    const response = await api.post('/ai/generate-summary', {
-                        chatSessions: allSessions,
-                        allChats: allChats
-                    });
-
-                    set({ isLoading: false });
-                    return response.data;
-                } catch (error) {
-                    console.error('Error generating summary:', error);
-                    set({ 
-                        error: 'Failed to generate summary',
-                        isLoading: false 
-                    });
-                    return { error: 'Failed to generate summary' };
-                }
-            }
-        }),
-        {
-            name: 'chat-store',
-            partialize: (state) => ({ 
-                chatHistory: state.chatHistory,
-                currentAgentId: state.currentAgentId,
-                uiContext: state.uiContext,
-                chatSessions: state.chatSessions || {}
-            })
-        }
-    )
-);
+}));
 
 export default useChatStore;

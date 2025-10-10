@@ -44,17 +44,15 @@ const PersonaDetailView = ({ agent, onClose, onChat }) => {
             <div className="flex items-center space-x-4">
               <div className="relative">
                     <img
-                      src={agent.avatar_url}
+                      src={agent.avatar_url || agent.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Persona')}&background=random&color=fff&size=200`}
                       alt={agent.name}
                       className="w-20 h-20 rounded-full object-cover border-4 border-gray-200"
                       onError={(e) => {
-                        // First fallback: Try a different Random User photo
-                        if (e.target.src.includes('randomuser.me')) {
-                          const fallbackUrl = `https://randomuser.me/api/portraits/${agent.demographics?.gender === 'Male' ? 'men' : 'women'}/${Math.floor(Math.random() * 99) + 1}.jpg`;
-                          e.target.src = fallbackUrl;
+                        if (agent.demographics?.gender) {
+                          const gender = agent.demographics.gender.toLowerCase().includes('male') ? 'men' : 'women';
+                          e.target.src = `https://randomuser.me/api/portraits/${gender}/${Math.floor(Math.random() * 99) + 1}.jpg`;
                         } else {
-                          // Second fallback: Use UI Avatars
-                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name)}&background=random&color=fff&size=200`;
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(agent.name || 'Persona')}&background=random&color=fff&size=200`;
                         }
                       }}
                     />

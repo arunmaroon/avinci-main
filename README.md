@@ -1,14 +1,42 @@
 # Sirius v2.02 - Enhanced AI Intelligence Platform
 
-A comprehensive AI-powered platform built with modern technologies for intelligent conversations, document processing, and data analysis. **Now with enhanced chat memory, detailed UI feedback, and usability testing capabilities.**
+A comprehensive AI-powered platform built with modern technologies for intelligent conversations, document processing, and data analysis. **Now with enhanced chat memory, GPT-4o vision for detailed UI feedback, and task-based usability testing capabilities.**
 
 ## ✨ New Features in v2.02
 
-- **🧠 Chat Memory**: Conversations retain context and uploaded UI images
-- **🎨 Detailed UI Feedback**: Get specific, actionable design critiques (spacing, alignment, button sizes)
-- **🧪 Usability Testing**: Run task-based usability tests with persona-specific pain points
-- **🎯 Airbnb/Uber Style UI**: Clean, intuitive, bold design system
-- **📱 Mobile-First**: Responsive design with accessibility features
+### 💬 Enhanced Chat System
+- **🧠 Persistent Chat Memory**: Conversations automatically saved per agent with localStorage
+- **📸 Image Context**: Upload UI screenshots and reference them across conversation
+- **👁️ GPT-4o Vision**: AI analyzes uploaded images with pixel-level detail
+- **🔄 Context Awareness**: Agents remember previous messages and uploaded images
+- **🗑️ Easy Reset**: Clear chat history with one click
+
+### 🎨 Detailed UI Feedback
+- **🔍 Pixel-Perfect Analysis**: Specific critiques on spacing, alignment, button sizes (e.g., "Increase padding by 8px")
+- **🎯 Persona-Driven Feedback**: Feedback tied to agent's specific pain points and background
+- **📊 Visual Analysis**: Upload PNG/JPG images (max 5MB) for real-time critique
+- **💡 Actionable Suggestions**: Get concrete fixes like "Align CTA to center, use bg-blue-600"
+- **🗣️ Natural Language**: Agents respond in their authentic voice with personality
+
+### 🧪 Usability Testing
+- **📋 Task-Based Testing**: Select from pre-defined tasks (Navigation, Form Usability, etc.)
+- **👥 Persona-Specific**: Tests reflect agent's tech savviness and experience
+- **📈 Structured Results**: Steps, pain points, rating (1-10), and specific fixes
+- **🎯 Contextual Analysis**: Feedback considers agent's daily routine and goals
+- **📊 Exportable Reports**: Comprehensive usability test summaries
+
+### 🎭 UXPressia-Style Persona Views
+- **📸 Professional Cards**: Magazine-style persona displays
+- **📋 Complete Data**: All 51 persona fields displayed beautifully
+- **🎨 Visual Hierarchy**: Clear sections for demographics, traits, goals, and behaviors
+
+### 🎯 Modern UI/UX (Airbnb/Uber Style)
+- **🎨 Gradient Backgrounds**: Clean, modern color schemes
+- **🔘 Rounded Corners**: Smooth, friendly interface elements
+- **✨ Smooth Transitions**: Professional hover and click animations
+- **♿ Accessibility**: ARIA labels, keyboard navigation, proper contrast
+- **📱 Mobile-First**: Responsive design for all screen sizes
+- **🔔 Toast Notifications**: Beautiful success/error feedback
 
 ## 🔧 Improvements in v2.02
 

@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { 
-    UserGroupIcon, 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    UserGroupIcon,
     MagnifyingGlassIcon,
-    FunnelIcon,
     DocumentTextIcon,
     SparklesIcon,
     PlusIcon,
@@ -10,9 +9,64 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import EnhancedAgentCreator from '../components/EnhancedAgentCreator';
-import PersonaChat from '../components/PersonaChat';
-import BulkTranscriptUploader from '../components/BulkTranscriptUploader';
 import AgentGrid from '../components/AgentGrid';
+
+const formatTitleCase = (value = '') => {
+    if (!value) return '';
+    const clean = value.toString().replace(/_/g, ' ').toLowerCase();
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
+};
+
+const complexityToEnglishLevel = (complexity) => {
+    if (complexity >= 8) return 'Advanced';
+    if (complexity >= 6) return 'Intermediate';
+    if (complexity >= 4) return 'Basic';
+    if (complexity > 0) return 'Beginner';
+    return 'Unknown';
+};
+
+const deriveEnglishLevel = (agent) => {
+    if (agent?.vocabulary_profile?.complexity) {
+        return complexityToEnglishLevel(agent.vocabulary_profile.complexity);
+    }
+    const gauge = agent?.gauges?.english_literacy;
+    if (!gauge) return 'Unknown';
+    const normalized = gauge.toLowerCase();
+    switch (normalized) {
+        case 'high':
+            return 'Advanced';
+        case 'medium':
+            return 'Intermediate';
+        case 'low':
+            return 'Basic';
+        case 'basic':
+            return 'Beginner';
+        default:
+            return formatTitleCase(gauge);
+    }
+};
+
+const normalizeStatus = (status) => {
+    if (typeof status === 'boolean') {
+        return status ? 'active' : 'archived';
+    }
+    if (typeof status === 'string') {
+        return status.toLowerCase();
+    }
+    return 'active';
+};
+
+const normalizeLevel = (value, fallback = 'medium') => {
+    if (!value) return fallback;
+    return value.toString().toLowerCase();
+};
+
+const StatCard = ({ label, value, accentClass = 'text-gray-900' }) => (
+    <div className="rounded-lg border border-gray-100 bg-white px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
+        <p className={`mt-1 text-xl font-semibold ${accentClass}`}>{value}</p>
+    </div>
+);
 
 const AgentLibrary = () => {
     const [agents, setAgents] = useState([]);
@@ -24,9 +78,6 @@ const AgentLibrary = () => {
     const [englishFilter, setEnglishFilter] = useState('all');
     const [locationFilter, setLocationFilter] = useState('all');
     const [showEnhancedCreator, setShowEnhancedCreator] = useState(false);
-    const [showBulkUploader, setShowBulkUploader] = useState(false);
-    const [selectedAgentForChat, setSelectedAgentForChat] = useState(null);
-    const [showChat, setShowChat] = useState(false);
 
     useEffect(() => {
         fetchAgents();
@@ -35,379 +86,319 @@ const AgentLibrary = () => {
     const fetchAgents = async () => {
         try {
             setLoading(true);
-            console.log('Fetching agents from API...');
             const response = await api.get('/agents/v5?view=short');
-            console.log('Agents response:', response.data);
-            setAgents(response.data);
+            const normalized = (response.data || []).map(agent => {
+                const status = normalizeStatus(agent.status);
+                const techLevel = normalizeLevel(agent.tech_savviness || agent.gauges?.tech);
+                const domainLevel = normalizeLevel(agent.domain_literacy?.level || agent.gauges?.domain);
+                const englishLevel = deriveEnglishLevel(agent);
+                const locationLabel = agent.location || 'Unknown';
+
+                return {
+                    ...agent,
+                    status,
+                    statusLabel: formatTitleCase(status),
+                    tech_savviness: techLevel,
+                    techLabel: formatTitleCase(techLevel),
+                    domainLevel: formatTitleCase(domainLevel),
+                    englishLevel,
+                    locationLabel
+                };
+            });
+            setAgents(normalized);
         } catch (error) {
             console.error('Error fetching agents:', error);
-            console.error('Error details:', error.response?.data);
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredAgents = agents.filter(agent => {
-        const matchesSearch = !searchTerm || 
-            agent.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            agent.occupation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            agent.role_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            agent.quote?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
-        
-        const matchesAge = ageFilter === 'all' || 
-            (ageFilter === 'young' && agent.demographics?.age < 30) ||
-            (ageFilter === 'adult' && agent.demographics?.age >= 30 && agent.demographics?.age < 50) ||
-            (ageFilter === 'mature' && agent.demographics?.age >= 50);
-        
-        const matchesTech = techFilter === 'all' || agent.tech_savviness === techFilter;
-        
-        const getEnglishLevel = (complexity) => {
-            if (!complexity) return 'N/A';
-            if (complexity >= 8) return 'Advanced';
-            if (complexity >= 6) return 'Intermediate';
-            if (complexity >= 4) return 'Basic';
-            return 'Beginner';
-        };
-        
-        const matchesEnglish = englishFilter === 'all' || 
-            getEnglishLevel(agent.vocabulary_profile?.complexity) === englishFilter;
-        
-        const matchesLocation = locationFilter === 'all' || 
-            agent.location?.toLowerCase().includes(locationFilter.toLowerCase());
-        
-        return matchesSearch && matchesStatus && matchesAge && matchesTech && matchesEnglish && matchesLocation;
-    });
+    const stats = useMemo(() => ({
+        total: agents.length,
+        active: agents.filter(agent => agent.status === 'active').length,
+        sleeping: agents.filter(agent => agent.status === 'sleeping').length,
+        archived: agents.filter(agent => agent.status === 'archived').length
+    }), [agents]);
+
+    const locationOptions = useMemo(() => {
+        const set = new Set();
+        agents.forEach(agent => {
+            if (agent.locationLabel && agent.locationLabel !== 'Unknown') {
+                set.add(agent.locationLabel);
+            }
+        });
+        return Array.from(set).sort();
+    }, [agents]);
+
+    const filteredAgents = useMemo(() => {
+        return agents.filter(agent => {
+            const searchValue = searchTerm.trim().toLowerCase();
+            const matchesSearch = !searchValue ||
+                agent.name?.toLowerCase().includes(searchValue) ||
+                agent.occupation?.toLowerCase().includes(searchValue) ||
+                agent.role_title?.toLowerCase().includes(searchValue) ||
+                agent.quote?.toLowerCase().includes(searchValue);
+
+            const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
+
+            const age = agent.demographics?.age ?? agent.age;
+            const matchesAge =
+                ageFilter === 'all' ||
+                (ageFilter === 'young' && age && age < 30) ||
+                (ageFilter === 'adult' && age && age >= 30 && age < 50) ||
+                (ageFilter === 'mature' && age && age >= 50);
+
+            const matchesTech = techFilter === 'all' || agent.tech_savviness === techFilter;
+            const matchesEnglish = englishFilter === 'all' || agent.englishLevel === englishFilter;
+            const matchesLocation = locationFilter === 'all' || agent.locationLabel === locationFilter;
+
+            return matchesSearch && matchesStatus && matchesAge && matchesTech && matchesEnglish && matchesLocation;
+        });
+    }, [agents, searchTerm, statusFilter, ageFilter, techFilter, englishFilter, locationFilter]);
+
+    const resetFilters = () => {
+        setSearchTerm('');
+        setStatusFilter('all');
+        setAgeFilter('all');
+        setTechFilter('all');
+        setEnglishFilter('all');
+        setLocationFilter('all');
+    };
 
     const handleAddTestAgent = async () => {
         try {
-            console.log('Creating test agent...');
-            const response = await api.post('/agents/v5', {
+            await api.post('/agents/v5', {
                 transcript: {
                     raw_text: 'This is a test transcript for creating a demo agent. The person is friendly and helpful, always willing to assist with questions and provide guidance. They love using mobile apps for banking and are eager to learn new features. They sometimes get confused by technical terms and are apprehensive about making mistakes. They prefer simple language and step-by-step instructions.',
                     file_name: 'test_transcript.txt'
                 },
-                demographics: {
-                    // Let the backend generate Indian demographics automatically
-                }
+                demographics: {}
             });
-            console.log('Test agent created:', response.data);
-            // Refresh the agents list
             fetchAgents();
         } catch (error) {
             console.error('Error creating test agent:', error);
-            console.error('Error details:', error.response?.data);
         }
     };
 
-    const handleAgentCreated = (newAgent) => {
-        console.log('New agent created:', newAgent);
-        fetchAgents(); // Refresh the list
-        setShowEnhancedCreator(false); // Close the creator
+    const handleAgentCreated = () => {
+        fetchAgents();
+        setShowEnhancedCreator(false);
     };
 
     const handleStartChat = (agent) => {
-        // Redirect to Enhanced Chat
         window.location.href = `/enhanced-chat/${agent.id}`;
-    };
-
-    const handleBulkAgentsCreated = (createdAgents) => {
-        console.log('Bulk agents created:', createdAgents);
-        fetchAgents(); // Refresh the list
-        setShowBulkUploader(false); // Close the uploader
     };
 
     const handleDeleteAgent = async (agentId) => {
         try {
-            console.log('Deleting agent:', agentId);
-            const response = await api.delete(`/agents/v5/${agentId}`);
-            console.log('Agent deleted:', response.data);
-            // Refresh the agents list
+            await api.delete(`/agents/v5/${agentId}`);
             fetchAgents();
         } catch (error) {
             console.error('Error deleting agent:', error);
-            console.error('Error details:', error.response?.data);
         }
     };
 
     const handleAgentStatusChange = (agentId, newStatus) => {
-        setAgents(prevAgents => 
-            prevAgents.map(agent => 
-                agent.id === agentId 
-                    ? { ...agent, status: newStatus }
+        setAgents(prevAgents =>
+            prevAgents.map(agent =>
+                agent.id === agentId
+                    ? { ...agent, status: newStatus, statusLabel: formatTitleCase(newStatus) }
                     : agent
             )
         );
     };
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-h2 font-bold text-gray-900 flex items-center">
-                    <UserGroupIcon className="h-8 w-8 mr-3 text-primary-600" />
-                    Agent Library
-                </h1>
-                <div className="flex space-x-4">
-                    <button
-                        onClick={() => window.location.href = '/group-chat'}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                        <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
-                        Group Chat
-                    </button>
-                    <button
-                        onClick={handleAddTestAgent}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                        <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                        Add Test Agent
-                    </button>
-                    <button
-                        onClick={() => setShowEnhancedCreator(true)}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                        <SparklesIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                        Generate New Agent
-                    </button>
+        <div className="min-h-screen bg-gray-50 p-6 lg:p-8">
+            <div className="mx-auto flex max-w-7xl flex-col gap-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+                            <UserGroupIcon className="h-6 w-6 text-emerald-600" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-semibold text-gray-900">Agent Library</h1>
+                            <p className="text-sm text-gray-500">
+                                Curate, explore, and chat with your research personas.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            onClick={() => window.location.href = '/group-chat'}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+                        >
+                            <ChatBubbleLeftRightIcon className="h-5 w-5" />
+                            Group Chat
+                        </button>
+                        <button
+                            onClick={handleAddTestAgent}
+                            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                        >
+                            <PlusIcon className="h-5 w-5" />
+                            Add Test Agent
+                        </button>
+                        <button
+                            onClick={() => setShowEnhancedCreator(true)}
+                            className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                        >
+                            <SparklesIcon className="h-5 w-5" />
+                            Generate New Agent
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* Search and Filters */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                <div className="space-y-4">
-                    {/* Search Bar */}
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <StatCard label="Total Agents" value={stats.total} />
+                    <StatCard label="Active" value={stats.active} accentClass="text-emerald-600" />
+                    <StatCard label="Sleeping" value={stats.sleeping} accentClass="text-amber-600" />
+                    <StatCard label="Archived" value={stats.archived} accentClass="text-rose-600" />
+                </div>
+
+                <div className="space-y-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                     <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search agents by name, occupation, or quote..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
-                            style={{ '--tw-ring-color': '#144835' }}
+                            placeholder="Search agents by name, occupation, or quote..."
+                            className="w-full rounded-lg border border-gray-200 py-2 pl-10 pr-4 text-sm text-gray-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
                         />
                     </div>
-                    
-                    {/* Filter Row */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <div className="flex items-center space-x-2">
-                            <FunnelIcon className="w-5 h-5 text-gray-400" />
+
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">Status</label>
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
                             >
-                                <option value="all">All Status</option>
+                                <option value="all">All</option>
                                 <option value="active">Active</option>
                                 <option value="sleeping">Sleeping</option>
                                 <option value="archived">Archived</option>
                             </select>
                         </div>
-                        
-                        <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">Age:</span>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">Age</label>
                             <select
                                 value={ageFilter}
                                 onChange={(e) => setAgeFilter(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
                             >
                                 <option value="all">All Ages</option>
-                                <option value="young">Young (&lt;30)</option>
-                                <option value="adult">Adult (30-49)</option>
-                                <option value="mature">Mature (50+)</option>
+                                <option value="young">Younger than 30</option>
+                                <option value="adult">30 to 49</option>
+                                <option value="mature">50 and above</option>
                             </select>
                         </div>
-                        
-                        <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">Tech:</span>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">Tech Comfort</label>
                             <select
                                 value={techFilter}
                                 onChange={(e) => setTechFilter(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
                             >
-                                <option value="all">All Tech Levels</option>
+                                <option value="all">All</option>
                                 <option value="low">Low</option>
                                 <option value="medium">Medium</option>
                                 <option value="high">High</option>
                             </select>
                         </div>
-                        
-                        <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">English:</span>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">English</label>
                             <select
                                 value={englishFilter}
                                 onChange={(e) => setEnglishFilter(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
                             >
-                                <option value="all">All Levels</option>
+                                <option value="all">All</option>
                                 <option value="Beginner">Beginner</option>
                                 <option value="Basic">Basic</option>
                                 <option value="Intermediate">Intermediate</option>
                                 <option value="Advanced">Advanced</option>
+                                <option value="Unknown">Unknown</option>
                             </select>
                         </div>
-                        
-                        <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">Location:</span>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">Location</label>
                             <select
                                 value={locationFilter}
                                 onChange={(e) => setLocationFilter(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:border-transparent"
-                                style={{ '--tw-ring-color': '#144835' }}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
                             >
                                 <option value="all">All Locations</option>
-                                <option value="delhi">Delhi</option>
-                                <option value="mumbai">Mumbai</option>
-                                <option value="bangalore">Bangalore</option>
-                                <option value="chennai">Chennai</option>
-                                <option value="hyderabad">Hyderabad</option>
-                                <option value="chandigarh">Chandigarh</option>
+                                {locationOptions.map(location => (
+                                    <option key={location} value={location}>
+                                        {location}
+                                    </option>
+                                ))}
                             </select>
                         </div>
-                        
-                        <div className="flex items-center justify-end">
+
+                        <div className="flex items-end justify-end">
                             <button
-                                onClick={() => {
-                                    setSearchTerm('');
-                                    setStatusFilter('all');
-                                    setAgeFilter('all');
-                                    setTechFilter('all');
-                                    setEnglishFilter('all');
-                                    setLocationFilter('all');
-                                }}
-                                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                onClick={resetFilters}
+                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
                             >
-                                Clear All
+                                Clear Filters
                             </button>
                         </div>
                     </div>
                 </div>
+
+                {loading ? (
+                    <div className="flex flex-col items-center gap-3 py-12">
+                        <svg className="h-8 w-8 animate-spin text-emerald-500" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <p className="text-sm text-gray-500">Loading agents...</p>
+                    </div>
+                ) : filteredAgents.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+                        <UserGroupIcon className="mx-auto h-12 w-12 text-gray-300" />
+                        <h3 className="mt-4 text-lg font-semibold text-gray-900">No agents match your filters</h3>
+                        <p className="mt-2 text-sm text-gray-500">
+                            {searchTerm ? 'Try a different search term or clear the filters.' : 'Generate a new persona to get started.'}
+                        </p>
+                        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                            <button
+                                onClick={() => setShowEnhancedCreator(true)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                            >
+                                <DocumentTextIcon className="h-5 w-5" />
+                                Generate Agent
+                            </button>
+                            <button
+                                onClick={handleAddTestAgent}
+                                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+                            >
+                                <PlusIcon className="h-5 w-5" />
+                                Add Test Agent
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <AgentGrid
+                        agents={filteredAgents}
+                        onSelectAgent={handleStartChat}
+                        onDeleteAgent={handleDeleteAgent}
+                        onAgentStatusChange={handleAgentStatusChange}
+                    />
+                )}
             </div>
 
-            {/* Agents Grid */}
-            {loading ? (
-                <div className="text-center py-10">
-                    <svg className="animate-spin h-10 w-10 text-primary-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p className="mt-4 text-lg text-gray-600">Loading agents...</p>
-                </div>
-            ) : filteredAgents.length === 0 ? (
-                <div className="text-center py-12">
-                    <UserGroupIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No agents found</h3>
-                    <p className="text-gray-500 mb-6">
-                        {searchTerm || statusFilter !== 'all' 
-                            ? 'Try adjusting your search or filter criteria'
-                            : 'Get started by generating your first AI agent'
-                        }
-                    </p>
-                    {!searchTerm && statusFilter === 'all' && (
-                        <div className="space-y-4">
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button 
-                                    onClick={() => setShowBulkUploader(true)}
-                                    className="text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2" 
-                                    style={{ backgroundColor: '#144835' }} 
-                                    onMouseOver={(e) => e.target.style.backgroundColor = '#0f3a2a'} 
-                                    onMouseOut={(e) => e.target.style.backgroundColor = '#144835'}
-                                >
-                                    <SparklesIcon className="w-5 h-5" />
-                                    <span>Bulk Upload Transcripts</span>
-                                </button>
-                                <button 
-                                    onClick={() => setShowEnhancedCreator(true)}
-                                    className="text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2" 
-                                    style={{ backgroundColor: '#144835' }} 
-                                    onMouseOver={(e) => e.target.style.backgroundColor = '#0f3a2a'} 
-                                    onMouseOut={(e) => e.target.style.backgroundColor = '#144835'}
-                                >
-                                    <DocumentTextIcon className="w-5 h-5" />
-                                    <span>Single Transcript</span>
-                                </button>
-                                <button 
-                                    onClick={handleAddTestAgent}
-                                    className="text-white px-6 py-3 rounded-lg transition-colors flex items-center space-x-2" 
-                                    style={{ backgroundColor: '#144835' }} 
-                                    onMouseOver={(e) => e.target.style.backgroundColor = '#0f3a2a'} 
-                                    onMouseOut={(e) => e.target.style.backgroundColor = '#144835'}
-                                >
-                                    <PlusIcon className="w-5 h-5" />
-                                    <span>Add Test Agent</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <AgentGrid 
-                    agents={filteredAgents}
-                    onSelectAgent={handleStartChat}
-                    onDeleteAgent={handleDeleteAgent}
-                    onAgentStatusChange={handleAgentStatusChange}
-                />
-            )}
-
-            {/* Stats */}
-            <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900">{agents.length}</div>
-                        <div className="text-sm text-gray-500">Total Agents</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                            {agents.filter(agent => agent.status === 'active').length}
-                        </div>
-                        <div className="text-sm text-gray-500">Active</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-yellow-600">
-                            {agents.filter(agent => agent.status === 'sleeping').length}
-                        </div>
-                        <div className="text-sm text-gray-500">Sleeping</div>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">
-                            {agents.filter(agent => agent.status === 'archived').length}
-                        </div>
-                        <div className="text-sm text-gray-500">Archived</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Bulk Transcript Uploader */}
-            <div className="mt-12">
-                <h2 className="text-h3 font-bold text-gray-900 mb-4 flex items-center">
-                    <SparklesIcon className="h-7 w-7 mr-2 text-primary-600" />
-                    Bulk Transcript Uploader
-                </h2>
-                <p className="text-body-md text-gray-600 mb-6">
-                    Upload CSV or Excel files containing multiple transcripts to generate agents in bulk.
-                </p>
-                <BulkTranscriptUploader onAgentsCreated={handleBulkAgentsCreated} />
-            </div>
-
-            {/* Agent Creator Modal */}
             {showEnhancedCreator && (
-                <EnhancedAgentCreator 
-                    onClose={() => setShowEnhancedCreator(false)} 
-                    onAgentCreated={handleAgentCreated} 
-                />
-            )}
-
-            {/* Persona Chat Modal */}
-            {showChat && selectedAgentForChat && (
-                <PersonaChat 
-                    agent={selectedAgentForChat} 
-                    onClose={() => setShowChat(false)} 
+                <EnhancedAgentCreator
+                    onClose={() => setShowEnhancedCreator(false)}
+                    onAgentCreated={handleAgentCreated}
                 />
             )}
         </div>

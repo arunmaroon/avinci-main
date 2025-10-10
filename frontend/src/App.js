@@ -5,15 +5,12 @@ import Layout from './components/layout/Layout';
 import Dashboard from './pages/Dashboard';
 import AIAgents from './pages/AIAgents';
 import AgentLibrary from './pages/AgentLibrary';
-import ChatInterface from './pages/ChatInterface';
 import DetailedPersonas from './pages/DetailedPersonas';
 import AgentChatPage from './pages/AgentChatPage';
 import EnhancedChatPage from './pages/EnhancedChatPage';
-import TestEnhancedChat from './pages/TestEnhancedChat';
-import ChatTest from './pages/ChatTest';
 import GroupChatPage from './pages/GroupChatPage';
+import ChatArchive from './pages/ChatArchive';
 import DesignFeedback from './components/DesignFeedback';
-import AgentChat from './components/AgentChat';
 import './index.css';
 
 function App() {
@@ -61,7 +58,9 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/generate" element={<AIAgents />} />
           <Route path="/agents" element={<AgentLibrary />} />
+          <Route path="/personas" element={<DetailedPersonas />} />
           <Route path="/group-chat" element={<GroupChatPage />} />
+          <Route path="/archive" element={<ChatArchive />} />
           <Route path="/design-feedback" element={<DesignFeedback />} />
           <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
           <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />

@@ -1,9 +1,17 @@
 # Dependencies
 node_modules/
 */node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
 
 # Environment variables
 .env
@@ -11,6 +19,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+*.env
 
 # Logs
 logs/
@@ -19,90 +28,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+.pnpm-debug.log*
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
-# Grunt intermediate storage
-.grunt
-
-# Bower dependency directory
-bower_components
-
-# node-waf configuration
-.lock-wscript
-
-# Compiled binary addons
-build/Release
-
-# Dependency directories
-jspm_packages/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
-public
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
-tmp/
-temp/
-
-# Editor directories and files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS generated files
+# Operating System
 .DS_Store
 .DS_Store?
 ._*
@@ -110,40 +38,93 @@ temp/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Uploads
-uploads/
-backend/uploads/
-
-# Build outputs
-build/
-dist/
-
-# Docker
-.dockerignore
+desktop.ini
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
 
-# MacOS
-.DS_Store
+# Testing
+coverage/
+*.cover
+.hypothesis/
+.pytest_cache/
+.coverage
+.tox/
+.nox/
+junit.xml
+test-results/
+
+# Build outputs
+dist/
+build/
+*.bundle.js
+*.bundle.js.map
+frontend/build/
+backend/dist/
+
+# Uploads and generated files
+uploads/
+temp/
+tmp/
+*.tmp
+backend/uploads/
+frontend/uploads/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.sql.backup
+
+# Cache
+.cache/
+.npm/
+.eslintcache
+.parcel-cache/
+.next/
+out/
+
+# Docker
+.dockerignore
+
+# Archives
+.archive/
+*.zip
+*.tar.gz
+*.rar
+
+# Test images and files
+test_*.png
+test_*.jpg
+test_*.jpeg
+test_*.pdf
+test_*.txt
+**/test_image*.png
+**/test_*.png
+backend/test*.png
+backend/test*.pdf
+frontend/test*.png
+
+# Sample data
+sample_*.csv
+
+# Migration backups
+*.sql.bak
+*.backup
+
+# Misc
+.pnp
+.pnp.js
+.yarn/install-state.gz
+*.tsbuildinfo
