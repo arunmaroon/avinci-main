@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import GroupChat from '../components/GroupChat';
+import ParallelChat from '../components/ParallelChat';
 import { Card, Button } from '../design-system';
 import { 
     UserGroupIcon, 
@@ -11,7 +12,8 @@ import {
     ArrowLeftIcon,
     DocumentTextIcon,
     FunnelIcon,
-    MagnifyingGlassIcon
+    MagnifyingGlassIcon,
+    SparklesIcon
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import useChatStore from '../stores/chatStore';
@@ -32,6 +34,7 @@ const GroupChatPage = () => {
     const [filterEnglishSavvy, setFilterEnglishSavvy] = useState('');
     const [chatPurpose, setChatPurpose] = useState('');
     const [isChatActive, setIsChatActive] = useState(false);
+    const [chatMode, setChatMode] = useState('group'); // 'group' or 'parallel'
 
     // Only subscribe to needed methods to prevent unnecessary re-renders
     const generateSummary = useChatStore((state) => state.generateSummary);
@@ -93,11 +96,19 @@ const GroupChatPage = () => {
             return;
         }
 
-        const groupId = startGroupChatSession(selectedAgents, chatPurpose);
-        loadGroupChatHistory(groupId);
-        setShowAgentSelector(false);
-        setIsChatActive(true);
-        toast.success(`Starting group chat with ${selectedAgents.length} agents`);
+        if (chatMode === 'parallel') {
+            // For parallel chat, we don't need to start a session, just show the chat interface
+            setShowAgentSelector(false);
+            setIsChatActive(true);
+            toast.success(`Started parallel chat with ${selectedAgents.length} agents`);
+        } else {
+            // For group chat, start a session
+            const groupId = startGroupChatSession(selectedAgents, chatPurpose);
+            loadGroupChatHistory(groupId);
+            setShowAgentSelector(false);
+            setIsChatActive(true);
+            toast.success(`Starting group chat with ${selectedAgents.length} agents`);
+        }
     };
 
     const handleGenerateSummary = async () => {
@@ -283,17 +294,28 @@ const GroupChatPage = () => {
                         </div>
                     ) : (
                         <div className="h-full p-4">
-                            <GroupChat
-                                agents={selectedAgents}
-                                onAddAgents={() => setShowAgentSelector(true)}
-                                chatPurpose={chatPurpose}
-                                isChatActive={isChatActive}
-                                onChatReset={() => {
-                                    setIsChatActive(false);
-                                    setSelectedAgents([]);
-                                    setChatPurpose('');
-                                }}
-                            />
+                            {chatMode === 'parallel' ? (
+                                <ParallelChat
+                                    selectedAgents={selectedAgents}
+                                    onClose={() => {
+                                        setIsChatActive(false);
+                                        setSelectedAgents([]);
+                                        setChatPurpose('');
+                                    }}
+                                />
+                            ) : (
+                                <GroupChat
+                                    agents={selectedAgents}
+                                    onAddAgents={() => setShowAgentSelector(true)}
+                                    chatPurpose={chatPurpose}
+                                    isChatActive={isChatActive}
+                                    onChatReset={() => {
+                                        setIsChatActive(false);
+                                        setSelectedAgents([]);
+                                        setChatPurpose('');
+                                    }}
+                                />
+                            )}
                         </div>
                     )}
                 </div>
@@ -536,6 +558,28 @@ const GroupChatPage = () => {
                                         Cancel
                                     </Button>
                                     <Button
+                                        onClick={() => setChatMode('group')}
+                                        className={`mr-2 ${
+                                            chatMode === 'group'
+                                                ? 'bg-indigo-600 text-white'
+                                                : 'bg-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        <UserGroupIcon className="w-4 h-4 mr-2" />
+                                        Group Chat
+                                    </Button>
+                                    <Button
+                                        onClick={() => setChatMode('parallel')}
+                                        className={`mr-2 ${
+                                            chatMode === 'parallel'
+                                                ? 'bg-purple-600 text-white'
+                                                : 'bg-gray-200 text-gray-700'
+                                        }`}
+                                    >
+                                        <SparklesIcon className="w-4 h-4 mr-2" />
+                                        Parallel Chat
+                                    </Button>
+                                    <Button
                                         onClick={startGroupChat}
                                         disabled={selectedAgents.length < 2 || !chatPurpose.trim()}
                                         className={`${
@@ -544,7 +588,7 @@ const GroupChatPage = () => {
                                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                         }`}
                                     >
-                                        Start Group Chat
+                                        Start {chatMode === 'group' ? 'Group' : 'Parallel'} Chat
                                     </Button>
                                 </div>
                             </div>

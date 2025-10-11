@@ -201,7 +201,77 @@ const useChatStore = create((set, get) => ({
                 return [];
             },
 
-            // ---------- Group Chat Methods ----------
+            // ---------- Parallel Chat Methods ----------
+            sendParallelMessage: async (agentIds, message, chatHistory = []) => {
+                set({ isLoading: true, error: null });
+
+                try {
+                    const response = await api.post('/ai/parallel-chat', {
+                        agentIds,
+                        message,
+                        chatHistory
+                    });
+
+                    if (response.data.success) {
+                        const responses = response.data.responses.map(resp => ({
+                            id: Date.now() + Math.random(),
+                            type: 'agent',
+                            agentId: resp.agentId,
+                            agentName: resp.agentName,
+                            content: resp.response,
+                            success: resp.success,
+                            timestamp: resp.timestamp,
+                            error: resp.error
+                        }));
+
+                        return {
+                            success: true,
+                            responses,
+                            metadata: response.data.metadata
+                        };
+                    } else {
+                        throw new Error('Failed to get parallel responses');
+                    }
+                } catch (error) {
+                    console.error('Parallel chat failed:', error);
+                    set({ error: error.message, isLoading: false });
+                    return {
+                        success: false,
+                        error: error.message
+                    };
+                } finally {
+                    set({ isLoading: false });
+                }
+            },
+
+            sendBatchMessage: async (conversations) => {
+                set({ isLoading: true, error: null });
+
+                try {
+                    const response = await api.post('/ai/batch-chat', {
+                        conversations
+                    });
+
+                    if (response.data.success) {
+                        return {
+                            success: true,
+                            conversations: response.data.conversations,
+                            metadata: response.data.metadata
+                        };
+                    } else {
+                        throw new Error('Failed to get batch responses');
+                    }
+                } catch (error) {
+                    console.error('Batch chat failed:', error);
+                    set({ error: error.message, isLoading: false });
+                    return {
+                        success: false,
+                        error: error.message
+                    };
+                } finally {
+                    set({ isLoading: false });
+                }
+            },
             startGroupChatSession: (agents, purpose) => {
                 const groupId = `group_${Date.now()}`;
                 set({
