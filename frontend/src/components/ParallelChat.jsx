@@ -470,3 +470,4 @@ const ParallelChat = ({ selectedAgents, onClose }) => {
 };
 
 export default ParallelChat;
+

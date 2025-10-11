@@ -74,6 +74,7 @@ app.use('/api/agent/generate', require('./routes/agentGenerate')); // Agent gene
 
 // ✅ Chat & AI Routes
 app.use('/api/ai', require('./routes/aiChat')); // AI chat with GPT-4o vision & memory
+app.use('/api/ai', require('./routes/parallelChat')); // Parallel chat processing
 app.use('/api/enhanced-chat', require('./routes/enhancedChat')); // Enhanced persona-aware chat
 app.use('/api/chat', require('./routes/chat')); // Base chat route
 
