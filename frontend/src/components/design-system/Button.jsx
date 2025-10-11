@@ -1,10 +1,43 @@
 import React from 'react';
+import { Button as MuiButton, CircularProgress } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
+
+const StyledButton = styled(MuiButton)(({ theme, variant = 'filled' }) => ({
+  borderRadius: 20,
+  textTransform: 'none',
+  fontWeight: 500,
+  padding: '10px 24px',
+  minHeight: 40,
+  boxShadow: 'none',
+  ...(variant === 'filled' && {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+      boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
+    },
+  }),
+  ...(variant === 'outlined' && {
+    borderColor: theme.palette.outline,
+    color: theme.palette.primary.main,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.main + '0A',
+      borderColor: theme.palette.primary.main,
+    },
+  }),
+  ...(variant === 'text' && {
+    color: theme.palette.primary.main,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.main + '0A',
+    },
+  }),
+}));
 
 const Button = ({
   children,
-  variant = 'primary',
-  size = 'md',
+  variant = 'filled',
+  size = 'medium',
   disabled = false,
   loading = false,
   icon,
@@ -12,53 +45,51 @@ const Button = ({
   onClick,
   className = '',
   type = 'button',
+  startIcon,
+  endIcon,
   ...props
 }) => {
-  const baseClasses = 'btn';
-  const variantClasses = {
-    primary: 'btn-primary',
-    secondary: 'btn-secondary',
-    outline: 'btn-outline',
-    ghost: 'btn-ghost',
-    danger: 'btn-danger'
+  const sizeProps = {
+    small: { size: 'small' },
+    medium: { size: 'medium' },
+    large: { size: 'large' },
   };
-  const sizeClasses = {
-    sm: 'btn-sm',
-    md: 'btn-md',
-    lg: 'btn-lg',
-    xl: 'btn-xl'
-  };
-
-  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`.trim();
 
   const buttonContent = (
     <>
       {loading && (
-        <span className="spinner mr-2" />
+        <CircularProgress size={16} sx={{ mr: 1 }} />
       )}
       {icon && iconPosition === 'left' && !loading && (
-        <span className="mr-2">{icon}</span>
+        <span style={{ marginRight: 8 }}>{icon}</span>
       )}
       {children}
       {icon && iconPosition === 'right' && !loading && (
-        <span className="ml-2">{icon}</span>
+        <span style={{ marginLeft: 8 }}>{icon}</span>
       )}
     </>
   );
 
   return (
-    <motion.button
-      type={type}
-      className={classes}
-      disabled={disabled || loading}
-      onClick={onClick}
+    <motion.div
       whileHover={!disabled && !loading ? { scale: 1.02 } : {}}
       whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
       transition={{ duration: 0.1 }}
-      {...props}
     >
-      {buttonContent}
-    </motion.button>
+      <StyledButton
+        variant={variant}
+        disabled={disabled || loading}
+        onClick={onClick}
+        className={className}
+        type={type}
+        startIcon={startIcon || (icon && iconPosition === 'left' && !loading ? icon : undefined)}
+        endIcon={endIcon || (icon && iconPosition === 'right' && !loading ? icon : undefined)}
+        {...sizeProps[size]}
+        {...props}
+      >
+        {buttonContent}
+      </StyledButton>
+    </motion.div>
   );
 };
 

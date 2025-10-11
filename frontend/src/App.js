@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline, Box, CircularProgress, Typography } from '@mui/material';
 import SimpleLogin from './components/SimpleLogin';
-import Layout from './components/layout/Layout';
+import M3Layout from './components/layout/M3Layout';
 import Dashboard from './pages/Dashboard';
 import AIAgents from './pages/AIAgents';
 import AgentLibrary from './pages/AgentLibrary';
@@ -11,6 +13,7 @@ import EnhancedChatPage from './pages/EnhancedChatPage';
 import GroupChatPage from './pages/GroupChatPage';
 import ChatArchive from './pages/ChatArchive';
 import DesignFeedback from './components/DesignFeedback';
+import m3Theme from './theme/m3Theme';
 import './index.css';
 
 function App() {
@@ -38,36 +41,57 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
+      <ThemeProvider theme={m3Theme}>
+        <CssBaseline />
+        <Box
+          sx={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'background.default',
+          }}
+        >
+          <Box sx={{ textAlign: 'center' }}>
+            <CircularProgress size={48} sx={{ mb: 2 }} />
+            <Typography variant="bodyLarge" color="text.secondary">
+              Loading...
+            </Typography>
+          </Box>
+        </Box>
+      </ThemeProvider>
     );
   }
 
   if (!user) {
-    return <SimpleLogin onLogin={handleLogin} />;
+    return (
+      <ThemeProvider theme={m3Theme}>
+        <CssBaseline />
+        <SimpleLogin onLogin={handleLogin} />
+      </ThemeProvider>
+    );
   }
 
   return (
-    <Router>
-      <Layout user={user} onLogout={handleLogout}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/generate" element={<AIAgents />} />
-          <Route path="/agents" element={<AgentLibrary />} />
-          <Route path="/personas" element={<DetailedPersonas />} />
-          <Route path="/group-chat" element={<GroupChatPage />} />
-          <Route path="/archive" element={<ChatArchive />} />
-          <Route path="/design-feedback" element={<DesignFeedback />} />
-          <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
-          <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <ThemeProvider theme={m3Theme}>
+      <CssBaseline />
+      <Router>
+        <M3Layout user={user} onLogout={handleLogout}>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/generate" element={<AIAgents />} />
+            <Route path="/agents" element={<AgentLibrary />} />
+            <Route path="/personas" element={<DetailedPersonas />} />
+            <Route path="/group-chat" element={<GroupChatPage />} />
+            <Route path="/archive" element={<ChatArchive />} />
+            <Route path="/design-feedback" element={<DesignFeedback />} />
+            <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
+            <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </M3Layout>
+      </Router>
+    </ThemeProvider>
   );
 }
 

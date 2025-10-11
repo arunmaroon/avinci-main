@@ -1,21 +1,32 @@
 import React from 'react';
+import { Card as MuiCard, CardContent, CardActions, CardHeader, CardMedia } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
+
+const StyledCard = styled(MuiCard)(({ theme }) => ({
+  borderRadius: 12,
+  boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
+  '&:hover': {
+    boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 2px 6px 2px rgba(0, 0, 0, 0.15)',
+  },
+}));
 
 const Card = ({
   children,
   className = '',
   hover = true,
-  padding = 'default',
+  padding = 'medium',
+  header,
+  actions,
+  media,
   ...props
 }) => {
-  const paddingClasses = {
-    none: '',
-    sm: 'p-4',
-    default: 'p-6',
-    lg: 'p-8'
+  const paddingMap = {
+    none: 0,
+    small: 2,
+    medium: 3,
+    large: 4,
   };
-
-  const classes = `card ${paddingClasses[padding]} ${className}`.trim();
 
   const CardComponent = hover ? motion.div : 'div';
   const motionProps = hover ? {
@@ -24,32 +35,35 @@ const Card = ({
   } : {};
 
   return (
-    <CardComponent
-      className={classes}
-      {...motionProps}
-      {...props}
-    >
-      {children}
+    <CardComponent {...motionProps}>
+      <StyledCard className={className} {...props}>
+        {media && <CardMedia {...media} />}
+        {header && <CardHeader {...header} />}
+        <CardContent sx={{ p: paddingMap[padding] }}>
+          {children}
+        </CardContent>
+        {actions && <CardActions>{actions}</CardActions>}
+      </StyledCard>
     </CardComponent>
   );
 };
 
 const CardHeader = ({ children, className = '', ...props }) => (
-  <div className={`card-header ${className}`} {...props}>
+  <CardHeader {...props} className={className}>
     {children}
-  </div>
+  </CardHeader>
 );
 
 const CardBody = ({ children, className = '', ...props }) => (
-  <div className={`card-body ${className}`} {...props}>
+  <CardContent {...props} className={className}>
     {children}
-  </div>
+  </CardContent>
 );
 
 const CardFooter = ({ children, className = '', ...props }) => (
-  <div className={`card-footer ${className}`} {...props}>
+  <CardActions {...props} className={className}>
     {children}
-  </div>
+  </CardActions>
 );
 
 Card.Header = CardHeader;

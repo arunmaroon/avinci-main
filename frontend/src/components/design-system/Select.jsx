@@ -1,49 +1,58 @@
-import React, { forwardRef } from 'react';
+import React from 'react';
+import { FormControl, InputLabel, Select as MuiSelect, MenuItem, FormHelperText } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
-const Select = forwardRef(({
+const StyledFormControl = styled(FormControl)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 4,
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.primary.main,
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.primary.main,
+      borderWidth: 2,
+    },
+  },
+}));
+
+const Select = ({
   label,
-  error,
-  helperText,
+  value,
+  onChange,
   options = [],
-  placeholder = 'Select an option',
+  disabled = false,
+  error = false,
+  helperText,
+  required = false,
+  multiple = false,
   className = '',
   ...props
-}, ref) => {
-  const selectClasses = `input ${error ? 'input-error' : ''} ${className}`.trim();
-
+}) => {
   return (
-    <div className="w-full">
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-        </label>
-      )}
-      <select
-        ref={ref}
-        className={selectClasses}
+    <StyledFormControl
+      fullWidth
+      disabled={disabled}
+      error={error}
+      required={required}
+      className={className}
+    >
+      <InputLabel>{label}</InputLabel>
+      <MuiSelect
+        value={value}
+        onChange={onChange}
+        multiple={multiple}
+        label={label}
         {...props}
       >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <MenuItem key={option.value} value={option.value}>
             {option.label}
-          </option>
+          </MenuItem>
         ))}
-      </select>
-      {error && (
-        <p className="mt-1 text-sm text-error-600">{error}</p>
-      )}
-      {helperText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
-      )}
-    </div>
+      </MuiSelect>
+      {helperText && <FormHelperText>{helperText}</FormHelperText>}
+    </StyledFormControl>
   );
-});
-
-Select.displayName = 'Select';
+};
 
 export default Select;

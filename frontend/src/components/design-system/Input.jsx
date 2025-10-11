@@ -1,50 +1,62 @@
-import React, { forwardRef } from 'react';
+import React from 'react';
+import { TextField as MuiTextField, InputAdornment } from '@mui/material';
+import { styled } from '@mui/material/styles';
 
-const Input = forwardRef(({
+const StyledTextField = styled(MuiTextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 4,
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.primary.main,
+    },
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.primary.main,
+      borderWidth: 2,
+    },
+  },
+}));
+
+const Input = ({
   label,
-  error,
+  placeholder,
+  value,
+  onChange,
+  type = 'text',
+  disabled = false,
+  error = false,
   helperText,
-  leftIcon,
-  rightIcon,
+  required = false,
+  multiline = false,
+  rows = 1,
+  startIcon,
+  endIcon,
   className = '',
   ...props
-}, ref) => {
-  const inputClasses = `input ${error ? 'input-error' : ''} ${className}`.trim();
-
+}) => {
   return (
-    <div className="w-full">
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label}
-        </label>
-      )}
-      <div className="relative">
-        {leftIcon && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {leftIcon}
-          </div>
-        )}
-        <input
-          ref={ref}
-          className={`${inputClasses} ${leftIcon ? 'pl-10' : ''} ${rightIcon ? 'pr-10' : ''}`}
-          {...props}
-        />
-        {rightIcon && (
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {rightIcon}
-          </div>
-        )}
-      </div>
-      {error && (
-        <p className="mt-1 text-sm text-error-600">{error}</p>
-      )}
-      {helperText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
-      )}
-    </div>
+    <StyledTextField
+      label={label}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      type={type}
+      disabled={disabled}
+      error={error}
+      helperText={helperText}
+      required={required}
+      multiline={multiline}
+      rows={rows}
+      className={className}
+      InputProps={{
+        startAdornment: startIcon ? (
+          <InputAdornment position="start">{startIcon}</InputAdornment>
+        ) : undefined,
+        endAdornment: endIcon ? (
+          <InputAdornment position="end">{endIcon}</InputAdornment>
+        ) : undefined,
+      }}
+      {...props}
+    />
   );
-});
-
-Input.displayName = 'Input';
+};
 
 export default Input;

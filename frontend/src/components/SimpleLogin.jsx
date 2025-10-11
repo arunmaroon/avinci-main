@@ -1,4 +1,21 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Container,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormHelperText
+} from '@mui/material';
+import { SmartToy as LogoIcon } from '@mui/icons-material';
+import Button from './design-system/Button';
+import Input from './design-system/Input';
+import Card from './design-system/Card';
 
 const SimpleLogin = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -75,134 +92,155 @@ const SimpleLogin = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-indigo-100">
-            <svg className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Welcome to Sirius
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            AI Agent Portal v0.1
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            {/* Name Field */}
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            {/* Role Selection */}
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                Role
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              >
-                <option value="">Select your role</option>
-                {roles.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Passcode Field */}
-            <div>
-              <label htmlFor="passcode" className="block text-sm font-medium text-gray-700">
-                Passcode
-              </label>
-              <input
-                id="passcode"
-                name="passcode"
-                type="password"
-                required
-                value={formData.passcode}
-                onChange={handleChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Enter passcode"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Hint: The passcode is 12345
-              </p>
-            </div>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    {error}
-                  </h3>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        py: 3,
+        px: 2,
+      }}
+    >
+      <Container maxWidth="sm">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <Card
+            sx={{
+              p: 4,
+              textAlign: 'center',
+              maxWidth: 400,
+              mx: 'auto',
+            }}
+          >
+            {/* Logo */}
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 3,
+              }}
             >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Signing in...
-                </div>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </div>
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  backgroundColor: 'primary.main',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                }}
+              >
+                <LogoIcon sx={{ fontSize: 32 }} />
+              </Box>
+            </Box>
 
-          {/* Demo Info */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-md">
-            <h4 className="text-sm font-medium text-blue-800 mb-2">Demo Login:</h4>
-            <p className="text-xs text-blue-700">
-              • Name: Any name you prefer<br/>
-              • Role: Select any role from dropdown<br/>
-              • Passcode: <strong>12345</strong>
-            </p>
-          </div>
-        </form>
-      </div>
-    </div>
+            {/* Title */}
+            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+              Welcome to Sirius
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+              AI Agent Portal v2.02
+            </Typography>
+
+            {/* Form */}
+            <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Name Field */}
+                <Input
+                  label="Full Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Enter your full name"
+                  required
+                  fullWidth
+                />
+
+                {/* Role Selection */}
+                <FormControl fullWidth>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    label="Role"
+                    required
+                  >
+                    <MenuItem value="">
+                      <em>Select your role</em>
+                    </MenuItem>
+                    {roles.map((role) => (
+                      <MenuItem key={role.value} value={role.value}>
+                        {role.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {/* Passcode Field */}
+                <Input
+                  label="Passcode"
+                  name="passcode"
+                  type="password"
+                  value={formData.passcode}
+                  onChange={handleChange}
+                  placeholder="Enter passcode"
+                  required
+                  fullWidth
+                  helperText="Hint: The passcode is 12345"
+                />
+              </Box>
+
+              {/* Error Message */}
+              {error && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                variant="filled"
+                size="large"
+                loading={isLoading}
+                fullWidth
+                sx={{ mt: 3 }}
+              >
+                {isLoading ? 'Signing in...' : 'Sign In'}
+              </Button>
+
+              {/* Demo Info */}
+              <Paper
+                sx={{
+                  mt: 3,
+                  p: 2,
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
+                }}
+              >
+                <Typography variant="subtitle2" gutterBottom>
+                  Demo Login:
+                </Typography>
+                <Typography variant="body2">
+                  • Name: Any name you prefer<br />
+                  • Role: Select any role from dropdown<br />
+                  • Passcode: <strong>12345</strong>
+                </Typography>
+              </Paper>
+            </Box>
+          </Card>
+        </motion.div>
+      </Container>
+    </Box>
   );
 };
 
