@@ -1,6 +1,6 @@
 # Sirius v2.02 - Enhanced AI Intelligence Platform
 
-A comprehensive AI-powered platform built with modern technologies for intelligent conversations, document processing, and data analysis. **Now with enhanced chat memory, GPT-4o vision for detailed UI feedback, and task-based usability testing capabilities.**
+A comprehensive AI-powered platform built with modern technologies for intelligent conversations, document processing, and data analysis. **Now with enhanced chat memory, GPT-4o vision for detailed UI feedback, and comprehensive persona management capabilities.**
 
 ## ✨ New Features in v2.02
 
@@ -18,12 +18,6 @@ A comprehensive AI-powered platform built with modern technologies for intellige
 - **💡 Actionable Suggestions**: Get concrete fixes like "Align CTA to center, use bg-blue-600"
 - **🗣️ Natural Language**: Agents respond in their authentic voice with personality
 
-### 🧪 Usability Testing
-- **📋 Task-Based Testing**: Select from pre-defined tasks (Navigation, Form Usability, etc.)
-- **👥 Persona-Specific**: Tests reflect agent's tech savviness and experience
-- **📈 Structured Results**: Steps, pain points, rating (1-10), and specific fixes
-- **🎯 Contextual Analysis**: Feedback considers agent's daily routine and goals
-- **📊 Exportable Reports**: Comprehensive usability test summaries
 
 ### 🎭 UXPressia-Style Persona Views
 - **📸 Professional Cards**: Magazine-style persona displays

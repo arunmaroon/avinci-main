@@ -5,7 +5,6 @@ import { toast } from 'react-hot-toast';
 import { 
     PaperAirplaneIcon, 
     PhotoIcon, 
-    PlayIcon,
     XMarkIcon,
     CheckCircleIcon,
     ExclamationTriangleIcon
@@ -17,28 +16,16 @@ const EnhancedChat = ({ agentId, agentName }) => {
         isLoading,
         error,
         uiContext,
-        usabilityResults,
         setCurrentAgent,
         sendMessage,
         uploadUI,
-        runUsabilityTest,
         clearHistory,
         clearError
     } = useChatStore();
 
     const [message, setMessage] = useState('');
-    const [selectedTask, setSelectedTask] = useState('Navigation');
-    const [showUsabilityTest, setShowUsabilityTest] = useState(false);
     const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
-
-    const tasks = [
-        'Navigation',
-        'Form Usability',
-        'Button Accessibility',
-        'Content Readability',
-        'Mobile Responsiveness'
-    ];
 
     useEffect(() => {
         if (agentId) {
@@ -126,21 +113,6 @@ const EnhancedChat = ({ agentId, agentName }) => {
         });
     };
 
-    const handleUsabilityTest = async () => {
-        if (!selectedTask) return;
-        
-        await runUsabilityTest(selectedTask, uiContext);
-        setShowUsabilityTest(true);
-        
-        toast.success('Usability test completed!', {
-            style: {
-                background: '#10b981',
-                color: 'white',
-                borderRadius: '9999px',
-                padding: '12px 16px'
-            }
-        });
-    };
 
     const formatMessage = (msg) => {
         if (msg.role === 'user') {
@@ -214,14 +186,6 @@ const EnhancedChat = ({ agentId, agentName }) => {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setShowUsabilityTest(!showUsabilityTest)}
-                        >
-                            <PlayIcon className="h-4 w-4 mr-1" />
-                            Test
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
                             onClick={clearHistory}
                         >
                             Clear
@@ -230,96 +194,6 @@ const EnhancedChat = ({ agentId, agentName }) => {
                 </div>
             </div>
 
-            {/* Usability Test Panel */}
-            {showUsabilityTest && (
-                <Card className="m-4 p-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Usability Testing</h3>
-                        <button
-                            onClick={() => setShowUsabilityTest(false)}
-                            className="text-gray-400 hover:text-gray-600"
-                        >
-                            <XMarkIcon className="h-5 w-5" />
-                        </button>
-                    </div>
-                    
-                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                        <select
-                            value={selectedTask}
-                            onChange={(e) => setSelectedTask(e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                            {tasks.map(task => (
-                                <option key={task} value={task}>{task}</option>
-                            ))}
-                        </select>
-                        <Button
-                            onClick={handleUsabilityTest}
-                            disabled={isLoading}
-                            loading={isLoading}
-                        >
-                            Run Test
-                        </Button>
-                    </div>
-
-                    {usabilityResults && (
-                        <div className="mt-4">
-                            <h4 className="font-semibold mb-2">Test Results</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                                <div className="bg-gray-50 p-3 rounded-lg">
-                                    <p className="font-medium text-gray-700">Steps</p>
-                                    <p className="text-gray-600">{usabilityResults.steps?.length || 0}</p>
-                                </div>
-                                <div className="bg-gray-50 p-3 rounded-lg">
-                                    <p className="font-medium text-gray-700">Pain Points</p>
-                                    <p className="text-gray-600">{usabilityResults.pains?.length || 0}</p>
-                                </div>
-                                <div className="bg-gray-50 p-3 rounded-lg">
-                                    <p className="font-medium text-gray-700">Rating</p>
-                                    <p className="text-gray-600">{usabilityResults.rating || 'N/A'}/10</p>
-                                </div>
-                                <div className="bg-gray-50 p-3 rounded-lg">
-                                    <p className="font-medium text-gray-700">Fixes</p>
-                                    <p className="text-gray-600">{usabilityResults.fixes?.length || 0}</p>
-                                </div>
-                            </div>
-                            
-                            {usabilityResults.steps && usabilityResults.steps.length > 0 && (
-                                <div className="mt-4">
-                                    <h5 className="font-medium mb-2">Test Steps:</h5>
-                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                                        {usabilityResults.steps.map((step, index) => (
-                                            <li key={index}>{step}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
-                            {usabilityResults.pains && usabilityResults.pains.length > 0 && (
-                                <div className="mt-4">
-                                    <h5 className="font-medium mb-2">Pain Points:</h5>
-                                    <ul className="list-disc list-inside space-y-1 text-sm text-red-600">
-                                        {usabilityResults.pains.map((pain, index) => (
-                                            <li key={index}>{pain}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
-                            {usabilityResults.fixes && usabilityResults.fixes.length > 0 && (
-                                <div className="mt-4">
-                                    <h5 className="font-medium mb-2">Suggested Fixes:</h5>
-                                    <ul className="list-disc list-inside space-y-1 text-sm text-green-600">
-                                        {usabilityResults.fixes.map((fix, index) => (
-                                            <li key={index}>{fix}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </Card>
-            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

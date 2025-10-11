@@ -149,25 +149,6 @@ const useChatStore = create((set, get) => ({
                 }
             },
 
-            runUsabilityTest: async (task, ui_path = null) => {
-                const { currentAgentId } = get();
-                if (!currentAgentId) return;
-
-                set({ isLoading: true });
-
-                try {
-                    const response = await api.post('/api/agent/usability', {
-                        agentId: currentAgentId,
-                        task,
-                        ui_path: ui_path || get().uiContext,
-                    });
-
-                    set({ usabilityResults: response.data, isLoading: false });
-                    get().appendMessage({ role: 'system', content: `Ran usability test: ${task}`, ui_path });
-                } catch (error) {
-                    set({ error: error.message, isLoading: false });
-                }
-            },
 
             loadChatHistory: (agentId) => {
                 if (!agentId) return;

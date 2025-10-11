@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import AgentPreview from '../AgentPreview';
 import {
     HomeIcon,
     PlusCircleIcon,
@@ -9,7 +8,6 @@ import {
     ArrowRightOnRectangleIcon,
     Bars3Icon,
     XMarkIcon,
-    EyeIcon,
     DocumentTextIcon,
     UserCircleIcon
 } from '@heroicons/react/24/outline';
@@ -17,14 +15,13 @@ import {
 const Layout = ({ children, user, onLogout }) => {
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [showAgentPreview, setShowAgentPreview] = useState(false);
 
         const navigation = [
             { name: 'Dashboard', href: '/', icon: HomeIcon },
             { name: 'Generate Agents', href: '/generate', icon: PlusCircleIcon },
             { name: 'Agent Library', href: '/agents', icon: UserGroupIcon },
             { name: 'Group Chat', href: '/group-chat', icon: ChatBubbleLeftRightIcon },
-            { name: 'Usability Test', href: '/design-feedback', icon: DocumentTextIcon },
+            { name: 'Design Feedback', href: '/design-feedback', icon: DocumentTextIcon },
         ];
 
     return (
@@ -54,8 +51,6 @@ const Layout = ({ children, user, onLogout }) => {
                             <SidebarContent 
                                 navigation={navigation} 
                                 currentPath={location.pathname}
-                                showAgentPreview={showAgentPreview}
-                                setShowAgentPreview={setShowAgentPreview}
                             />
                         </div>
                     </nav>
@@ -76,30 +71,9 @@ const Layout = ({ children, user, onLogout }) => {
                             <SidebarContent 
                                 navigation={navigation} 
                                 currentPath={location.pathname}
-                                showAgentPreview={showAgentPreview}
-                                setShowAgentPreview={setShowAgentPreview}
                             />
                         </div>
                         
-                        {/* Agent Preview Section */}
-                        {showAgentPreview && (
-                            <div className="px-6 pb-6 border-t border-gray-200">
-                                <div className="mt-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-sm font-medium text-gray-900">Agent Preview</h3>
-                                        <button
-                                            onClick={() => setShowAgentPreview(false)}
-                                            className="p-1 text-gray-400 hover:text-gray-600"
-                                        >
-                                            <XMarkIcon className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                    <div className="h-96 border border-gray-200 rounded-lg overflow-hidden">
-                                        <AgentPreview onClose={() => setShowAgentPreview(false)} />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             </nav>
@@ -149,7 +123,7 @@ const Layout = ({ children, user, onLogout }) => {
     );
 };
 
-const SidebarContent = ({ navigation, currentPath, showAgentPreview, setShowAgentPreview }) => {
+const SidebarContent = ({ navigation, currentPath }) => {
     return (
         <div>
             <nav className="space-y-2">
@@ -182,30 +156,6 @@ const SidebarContent = ({ navigation, currentPath, showAgentPreview, setShowAgen
                 })}
             </nav>
             
-            {/* Agent Preview Toggle */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-                <button
-                    onClick={() => setShowAgentPreview(!showAgentPreview)}
-                        className={`w-full group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                            showAgentPreview
-                                ? 'border-r-2'
-                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                        }`}
-                        style={showAgentPreview ? { 
-                            backgroundColor: '#14483520', 
-                            color: '#144835', 
-                            borderColor: '#144835' 
-                        } : {}}
-                >
-                    <EyeIcon
-                        className={`mr-3 h-5 w-5 ${
-                            showAgentPreview ? '' : 'text-gray-400 group-hover:text-gray-500'
-                        }`}
-                        style={showAgentPreview ? { color: '#144835' } : {}}
-                    />
-                    Agent Preview
-                </button>
-            </div>
         </div>
     );
 };
