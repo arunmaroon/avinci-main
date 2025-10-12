@@ -26,7 +26,7 @@ import {
   ListItem as MuiListItem,
   ListItemText,
   ListItemIcon,
-  ListItemButton,
+  ListItemButton as MuiListItemButton,
   Divider as MuiDivider,
   Paper as MuiPaper,
   Box,
@@ -255,7 +255,7 @@ export const ListItem = styled(MuiListItem)(({ theme }) => ({
   },
 }));
 
-export const ListItemButton = styled(MuiListItemButton)(({ theme }) => ({
+export const StyledListItemButton = styled(MuiListItemButton)(({ theme }) => ({
   borderRadius: 0,
   '&:hover': {
     backgroundColor: theme.palette.primary.main + '0A',
@@ -340,6 +340,6 @@ export const Center = styled(Box)({
   alignItems: 'center',
 });
 
-export const Stack = styled(Stack)(({ theme, spacing = 1 }) => ({
+export const StyledStack = styled(Stack)(({ theme, spacing = 1 }) => ({
   gap: spacing * 8,
 }));

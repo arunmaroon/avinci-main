@@ -104,22 +104,22 @@ app.use('*', (req, res) => {
 
 async function startServer() {
     try {
-        await createTables();
-        
-        if (!redis.isOpen) {
-            await redis.connect();
-        }
+        // Skip database and Redis for now to get the server running
+        console.log('⚠️  Running in development mode without database');
+        console.log('   To enable full functionality, start PostgreSQL and Redis');
         
         console.log('\n🎯 Avinci Configuration:');
-        console.log(`   AI Provider: ${process.env.AI_PROVIDER || 'grok'}`);
+        console.log(`   AI Provider: ${process.env.AI_PROVIDER || 'openai'}`);
         console.log(`   Database: ${process.env.DB_NAME || 'avinci'}`);
         
+        console.log('Starting server...');
         app.listen(PORT, () => {
             console.log('\n🚀 Avinci Backend is running!');
             console.log(`   Port: ${PORT}`);
             console.log(`   Health: http://localhost:${PORT}/api/health`);
             console.log('\n✨ Ready to generate AI agents!\n');
         });
+        console.log('Server listen called');
         
     } catch (error) {
         console.error('❌ Failed to start server:', error);
