@@ -8,6 +8,9 @@ const pool = new Pool({
     database: process.env.DB_NAME || 'avinci',
     password: process.env.DB_PASSWORD,
     port: process.env.DB_PORT || 5432,
+    connectionTimeoutMillis: 5000, // 5 second timeout
+    idleTimeoutMillis: 30000, // 30 seconds
+    max: 10, // max pool size
 });
 
 // Redis client for sessions and cache
@@ -18,11 +21,28 @@ const redis = Redis.createClient({
     }
 });
 
-redis.on('error', (err) => console.error('Redis Client Error', err));
+redis.on('error', (err) => {
+    // Don't log Redis errors repeatedly, just silently handle them
+    if (!redis._errorLogged) {
+        console.log('⚠️  Redis not available, running without caching');
+        redis._errorLogged = true;
+    }
+});
 redis.on('connect', () => console.log('✅ Redis connected'));
+
+// Don't automatically connect to Redis
+// redis.connect().catch(() => {});
 
 const createTables = async () => {
     try {
+        // Test connection first with timeout
+        await Promise.race([
+            pool.query('SELECT 1'),
+            new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+            )
+        ]);
+        
         // Admin users table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS admin_users (

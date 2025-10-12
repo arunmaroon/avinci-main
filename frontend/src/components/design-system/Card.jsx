@@ -48,7 +48,7 @@ const Card = ({
   );
 };
 
-const CardHeader = ({ children, className = '', ...props }) => (
+const CardHeaderComponent = ({ children, className = '', ...props }) => (
   <CardHeader {...props} className={className}>
     {children}
   </CardHeader>
@@ -66,7 +66,7 @@ const CardFooter = ({ children, className = '', ...props }) => (
   </CardActions>
 );
 
-Card.Header = CardHeader;
+Card.Header = CardHeaderComponent;
 Card.Body = CardBody;
 Card.Footer = CardFooter;
 
