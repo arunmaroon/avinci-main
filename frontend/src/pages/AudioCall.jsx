@@ -6,9 +6,7 @@ import toast from 'react-hot-toast';
 import { 
     FaMicrophoneSlash as MicOff, 
     FaMicrophone as Mic, 
-    FaPhone as Phone, 
     FaPhoneSlash as PhoneOff, 
-    FaUsers as Users, 
     FaCommentDots as MessageSquare 
 } from 'react-icons/fa';
 import axios from 'axios';
@@ -16,8 +14,12 @@ import axios from 'axios';
 const AudioCall = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { agentIds, topic, type = 'group' } = location.state || {};
+    const { agentIds: initialAgentIds, topic: initialTopic, type: initialType = 'group' } = location.state || {};
     
+    // ===== STATE =====
+    const [agentIds, setAgentIds] = useState(initialAgentIds);
+    const [topic, setTopic] = useState(initialTopic);
+    const [type, setType] = useState(initialType);
     const [callState, setCallState] = useState('idle'); // idle, connecting, connected, ended
     const [isMuted, setIsMuted] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -31,12 +33,139 @@ const AudioCall = () => {
     const [speakingAgents, setSpeakingAgents] = useState(new Set());
     const [callDuration, setCallDuration] = useState(0);
     const [showTranscript, setShowTranscript] = useState(true);
+    const [recognitionTranscript, setRecognitionTranscript] = useState('');
+    const [selectedVoice, setSelectedVoice] = useState(null);
     
+    // ===== REFS =====
     const deviceRef = useRef(null);
     const socketRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const streamRef = useRef(null);
+    const recognitionRef = useRef(null);
+    const currentTranscriptRef = useRef(''); // Store current transcript directly
+
+    // ===== FUNCTION DEFINITIONS (BEFORE USE EFFECTS) =====
+    const formatDuration = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const cleanup = () => {
+        try {
+            if (socketRef.current) {
+                socketRef.current.emit('leave-call', callId);
+                socketRef.current.disconnect();
+            }
+            if (deviceRef.current) {
+                if (deviceRef.current.state === 'registered') {
+                    deviceRef.current.unregister();
+                }
+                deviceRef.current.destroy();
+            }
+            if (isRecording) {
+                stopRecording();
+            }
+        } catch (error) {
+            console.error('Error during cleanup:', error);
+        }
+    };
+
+    const initSpeechRecognition = () => {
+        console.log('🔊 Checking Web Speech API support...');
+        
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            console.log('✅ Web Speech API supported');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-IN'; // Indian English
+            
+            recognition.onstart = () => {
+                console.log('🗣️ Speech recognition started');
+            };
+            
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const result = event.results[i];
+                    if (result.isFinal) {
+                        finalTranscript += result[0].transcript;
+                    } else {
+                        interimTranscript += result[0].transcript;
+                    }
+                }
+                
+                const fullTranscript = finalTranscript + interimTranscript;
+                setRecognitionTranscript(fullTranscript);
+                currentTranscriptRef.current = fullTranscript; // Store in ref for immediate access
+                
+                if (finalTranscript) {
+                    console.log('🗣️ Speech recognized (final):', finalTranscript);
+                }
+                if (interimTranscript) {
+                    console.log('🗣️ Speech recognized (interim):', interimTranscript);
+                }
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('❌ Speech recognition error:', event.error);
+                if (event.error === 'no-speech') {
+                    setRecognitionTranscript('');
+                    console.log('No speech detected');
+                } else if (event.error === 'not-allowed') {
+                    console.log('Speech recognition not allowed');
+                }
+            };
+            
+            recognition.onend = () => {
+                console.log('🗣️ Speech recognition ended');
+                if (recognitionRef.current) {
+                    recognitionRef.current.running = false;
+                }
+            };
+            
+            recognitionRef.current = recognition;
+            console.log('✅ Speech recognition initialized successfully');
+            return recognition;
+        } else {
+            console.warn('❌ Web Speech API not supported in this browser');
+            console.log('Falling back to Deepgram STT');
+            return null;
+        }
+    };
+
+    const startSpeechRecognition = () => {
+        if (recognitionRef.current && !recognitionRef.current.running) {
+            try {
+                recognitionRef.current.start();
+                recognitionRef.current.running = true;
+                console.log('🗣️ Started speech recognition');
+                setRecognitionTranscript('');
+            } catch (error) {
+                console.error('Failed to start speech recognition:', error);
+            }
+        } else {
+            console.log('Speech recognition already running or not available');
+        }
+    };
+
+    const stopSpeechRecognition = () => {
+        if (recognitionRef.current && recognitionRef.current.running) {
+            try {
+                recognitionRef.current.stop();
+                recognitionRef.current.running = false;
+                console.log('🗣️ Stopped speech recognition');
+            } catch (error) {
+                console.error('Error stopping speech recognition:', error);
+            }
+        }
+    };
 
     const initializeCall = async () => {
         try {
@@ -73,61 +202,10 @@ const AudioCall = () => {
                 console.error('Missing required fields:', { newCallId, newToken, newRoom });
                 throw new Error('Invalid call data received from server');
             }
+            
             setCallId(newCallId);
             setToken(newToken);
             setRoomName(newRoom);
-
-            // Initialize Socket.IO
-            socketRef.current = io('http://localhost:9001');
-            
-            socketRef.current.on('connect', () => {
-                console.log('Socket connected');
-                socketRef.current.emit('join-call', newCallId);
-            });
-
-            socketRef.current.on('play-audio', (data) => {
-                playAgentAudio(data);
-            });
-
-            socketRef.current.on('user-joined', (data) => {
-                console.log('User joined:', data);
-            });
-
-            socketRef.current.on('agent-response', (data) => {
-                handleAgentResponse(data);
-                // Remove from typing and add to speaking
-                setTypingAgents(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(data.agentName);
-                    return newSet;
-                });
-                setSpeakingAgents(prev => new Set(prev).add(data.agentName));
-            });
-
-            socketRef.current.on('agent-typing', (data) => {
-                setTypingAgents(prev => new Set(prev).add(data.agentName));
-            });
-
-            // Initialize Twilio Device (optional for voice routing)
-            try {
-                deviceRef.current = new Device(newToken, {
-                    codecPreferences: ['opus', 'pcmu'],
-                    logLevel: 1
-                });
-
-                deviceRef.current.on('registered', () => {
-                    console.log('Twilio device registered');
-                });
-
-                deviceRef.current.on('error', (error) => {
-                    console.warn('Twilio device error (non-critical):', error);
-                });
-
-                await deviceRef.current.register();
-            } catch (twilioError) {
-                console.warn('Twilio registration failed, continuing without it:', twilioError);
-                // Continue anyway - we'll use MediaRecorder for audio capture
-            }
 
             // Set state to connected so user can start speaking
             setCallState('connected');
@@ -139,6 +217,7 @@ const AudioCall = () => {
                     agentIds
                 });
                 setParticipants(agentsResponse.data?.agents || []);
+                console.log('✅ Agents loaded:', agentsResponse.data?.agents?.length || 0);
             } catch (agentError) {
                 console.warn('Failed to fetch agents:', agentError);
                 setParticipants([]);
@@ -166,155 +245,77 @@ const AudioCall = () => {
         }
     };
 
-    // Initialize call
-    useEffect(() => {
-        if (!agentIds || agentIds.length === 0) {
-            toast.error('No agents selected for call');
-            navigate('/user-research');
+    const processAudio = async (audioBlob, speechTranscript = '') => {
+        console.log('🎤 processAudio called with:', { 
+            hasBlob: !!audioBlob, 
+            hasCallId: !!callId, 
+            size: audioBlob?.size,
+            type: audioBlob?.type,
+            speechTranscript
+        });
+        
+        if (!callId) {
+            console.log('⚠️ No callId available');
             return;
         }
 
-        initializeCall();
-
-        return () => {
-            cleanup();
-        };
-    }, []);
-
-    // Call duration timer
-    useEffect(() => {
-        if (callState === 'connected') {
-            const timer = setInterval(() => {
-                setCallDuration(prev => prev + 1);
-            }, 1000);
-
-            return () => clearInterval(timer);
-        }
-    }, [callState]);
-
-    // Format call duration (MM:SS)
-    const formatDuration = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const handleAgentResponse = (data) => {
-        const { responseText, agentName, timestamp, audioUrl } = data;
+        // Always send the speech transcript if available
+        const hasValidTranscript = speechTranscript && speechTranscript.trim().length > 0 && 
+                                  !speechTranscript.includes('No speech detected');
         
-        // Add to transcript
-        setTranscript(prev => [...prev, {
-            speaker: agentName,
-            text: responseText,
-            timestamp: timestamp || new Date().toISOString(),
-            type: 'agent'
-        }]);
-
-        // Play audio if available
-        if (audioUrl) {
-            const audio = new Audio(`http://localhost:9001${audioUrl}`);
-            audio.play().catch(console.error);
-        }
-    };
-
-    const playAgentAudio = (data) => {
-        const { audioUrl, responseText, agentName, timestamp } = data;
-        
-        // Add to transcript
-        setTranscript(prev => [...prev, {
-            speaker: agentName,
-            text: responseText,
-            timestamp,
-            type: 'agent'
-        }]);
-
-        // Play audio
-        const audio = new Audio(`http://localhost:9001${audioUrl}`);
-        audio.play().catch(err => console.error('Error playing audio:', err));
-    };
-
-    const toggleMute = async () => {
-        if (!isMuted) {
-            // Muting - stop recording
-            stopRecording();
-            setIsMuted(true);
-        } else {
-            // Unmuting - start recording
-            await startRecording();
-            setIsMuted(false);
-        }
-    };
-
-    const startRecording = async () => {
-        // Prevent multiple recordings
-        if (isRecording) {
-            console.log('Already recording, ignoring start request');
-            return;
-        }
+        console.log('🗣️ Using transcript:', hasValidTranscript ? speechTranscript : 'none (will use Deepgram)');
 
         try {
-            // Get microphone access
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-
-            // Create MediaRecorder
-            const mediaRecorder = new MediaRecorder(stream);
-            mediaRecorderRef.current = mediaRecorder;
-            audioChunksRef.current = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = async () => {
-                // Process recorded audio
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-                await processAudio(audioBlob);
-                audioChunksRef.current = [];
+            // If we have a valid transcript, send it directly (skip audio processing)
+            if (hasValidTranscript) {
+                console.log('🚀 Sending transcript directly to backend');
                 
-                // Stop recording - don't auto-restart
-                setIsRecording(false);
-            };
+                // Add user speech to transcript
+                setTranscript(prev => [...prev, {
+                    speaker: 'You',
+                    text: speechTranscript,
+                    timestamp: new Date().toISOString(),
+                    type: 'user'
+                }]);
 
-            // Start recording in 3-second chunks
-            mediaRecorder.start();
-            setIsRecording(true);
+                // Send transcript to backend
+                const response = await axios.post('http://localhost:9001/api/call/process-speech', {
+                    callId,
+                    type,
+                    transcript: speechTranscript
+                });
+                
+                console.log('✅ Backend response:', response.data);
+                const { responseText, audioUrl, agentName } = response.data;
 
-            // Stop after 3 seconds to process
-            setTimeout(() => {
-                if (mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
+                // Agent response will come via socket
+                if (responseText) {
+                    socketRef.current?.emit('agent-response', {
+                        callId,
+                        audioUrl,
+                        responseText,
+                        agentName,
+                        delay: Math.random() * 1000 + 500
+                    });
                 }
-            }, 3000);
+                return;
+            }
 
-        } catch (error) {
-            console.error('Error starting recording:', error);
-            toast.error('Microphone access denied');
-        }
-    };
+            // Fallback to audio processing if no speech transcript
+            if (!audioBlob || audioBlob.size < 1000) {
+                console.log('⚠️ Skipping audio processing - too small or missing data');
+                return;
+            }
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            mediaRecorderRef.current.stop();
-        }
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-        }
-        setIsRecording(false);
-    };
+            console.log('🎤 Processing audio blob:', { size: audioBlob.size, callId, type });
 
-    const processAudio = async (audioBlob) => {
-        if (!audioBlob || !callId || audioBlob.size < 1000) return; // Skip very small recordings
-
-        try {
             // Convert blob to base64
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
             
             reader.onloadend = async () => {
                 const base64Audio = reader.result.split(',')[1];
+                console.log('📤 Sending audio to backend, base64 length:', base64Audio.length);
 
                 // Add user speech to transcript (placeholder)
                 setTranscript(prev => [...prev, {
@@ -325,11 +326,14 @@ const AudioCall = () => {
                 }]);
 
                 // Send to backend for processing
+                console.log('🚀 Making request to /api/call/process-speech');
                 const response = await axios.post('http://localhost:9001/api/call/process-speech', {
                     audio: base64Audio,
                     callId,
-                    type
+                    type,
+                    transcript: speechTranscript || undefined
                 });
+                console.log('✅ Backend response:', response.data);
 
                 const { responseText, audioUrl, transcript: userTranscript, agentName, region } = response.data;
 
@@ -367,43 +371,467 @@ const AudioCall = () => {
         }
     };
 
+    const handleAgentResponse = (data) => {
+        console.log('handleAgentResponse called with:', data);
+        const { responseText, agentName, timestamp, audioUrl } = data;
+        
+        // Add to transcript
+        setTranscript(prev => {
+            const newTranscript = [...prev, {
+                speaker: agentName,
+                text: responseText,
+                timestamp: timestamp || new Date().toISOString(),
+                type: 'agent'
+            }];
+            console.log('Updated transcript:', newTranscript);
+            return newTranscript;
+        });
+
+        // Play audio if available; fallback to natural Indian voice TTS if not
+        if (audioUrl) {
+            console.log('Playing audio:', audioUrl);
+            const audio = new Audio(`http://localhost:9001${audioUrl}`);
+            audio.play().catch(console.error);
+        } else if (window.speechSynthesis && responseText) {
+            try {
+                // Try to find a natural Indian voice
+                const voices = speechSynthesis.getVoices();
+                console.log('Available voices:', voices.length);
+                
+                // Look for Indian English voices first
+                let selectedVoice = voices.find(voice => 
+                    voice.lang.includes('en-IN') || 
+                    voice.name.toLowerCase().includes('indian') ||
+                    voice.name.toLowerCase().includes('india')
+                );
+                
+                // Fallback to any English voice if no Indian voice found
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(voice => 
+                        voice.lang.startsWith('en') && 
+                        !voice.name.toLowerCase().includes('google')
+                    );
+                }
+                
+                // Use system default if no good voice found
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(voice => voice.default);
+                }
+                
+                const utterance = new SpeechSynthesisUtterance(responseText);
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                    console.log('🗣️ Using selected voice:', selectedVoice.name, selectedVoice.lang);
+                }
+                
+                // Natural speech parameters for Indian accent
+                utterance.rate = 0.9;  // Slightly slower for natural speech
+                utterance.pitch = 1.1; // Slightly higher pitch
+                utterance.volume = 0.8;
+                
+                speechSynthesis.speak(utterance);
+                console.log('🗣️ Using natural browser TTS for response');
+            } catch (e) {
+                console.warn('Browser TTS failed:', e);
+            }
+        }
+    };
+
+    const playAgentAudio = (data) => {
+        const { audioUrl, responseText, agentName, timestamp } = data;
+        
+        // Add to transcript
+        setTranscript(prev => [...prev, {
+            speaker: agentName,
+            text: responseText,
+            timestamp,
+            type: 'agent'
+        }]);
+
+        // Play audio
+        const audio = new Audio(`http://localhost:9001${audioUrl}`);
+        audio.play().catch(err => console.error('Error playing audio:', err));
+    };
+
+    const toggleMute = async () => {
+        try {
+            if (!isMuted) {
+                // Muting - stop recording
+                stopRecording();
+                setIsMuted(true);
+            } else {
+                // Unmuting - start recording
+                await startRecording();
+                setIsMuted(false);
+            }
+        } catch (error) {
+            console.error('❌ Error in toggleMute:', error);
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+        }
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+        }
+        stopSpeechRecognition();
+        setIsRecording(false);
+    };
+
     const endCall = async () => {
         try {
             if (callId) {
-                await axios.post(`http://localhost:9001/api/call/${callId}/end`);
+                await axios.post(`http://localhost:9001/api/call/${callId}/end`).catch(error => {
+                    console.error('❌ Error calling end call API:', error);
+                });
             }
             cleanup();
             setCallState('ended');
             toast.success('Call ended');
-            setTimeout(() => navigate('/user-research'), 2000);
-        } catch (error) {
-            console.error('Error ending call:', error);
-            cleanup();
-            navigate('/user-research');
-        }
-    };
-
-    const cleanup = () => {
-        try {
-            if (socketRef.current) {
-                socketRef.current.emit('leave-call', callId);
-                socketRef.current.disconnect();
-            }
-            if (deviceRef.current) {
-                // Only unregister if the device is in 'registered' state
-                if (deviceRef.current.state === 'registered') {
-                    deviceRef.current.unregister();
+            setTimeout(() => {
+                try {
+                    navigate('/user-research');
+                } catch (error) {
+                    console.error('❌ Error navigating to user research:', error);
                 }
-                deviceRef.current.destroy();
-            }
-            if (isRecording) {
-                stopRecording();
-            }
+            }, 2000);
         } catch (error) {
-            console.error('Error during cleanup:', error);
+            console.error('❌ Error ending call:', error);
+            cleanup();
+            try {
+                navigate('/user-research');
+            } catch (navError) {
+                console.error('❌ Error navigating after call end:', navError);
+            }
         }
     };
 
+    const startRecording = async () => {
+        // Prevent multiple recordings
+        if (isRecording) {
+            console.log('Already recording, ignoring start request');
+            return;
+        }
+
+        try {
+            console.log('🎤 Starting recording...');
+            
+            // Get microphone access
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    sampleRate: 48000
+                }
+            });
+            streamRef.current = stream;
+            console.log('✅ Microphone access granted');
+
+            // Start speech recognition FIRST
+            startSpeechRecognition();
+
+            // Create MediaRecorder (prefer opus in webm)
+            const preferredMimeTypes = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/ogg;codecs=opus'
+            ];
+            const supportedType = preferredMimeTypes.find(t => MediaRecorder.isTypeSupported?.(t));
+            console.log('🎵 Using media type:', supportedType || 'default');
+            
+            const mediaRecorder = supportedType ? 
+                new MediaRecorder(stream, { mimeType: supportedType }) : 
+                new MediaRecorder(stream);
+            
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+            setRecognitionTranscript('');
+            currentTranscriptRef.current = ''; // Clear ref for new recording
+
+            mediaRecorder.ondataavailable = (event) => {
+                console.log('🎤 Audio data available:', event.data.size, 'bytes');
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                } else {
+                    console.warn('⚠️ Empty audio data received');
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                try {
+                    console.log('⏹️ MediaRecorder stopped');
+                    
+                    // Wait a moment for any final recognition results BEFORE stopping
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Increased delay
+                    
+                    // Capture the transcript from ref (immediate access) BEFORE stopping speech recognition
+                    const finalTranscript = currentTranscriptRef.current.trim() || 'Hello';
+                    console.log('🗣️ Captured transcript from ref:', finalTranscript);
+                    console.log('🗣️ State transcript was:', recognitionTranscript);
+                    
+                    // Stop speech recognition AFTER capturing transcript
+                    stopSpeechRecognition();
+                    
+                    // Process recorded audio
+                    const blobType = supportedType || 'audio/webm';
+                    const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
+                    console.log('🎤 Audio blob created:', audioBlob.size, 'bytes, type:', blobType);
+                    
+                    await processAudio(audioBlob, finalTranscript).catch(error => {
+                        console.error('❌ Error in processAudio:', error);
+                    });
+                    audioChunksRef.current = [];
+                    
+                    // Stop recording - don't auto-restart
+                    setIsRecording(false);
+                    console.log('✅ Recording session complete');
+                } catch (error) {
+                    console.error('❌ Error in mediaRecorder.onstop:', error);
+                    setIsRecording(false);
+                }
+            };
+
+            // Start recording for 6 seconds to give speech recognition more time
+            mediaRecorder.start();
+            setIsRecording(true);
+            console.log('▶️ Recording started (6 seconds)');
+
+            // Stop after 6 seconds to process
+            setTimeout(() => {
+                if (mediaRecorder.state === 'recording') {
+                    console.log('⏱️ Recording timeout reached (6s), stopping...');
+                    mediaRecorder.stop();
+                }
+            }, 6000);
+
+        } catch (error) {
+            console.error('❌ Error starting recording:', error);
+            toast.error('Microphone access denied: ' + error.message);
+            stopSpeechRecognition();
+            setIsRecording(false);
+        }
+    };
+
+    // ===== USE EFFECTS =====
+    // Global error handler for unhandled promise rejections
+    useEffect(() => {
+        const handleUnhandledRejection = (event) => {
+            console.error('❌ Unhandled promise rejection:', event.reason);
+            console.error('❌ Promise rejection stack:', event.reason?.stack);
+            console.error('❌ Event details:', event);
+            event.preventDefault(); // Prevent the default browser behavior
+        };
+
+        const handleError = (event) => {
+            console.error('❌ Global error:', event.error);
+            console.error('❌ Error stack:', event.error?.stack);
+        };
+
+        window.addEventListener('unhandledrejection', handleUnhandledRejection);
+        window.addEventListener('error', handleError);
+        
+        return () => {
+            window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+            window.removeEventListener('error', handleError);
+        };
+    }, []);
+
+    // Initialize speech recognition and load voices
+    useEffect(() => {
+        try {
+            initSpeechRecognition();
+            
+            // Load voices for TTS
+            const loadVoices = () => {
+                const voices = speechSynthesis.getVoices();
+                console.log('🔊 Loaded voices:', voices.length);
+                
+                // Find the best Indian voice
+                let bestIndianVoice = voices.find(voice => 
+                    voice.lang.includes('en-IN') || 
+                    voice.name.toLowerCase().includes('indian') ||
+                    voice.name.toLowerCase().includes('india')
+                );
+                
+                // Fallback to any English voice if no Indian voice found
+                if (!bestIndianVoice) {
+                    bestIndianVoice = voices.find(voice => 
+                        voice.lang.startsWith('en') && 
+                        !voice.name.toLowerCase().includes('google') &&
+                        !voice.name.toLowerCase().includes('microsoft')
+                    );
+                }
+                
+                // Set the best voice as selected
+                if (bestIndianVoice) {
+                    setSelectedVoice(bestIndianVoice);
+                    console.log('🎯 Selected best voice:', bestIndianVoice.name, bestIndianVoice.lang);
+                }
+                
+                voices.forEach(voice => {
+                    if (voice.lang.includes('en') || voice.name.toLowerCase().includes('indian')) {
+                        console.log('  -', voice.name, voice.lang, voice.default ? '(default)' : '', voice === bestIndianVoice ? '← SELECTED' : '');
+                    }
+                });
+            };
+            
+            // Load voices immediately and when they become available
+            loadVoices();
+            speechSynthesis.addEventListener('voiceschanged', loadVoices);
+            
+            return () => {
+                speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+            };
+        } catch (error) {
+            console.error('Error initializing speech recognition:', error);
+        }
+    }, []);
+
+    // Set default agents if none provided
+    useEffect(() => {
+        if (!agentIds || agentIds.length === 0) {
+            console.log('No agents provided, using default agents for testing');
+            const defaultAgentIds = ['b64ef359-e65a-475c-89fd-6411767473ec']; // Use test agent
+            setAgentIds(defaultAgentIds);
+            setTopic('Test Call');
+            setType('1on1');
+        }
+    }, []);
+
+    // Initialize call when agentIds are available
+    useEffect(() => {
+        if (agentIds && agentIds.length > 0) {
+            initializeCall().catch(error => {
+                console.error('Error in initializeCall useEffect:', error);
+            });
+        }
+    }, [agentIds]);
+
+    // Socket.IO setup
+    useEffect(() => {
+        if (!callId || !roomName) return;
+
+        try {
+            console.log('🔌 Initializing Socket.IO...');
+            socketRef.current = io('http://localhost:9001');
+            
+            socketRef.current.on('connect', () => {
+                console.log('🔌 Socket connected');
+                console.log('🔌 Joining call room:', { callId, roomName });
+                try {
+                    socketRef.current.emit('join-call', { callId, roomName });
+                } catch (error) {
+                    console.error('❌ Error emitting join-call:', error);
+                }
+            });
+
+            socketRef.current.on('play-audio', (data) => {
+                try {
+                    playAgentAudio(data);
+                } catch (error) {
+                    console.error('❌ Error in play-audio handler:', error);
+                }
+            });
+
+            socketRef.current.on('user-joined', (data) => {
+                console.log('User joined:', data);
+            });
+
+            socketRef.current.on('agent-response', (data) => {
+                try {
+                    console.log('🤖 Received agent-response:', data);
+                    console.log('🤖 Socket.IO room:', socketRef.current?.rooms);
+                    handleAgentResponse(data);
+                    setTypingAgents(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(data.agentName);
+                        return newSet;
+                    });
+                    setSpeakingAgents(prev => new Set(prev).add(data.agentName));
+                } catch (error) {
+                    console.error('❌ Error in agent-response handler:', error);
+                }
+            });
+
+            socketRef.current.on('agent-typing', (data) => {
+                try {
+                    console.log('⌨️ Received agent-typing:', data);
+                    setTypingAgents(prev => new Set(prev).add(data.agentName));
+                } catch (error) {
+                    console.error('❌ Error in agent-typing handler:', error);
+                }
+            });
+
+            socketRef.current.on('disconnect', () => {
+                console.log('🔌 Socket.IO disconnected');
+            });
+
+            socketRef.current.on('connect_error', (error) => {
+                console.error('🔌 Socket.IO connection error:', error);
+            });
+
+        } catch (error) {
+            console.error('❌ Error setting up Socket.IO:', error);
+        }
+
+        return () => {
+            try {
+                if (socketRef.current) {
+                    socketRef.current.disconnect();
+                }
+            } catch (error) {
+                console.error('❌ Error disconnecting Socket.IO:', error);
+            }
+        };
+    }, [callId, roomName]);
+
+    // Twilio device setup (optional - not required for audio calling)
+    useEffect(() => {
+        // Skip Twilio device registration entirely since we're using MediaRecorder
+        console.log('ℹ️ Skipping Twilio device registration - using MediaRecorder for audio calling');
+        console.log('ℹ️ Audio calling features:');
+        console.log('  - Audio capture: MediaRecorder API');
+        console.log('  - Speech recognition: Web Speech API');
+        console.log('  - Text-to-speech: Browser SpeechSynthesis');
+        console.log('  - Real-time communication: Socket.IO');
+        
+        // Set call state to connected immediately since we don't need Twilio
+        if (token && callState === 'connecting') {
+            setCallState('connected');
+            console.log('✅ Audio calling ready (without Twilio device)');
+        }
+
+        return () => {
+            // Clean up any existing Twilio device
+            try {
+                if (deviceRef.current) {
+                    if (deviceRef.current.state === 'registered') {
+                        deviceRef.current.unregister().catch(error => {
+                            console.error('❌ Error unregistering Twilio device:', error);
+                        });
+                    }
+                    deviceRef.current.destroy();
+                }
+            } catch (error) {
+                console.error('❌ Error cleaning up Twilio device:', error);
+            }
+        };
+    }, [token, callState]);
+
+    // Call duration timer
+    useEffect(() => {
+        if (callState === 'connected') {
+            const timer = setInterval(() => {
+                setCallDuration(prev => prev + 1);
+            }, 1000);
+
+            return () => clearInterval(timer);
+        }
+    }, [callState]);
+
+    // ===== RENDER =====
     // Show error state if audio services not available
     if (error && error.includes('Audio services')) {
         return (
@@ -584,18 +1012,28 @@ const AudioCall = () => {
 
                     {/* Main Controls */}
                     <div className="flex items-center space-x-3">
-                        {/* Microphone Button */}
+                        {/* Press to Speak Button - Large and prominent */}
                         <button
                             onClick={isRecording ? stopRecording : startRecording}
                             disabled={callState !== 'connected'}
-                            className={`p-4 rounded-full transition-all ${
+                            className={`px-6 py-4 rounded-full transition-all font-medium ${
                                 isRecording 
-                                    ? 'bg-red-600 hover:bg-red-700' 
-                                    : 'bg-white hover:bg-gray-200 text-gray-800'
+                                    ? 'bg-red-600 hover:bg-red-700 text-white' 
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                             title={isRecording ? 'Stop Speaking' : 'Press to Speak'}
                         >
-                            {isRecording ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6 text-gray-800" />}
+                            {isRecording ? (
+                                <div className="flex items-center space-x-2">
+                                    <MicOff className="w-5 h-5" />
+                                    <span>Stop Speaking</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center space-x-2">
+                                    <Mic className="w-5 h-5" />
+                                    <span>Press to Speak</span>
+                                </div>
+                            )}
                         </button>
 
                         {/* End Call Button */}
@@ -607,18 +1045,18 @@ const AudioCall = () => {
                             <PhoneOff className="w-6 h-6" />
                         </button>
 
-                        {/* Mute Button */}
+                        {/* Mute/Unmute Button - Smaller and different style */}
                         <button
                             onClick={toggleMute}
                             disabled={callState !== 'connected'}
-                            className={`p-4 rounded-full transition-all ${
+                            className={`p-3 rounded-full transition-all ${
                                 isMuted 
-                                    ? 'bg-gray-600' 
-                                    : 'bg-white hover:bg-gray-200'
+                                    ? 'bg-red-500 text-white' 
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                             title={isMuted ? 'Unmute' : 'Mute'}
                         >
-                            {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6 text-gray-800" />}
+                            {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                         </button>
                     </div>
 

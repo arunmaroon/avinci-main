@@ -67,10 +67,14 @@ app.use('/uploads', express.static('uploads'));
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
-    socket.on('join-call', (callId) => {
-        socket.join(`call-${callId}`);
-        console.log(`Socket ${socket.id} joined call ${callId}`);
-        socket.to(`call-${callId}`).emit('user-joined', { socketId: socket.id });
+    socket.on('join-call', (data) => {
+        const callId = typeof data === 'string' ? data : data.callId;
+        const roomName = typeof data === 'object' && data.roomName ? data.roomName : `call-${callId}`;
+        
+        socket.join(roomName);
+        console.log(`🔌 Socket ${socket.id} joined room: ${roomName} (callId: ${callId})`);
+        console.log(`🔌 Total rooms for this socket:`, Array.from(socket.rooms));
+        socket.to(roomName).emit('user-joined', { socketId: socket.id });
     });
 
     socket.on('agent-response', (data) => {

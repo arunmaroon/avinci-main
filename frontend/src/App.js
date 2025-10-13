@@ -20,6 +20,8 @@ import UserResearch from './pages/UserResearch';
 import SessionCall from './pages/SessionCall';
 import UserInterview from './pages/UserInterview';
 import AudioCall from './pages/AudioCall';
+import SocketTest from './pages/SocketTest';
+import TestRoute from './pages/TestRoute';
 import m3Theme from './theme/m3Theme';
 import './index.css';
 
@@ -92,6 +94,8 @@ function App() {
             <Route path="/user-research/session/:sessionId" element={<SessionCall />} />
             <Route path="/user-interview" element={<UserInterview />} />
             <Route path="/audio-call" element={<AudioCall />} />
+            <Route path="/socket-test" element={<SocketTest />} />
+            <Route path="/test-route" element={<TestRoute />} />
             <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
             <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />
             <Route path="/projects" element={<ProjectsDashboard />} />

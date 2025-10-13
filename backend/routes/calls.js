@@ -60,13 +60,13 @@ if (!fs.existsSync(audioTempDir)) {
     fs.mkdirSync(audioTempDir, { recursive: true });
 }
 
-// Indian accent voice mappings for ElevenLabs
+// Natural Indian accent voice mappings for ElevenLabs
 const INDIAN_VOICES = {
-    north: 'pNInz6obpgDQGcFmaJgB', // Indian male
-    south: 'onwK4e9ZLuTAKqWW03F9', // Indian female
-    west: 'pNInz6obpgDQGcFmaJgB', // Default Indian
-    east: 'onwK4e9ZLuTAKqWW03F9', // Default Indian female
-    default: 'pNInz6obpgDQGcFmaJgB'
+    north: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male voice
+    south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female voice  
+    west: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male
+    east: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female
+    default: 'pNInz6obpgDQGcFmaJgB' // Adam - Natural Indian male
 };
 
 // Check audio services status
@@ -165,57 +165,75 @@ router.post('/process-speech', async (req, res) => {
             });
         }
         
-        const { audio, callId, type = 'group' } = req.body;
-        console.log('Request params:', { callId, type, audioLength: audio?.length });
+        const { audio, callId, type = 'group', transcript: providedTranscript } = req.body;
+        console.log('Request params:', { callId, type, audioLength: audio?.length, hasTranscript: !!providedTranscript });
 
-        if (!audio || !callId) {
-            return res.status(400).json({ error: 'audio and callId are required' });
+        if (!callId) {
+            return res.status(400).json({ error: 'callId is required' });
         }
 
-        // Decode base64 audio
-        console.log('Decoding base64 audio...');
-        const audioBuffer = Buffer.from(audio, 'base64');
-        console.log('Audio buffer size:', audioBuffer.length);
-        
-        // Save temporary audio file
-        const tempAudioPath = path.join(audioTempDir, `${uuidv4()}.wav`);
-        fs.writeFileSync(tempAudioPath, audioBuffer);
-
-        // Step 1: Speech-to-Text with Deepgram
-        let transcript;
-        try {
-            const audioFile = fs.readFileSync(tempAudioPath);
-            console.log('Sending audio to Deepgram...');
+        let tempAudioPath = null;
+        if (audio) {
+            // Decode base64 audio
+            console.log('Decoding base64 audio...');
+            const audioBuffer = Buffer.from(audio, 'base64');
+            console.log('Audio buffer size:', audioBuffer.length);
             
-            const { result, error: dgError } = await deepgramClient.listen.prerecorded.transcribeFile(
-                audioFile,
-                { 
-                    model: 'nova-2',
-                    smart_format: true,
-                    language: 'en-IN', // Indian English
-                    punctuate: true,
-                    diarize: false
+            // Check if audio buffer is too small (likely not real audio)
+            if (audioBuffer.length >= 1000) {
+                // Save temporary audio file (use webm format since that's what frontend sends)
+                tempAudioPath = path.join(audioTempDir, `${uuidv4()}.webm`);
+                fs.writeFileSync(tempAudioPath, audioBuffer);
+            } else {
+                console.log('⚠️ Audio buffer too small, skipping STT from audio');
+            }
+        }
+
+        // Step 1: Speech-to-Text with Deepgram (skip if client provided transcript)
+        let transcript = (providedTranscript && providedTranscript.trim()) ? providedTranscript.trim() : undefined;
+        if (transcript) {
+            console.log(`📝 Using client-provided transcript: "${transcript}"`);
+        } else if (tempAudioPath) {
+            try {
+                const audioFile = fs.readFileSync(tempAudioPath);
+                console.log('🎤 Sending audio to Deepgram...', {
+                    fileSize: audioFile.length,
+                    filePath: tempAudioPath
+                });
+                
+                const { result, error: dgError } = await deepgramClient.listen.prerecorded.transcribeFile(
+                    audioFile,
+                    { 
+                        model: 'nova-2',
+                        smart_format: true,
+                        language: 'en-IN', // Indian English
+                        punctuate: true,
+                        diarize: false,
+                        mimetype: 'audio/webm'
+                    }
+                );
+
+                if (dgError) {
+                    console.error('❌ Deepgram API error:', dgError);
+                    throw new Error(`Deepgram error: ${dgError.message}`);
                 }
-            );
 
-            if (dgError) {
-                console.error('Deepgram API error:', dgError);
-                throw new Error(`Deepgram error: ${dgError.message}`);
+                if (!result || !result.results || !result.results.channels || !result.results.channels[0]) {
+                    console.error('❌ Unexpected Deepgram response structure:', result);
+                    throw new Error('Invalid response from Deepgram');
+                }
+
+                transcript = result.results.channels[0].alternatives[0].transcript;
+                console.log(`✅ Deepgram transcript: "${transcript}"`);
+            } catch (sttError) {
+                console.error('❌ Deepgram STT error:', sttError);
+                console.error('❌ Error details:', sttError.message);
             }
+        }
 
-            if (!result || !result.results || !result.results.channels || !result.results.channels[0]) {
-                console.error('Unexpected Deepgram response structure:', result);
-                throw new Error('Invalid response from Deepgram');
-            }
-
-            transcript = result.results.channels[0].alternatives[0].transcript;
-            console.log(`Deepgram transcript: "${transcript}"`);
-        } catch (sttError) {
-            console.error('Deepgram STT error:', sttError);
-            console.error('Error details:', sttError.message);
-            
-            // For now, let's use a fallback instead of failing completely
-            console.log('Using fallback: assuming user said "Hello"');
+        if (!transcript) {
+            // As a last resort, fallback to a simple prompt to keep the flow alive
+            console.log('⚠️ No transcript available; falling back to generic greeting');
             transcript = 'Hello';
         }
         
@@ -276,7 +294,13 @@ router.post('/process-speech', async (req, res) => {
         try {
             const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
                 text: responseText,
-                model_id: 'eleven_multilingual_v2'
+                model_id: 'eleven_multilingual_v2',
+                voice_settings: {
+                    stability: 0.5,      // More stable for natural speech
+                    similarity_boost: 0.8, // Better voice similarity
+                    style: 0.2,          // Slight style for naturalness
+                    use_speaker_boost: true // Enhance voice quality
+                }
             });
 
             // Save TTS audio
@@ -312,11 +336,24 @@ router.post('/process-speech', async (req, res) => {
         // Emit agent response to all clients in the call with human-like behavior
         const io = req.app.get('io');
         if (io) {
+            const roomName = `call-${callId}`;
+            console.log(`🔌 Emitting to room: ${roomName}, agent: ${agentName}`);
+            console.log(`🔌 Socket.IO connected clients:`, io.sockets.sockets.size);
+            
+            // Show typing indicator first
+            io.to(roomName).emit('agent-typing', {
+                callId,
+                agentName,
+                isTyping: true
+            });
+            console.log(`⌨️ Sent agent-typing to room ${roomName}`);
+            
             // Add some human-like delay (1-3 seconds)
             const delay = Math.random() * 2000 + 1000;
             
             setTimeout(() => {
-                io.to(callId).emit('agent-response', {
+                console.log(`🤖 Sending agent response to room ${roomName}: "${responseText.substring(0, 50)}..."`);
+                io.to(roomName).emit('agent-response', {
                     callId,
                     agentName,
                     responseText,
@@ -325,18 +362,16 @@ router.post('/process-speech', async (req, res) => {
                     isTyping: false,
                     isSpeaking: true
                 });
+                console.log(`✅ Agent response sent to room ${roomName}`);
             }, delay);
-            
-            // Show typing indicator first
-            io.to(callId).emit('agent-typing', {
-                callId,
-                agentName,
-                isTyping: true
-            });
+        } else {
+            console.warn('❌ Socket.IO not available, cannot emit agent response');
         }
 
-        // Clean up temp input file
-        fs.unlinkSync(tempAudioPath);
+        // Clean up temp input file if it exists
+        if (tempAudioPath && fs.existsSync(tempAudioPath)) {
+            fs.unlinkSync(tempAudioPath);
+        }
 
         res.json({ 
             responseText, 
