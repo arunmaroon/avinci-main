@@ -4,6 +4,50 @@
 
 class PromptBuilder {
     /**
+     * Regional profiles with HEAVY language mixing for authentic Indian responses
+     */
+    static REGIONAL_PROFILES = {
+        north: {
+            local_words: ['yaar', 'achha', 'theek hai', 'bilkul', 'kya', 'haan', 'nahi', 'bas', 'arre', 'aap'],
+            example: 'Yaar, this looks theek hai na? Bilkul perfect!'
+        },
+        south: {
+            local_words: ['kada', 'ra', 'sare', 'aitey', 'eppudu', 'chala', 'em chestham', 'bagundi'],
+            example: 'Chala bagundi kada this design. Aitey we can improve it more.'
+        },
+        tamil: {
+            local_words: ['da', 'pa', 'seri', 'puriyuthu', 'nalla', 'romba', 'enna', 'ponga', 'illa'],
+            example: 'Seri pa, nalla irukku this feature. Romba useful da!'
+        },
+        west: {
+            local_words: ['mhanje', 'kay', 'mast', 'chalu', 'ho na', 'kay re', 'ata'],
+            example: 'Mast hai yaar! Kay mhantos, this is really good na?'
+        },
+        east: {
+            local_words: ['bhalo', 'darun', 'ektu', 'toh', 'na', 'ekebare', 'bujhecho'],
+            example: 'Ektu darun! This is bhalo but needs more work na?'
+        },
+        default: {
+            local_words: ['yaar', 'achha', 'theek hai'],
+            example: 'Yaar, this is achha!'
+        }
+    };
+
+    /**
+     * Determine region from location
+     */
+    static getRegion(location) {
+        if (!location) return 'north';
+        const loc = location.toLowerCase();
+        if (loc.includes('tamil') || loc.includes('chennai') || loc.includes('madurai') || loc.includes('coimbatore')) return 'tamil';
+        if (loc.includes('delhi') || loc.includes('punjab') || loc.includes('haryana') || loc.includes('rajasthan') || loc.includes('uttar pradesh')) return 'north';
+        if (loc.includes('bangalore') || loc.includes('karnataka') || loc.includes('kerala') || loc.includes('andhra') || loc.includes('telangana') || loc.includes('hyderabad')) return 'south';
+        if (loc.includes('mumbai') || loc.includes('maharashtra') || loc.includes('gujarat') || loc.includes('goa') || loc.includes('pune')) return 'west';
+        if (loc.includes('kolkata') || loc.includes('west bengal') || loc.includes('odisha') || loc.includes('bihar')) return 'east';
+        return 'north';
+    }
+
+    /**
      * Build comprehensive master system prompt for persona
      */
     static buildMasterPrompt(persona) {
@@ -18,34 +62,61 @@ class PromptBuilder {
         const needs = persona.needs?.join('; ') || 'N/A';
         const fears = [...(persona.fears || []), ...(persona.apprehensions || [])].join('; ') || 'N/A';
 
-        const fillerWords = (persona.speech_patterns?.filler_words || []).join(', ') || 'none';
+        const fillerWords = (persona.speech_patterns?.filler_words || persona.speech_patterns?.fillers || []).join(', ') || 'none';
         const avoidedWords = (persona.vocabulary_profile?.avoided_words || []).slice(0, 10).join(', ') || 'none';
 
-        const frustrationTriggers = (persona.emotional_profile?.frustration_triggers || []).join(', ') || 'none';
+        const frustrationTriggers = (persona.emotional_profile?.frustration_triggers || persona.emotional_profile?.triggers || []).join(', ') || 'none';
         const excitementTriggers = (persona.emotional_profile?.excitement_triggers || []).join(', ') || 'none';
 
         const confidentTopics = (persona.knowledge_bounds?.confident || []).join(', ') || 'none';
         const partialTopics = (persona.knowledge_bounds?.partial || []).join(', ') || 'none';
         const unknownTopics = (persona.knowledge_bounds?.unknown || []).join(', ') || 'none';
 
-        // Determine language mixing based on English proficiency
-        const englishSavvy = persona.english_savvy || persona.communication_style?.english_proficiency || 'Medium';
-        const nativeLanguage = persona.cultural_background?.primary_language || persona.native_language || 'Telugu';
+        // Extract speech patterns and native phrases
+        const nativeLanguage = persona.cultural_background?.primary_language || persona.native_language || 'Hindi';
+        const nativePhrases = persona.speech_patterns?.native_phrases || [];
+        const englishLevel = persona.speech_patterns?.english_level || persona.english_savvy || 'Medium';
+        const speechStyle = persona.speech_patterns?.style || '';
         
-        let languageInstructions = '';
-        if (englishSavvy.toLowerCase() === 'high' || englishSavvy.toLowerCase() === 'fluent') {
-            languageInstructions = `\nLANGUAGE: Speak ONLY in English. You are fluent and comfortable with English.`;
-        } else if (englishSavvy.toLowerCase() === 'low' || englishSavvy.toLowerCase() === 'basic') {
-            languageInstructions = `\nLANGUAGE: Mix ${nativeLanguage} and English naturally. Use ${nativeLanguage} words frequently, especially for common expressions, emotions, and cultural references. You're more comfortable in ${nativeLanguage} but try to use English too. Example: "Chala baagundi! This feature is very useful kada?" or "Naaku ardham kaaledu, can you explain again?"`;
+        // Determine region and get local words
+        const region = this.getRegion(persona.location);
+        const regionalProfile = this.REGIONAL_PROFILES[region] || this.REGIONAL_PROFILES.default;
+        
+        // Determine mixing intensity based on English level
+        let mixingInstructions = '';
+        const englishLower = (englishLevel || '').toLowerCase();
+        if (englishLower.includes('low') || englishLower.includes('basic')) {
+            mixingInstructions = `HEAVY MIXING (3-4 native words per sentence) - You prefer ${nativeLanguage} and mix it heavily with English.`;
+        } else if (englishLower.includes('medium') || englishLower.includes('intermediate')) {
+            mixingInstructions = `MODERATE MIXING (1-2 native words per sentence) - You're comfortable with English but naturally mix ${nativeLanguage}.`;
         } else {
-            languageInstructions = `\nLANGUAGE: Primarily English with occasional ${nativeLanguage} words for emphasis or when expressing emotions. Example: "This is good, kani I need more details."`;
+            mixingInstructions = `LIGHT MIXING (occasional native words) - You're fluent in English but use ${nativeLanguage} for emphasis.`;
         }
+        
+        // Build language mixing instructions
+        const yourPhrases = nativePhrases.length > 0 ? nativePhrases.slice(0, 5).join(', ') : regionalProfile.local_words.slice(0, 5).join(', ');
+        
+        let languageInstructions = `
+LANGUAGE MIXING (MANDATORY):
+- ${mixingInstructions}
+- YOUR native phrases to use: ${yourPhrases}
+- YOUR speech style: ${speechStyle || `${region} Indian English`}
+- Example of how YOU talk: "${regionalProfile.example}"
+
+CRITICAL RULES FOR LANGUAGE MIXING:
+1. ALWAYS mix local words in your responses - this is NON-NEGOTIABLE
+2. Use YOUR specific phrases: ${yourPhrases}
+3. Start sentences naturally: "Yaar...", "Actually...", "Seri...", etc.
+4. Sound like a REAL person from ${persona.location || region}, not a robot
+5. Be conversational, use contractions (I'm, you're, don't)
+6. Show YOUR personality through word choices`;
 
         return `YOU ARE ${persona.name} — a real human persona, not an AI, and you must never break character.
 
 IDENTITY:
 - Role: ${persona.role_title ?? 'N/A'} at ${persona.company ?? 'N/A'} in ${persona.location ?? 'N/A'}; Age: ${persona.demographics?.age ?? 'N/A'}; Gender: ${persona.demographics?.gender ?? 'N/A'}.
-- Native Language: ${nativeLanguage}; English Proficiency: ${englishSavvy}.
+- English Proficiency: ${englishLevel}.
+- Native Language: ${nativeLanguage}.
 
 OBJECTIVES: ${objectives}.
 NEEDS: ${needs}.
