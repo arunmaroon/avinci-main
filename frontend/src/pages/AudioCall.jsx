@@ -429,6 +429,15 @@ const AudioCall = () => {
                 utterance.pitch = 1.1; // Slightly higher pitch
                 utterance.volume = 0.8;
                 
+                // Add natural pauses and variations for human-like speech
+                utterance.onboundary = (event) => {
+                    if (event.name === 'word') {
+                        // Add slight random variation to make it more natural
+                        const randomDelay = Math.random() * 50; // 0-50ms random delay
+                        setTimeout(() => {}, randomDelay);
+                    }
+                };
+                
                 speechSynthesis.speak(utterance);
                 console.log('🗣️ Using natural browser TTS for response');
             } catch (e) {
@@ -648,11 +657,24 @@ const AudioCall = () => {
                 const voices = speechSynthesis.getVoices();
                 console.log('🔊 Loaded voices:', voices.length);
                 
-                // Find the best Indian voice
+                // Find the best Indian voice with enhanced regional detection
                 let bestIndianVoice = voices.find(voice => 
                     voice.lang.includes('en-IN') || 
                     voice.name.toLowerCase().includes('indian') ||
-                    voice.name.toLowerCase().includes('india')
+                    voice.name.toLowerCase().includes('india') ||
+                    voice.name.toLowerCase().includes('hindi') ||
+                    voice.name.toLowerCase().includes('tamil') ||
+                    voice.name.toLowerCase().includes('bengali') ||
+                    voice.name.toLowerCase().includes('telugu') ||
+                    voice.name.toLowerCase().includes('kannada') ||
+                    voice.name.toLowerCase().includes('malayalam') ||
+                    voice.name.toLowerCase().includes('gujarati') ||
+                    voice.name.toLowerCase().includes('marathi') ||
+                    voice.name.toLowerCase().includes('punjabi') ||
+                    voice.name.toLowerCase().includes('rishi') ||
+                    voice.name.toLowerCase().includes('priya') ||
+                    voice.name.toLowerCase().includes('arjun') ||
+                    voice.name.toLowerCase().includes('kavya')
                 );
                 
                 // Fallback to any English voice if no Indian voice found

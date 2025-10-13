@@ -60,14 +60,55 @@ if (!fs.existsSync(audioTempDir)) {
     fs.mkdirSync(audioTempDir, { recursive: true });
 }
 
-// Natural Indian accent voice mappings for ElevenLabs
-const INDIAN_VOICES = {
-    north: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male voice
-    south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female voice  
-    west: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male
-    east: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female
-    default: 'pNInz6obpgDQGcFmaJgB' // Adam - Natural Indian male
-};
+        // Enhanced Indian accent voice mappings for ElevenLabs
+        const INDIAN_VOICES = {
+            north: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male voice (Hindi-influenced)
+            south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female voice (South Indian)
+            west: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male (Marathi/Gujarati)
+            east: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (Bengali)
+            tamil: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (Tamil accent)
+            default: 'pNInz6obpgDQGcFmaJgB' // Adam - Natural Indian male
+        };
+        
+        // Enhanced voice settings for different regions
+        const VOICE_SETTINGS = {
+            north: {
+                stability: 0.5,
+                similarity_boost: 0.8,
+                style: 0.3,
+                use_speaker_boost: true
+            },
+            south: {
+                stability: 0.6,
+                similarity_boost: 0.7,
+                style: 0.2,
+                use_speaker_boost: true
+            },
+            west: {
+                stability: 0.4,
+                similarity_boost: 0.9,
+                style: 0.4,
+                use_speaker_boost: true
+            },
+            east: {
+                stability: 0.7,
+                similarity_boost: 0.6,
+                style: 0.1,
+                use_speaker_boost: true
+            },
+            tamil: {
+                stability: 0.6,
+                similarity_boost: 0.7,
+                style: 0.2,
+                use_speaker_boost: true
+            },
+            default: {
+                stability: 0.5,
+                similarity_boost: 0.8,
+                style: 0.2,
+                use_speaker_boost: true
+            }
+        };
 
 // Check audio services status
 router.get('/status', (req, res) => {
@@ -285,22 +326,18 @@ router.post('/process-speech', async (req, res) => {
             return res.json({ responseText: '', audioUrl: null, transcript });
         }
 
-        // Step 3: Text-to-Speech with ElevenLabs (Indian accent)
+        // Step 3: Text-to-Speech with ElevenLabs (Enhanced Indian accent)
         const voiceId = INDIAN_VOICES[region] || INDIAN_VOICES.default;
+        const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
         
-        console.log(`Generating TTS for: "${responseText}" with voice: ${voiceId}`);
+        console.log(`Generating TTS for: "${responseText}" with voice: ${voiceId} (${region} accent)`);
         
         let ttsAudioPath;
         try {
             const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
                 text: responseText,
                 model_id: 'eleven_multilingual_v2',
-                voice_settings: {
-                    stability: 0.5,      // More stable for natural speech
-                    similarity_boost: 0.8, // Better voice similarity
-                    style: 0.2,          // Slight style for naturalness
-                    use_speaker_boost: true // Enhance voice quality
-                }
+                voice_settings: voiceSettings
             });
 
             // Save TTS audio

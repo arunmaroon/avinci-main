@@ -6,6 +6,7 @@ Handles group and 1:1 interview sessions with agent responses
 import random
 import asyncio
 import logging
+import json
 from typing import Dict, Any, Optional, List
 import os
 from openai import OpenAI
@@ -18,13 +19,44 @@ class CallSimulator:
     def __init__(self):
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
-        # Regional accent hints for more authentic responses
-        self.accent_hints = {
-            'north': 'Speak with a subtle North Indian (Hindi-influenced) accent, using words like "yaar", "actually", "basically"',
-            'south': 'Speak with a subtle South Indian accent, clear pronunciation, slightly formal but friendly',
-            'west': 'Speak with a Marathi/Gujarati influenced accent, confident and expressive',
-            'east': 'Speak with a Bengali influenced accent, poetic and thoughtful',
-            'default': 'Speak naturally with an Indian English accent'
+        # Enhanced regional accent and speech patterns for authentic Indian responses
+        self.regional_profiles = {
+            'north': {
+                'accent': 'North Indian (Hindi-influenced) accent',
+                'fillers': ['yaar', 'actually', 'basically', 'you know', 'I mean'],
+                'phrases': ['theek hai', 'achha', 'bilkul', 'exactly'],
+                'speech_style': 'confident, uses Hindi words naturally mixed with English'
+            },
+            'south': {
+                'accent': 'South Indian accent with clear pronunciation',
+                'fillers': ['okay', 'right', 'you see', 'I think', 'actually'],
+                'phrases': ['correct', 'yes', 'no problem', 'sure'],
+                'speech_style': 'polite, slightly formal, clear enunciation'
+            },
+            'west': {
+                'accent': 'Marathi/Gujarati influenced accent',
+                'fillers': ['ho na', 'you know', 'basically', 'I think'],
+                'phrases': ['theek hai', 'good', 'nice', 'wonderful'],
+                'speech_style': 'expressive, enthusiastic, uses local expressions'
+            },
+            'east': {
+                'accent': 'Bengali influenced accent',
+                'fillers': ['you know', 'I think', 'actually', 'basically'],
+                'phrases': ['very good', 'excellent', 'wonderful', 'amazing'],
+                'speech_style': 'thoughtful, poetic, expressive'
+            },
+            'tamil': {
+                'accent': 'Tamil-influenced accent with unique pronunciation',
+                'fillers': ['okay', 'you know', 'I think', 'actually'],
+                'phrases': ['correct', 'yes', 'no problem', 'sure'],
+                'speech_style': 'polite, clear, sometimes uses Tamil words'
+            },
+            'default': {
+                'accent': 'General Indian English accent',
+                'fillers': ['you know', 'I think', 'actually', 'basically'],
+                'phrases': ['good', 'nice', 'correct', 'yes'],
+                'speech_style': 'natural, conversational'
+            }
         }
         
     async def process_input(
@@ -36,13 +68,13 @@ class CallSimulator:
         topic: str = ''
     ) -> Dict[str, Any]:
         """
-        Process user input and generate agent response
+        Process user input and generate agent response using rich persona data
         
         Args:
             transcript: User's spoken text (from STT)
             call_id: Call session ID
             session_type: 'group' or '1on1'
-            agents: List of agent personas
+            agents: List of agent personas with rich data
             topic: Discussion topic
             
         Returns:
@@ -66,48 +98,62 @@ class CallSimulator:
                 # For 1:1, use the first agent
                 agent = agents[0]
             
-            # Extract agent details
+            # Extract rich agent details from persona data
             agent_name = agent.get('name', 'Agent')
-            agent_persona = agent.get('persona', '')
-            agent_background = agent.get('background', '')
-            region = agent.get('region', 'north')
+            location = agent.get('location', '')
+            demographics = agent.get('demographics', {})
+            traits = agent.get('traits', {})
+            communication_style = agent.get('communication_style', {})
+            speech_patterns = agent.get('speech_patterns', {})
+            vocabulary_profile = agent.get('vocabulary_profile', {})
+            emotional_profile = agent.get('emotional_profile', {})
+            cognitive_profile = agent.get('cognitive_profile', {})
+            objectives = agent.get('objectives', [])
+            frustrations = agent.get('frustrations', [])
+            tech_savviness = agent.get('tech_savviness', 'medium')
+            
+            # Determine region based on location or demographics
+            region = self._determine_region(location, demographics)
+            
+            # Get regional speech profile
+            regional_profile = self.regional_profiles.get(region, self.regional_profiles['default'])
+            
+            # Extract persona-specific speech characteristics
+            persona_fillers = speech_patterns.get('filler_words', regional_profile['fillers'])
+            persona_phrases = speech_patterns.get('common_phrases', regional_profile['phrases'])
+            sentence_length = communication_style.get('sentence_length', 'medium')
+            formality = communication_style.get('formality', 'casual')
+            vocabulary_complexity = vocabulary_profile.get('complexity', 5)
             
             # Add natural delay simulation for human feel (used by frontend)
             delay_ms = random.randint(500, 2000)
             
-            # Build prompt for natural Indian-English response
-            accent_hint = self.accent_hints.get(region, self.accent_hints['default'])
+            # Build comprehensive persona-based prompt
+            system_prompt = self._build_persona_prompt(
+                agent_name, location, demographics, traits, 
+                communication_style, speech_patterns, vocabulary_profile,
+                emotional_profile, cognitive_profile, objectives, frustrations,
+                tech_savviness, regional_profile, topic
+            )
+
+            user_prompt = f"User just said: '{transcript}'\n\nRespond naturally as {agent_name} with your authentic personality and speech patterns:"
             
-            system_prompt = f"""You are {agent_name}, participating in a user research call about {topic or 'product feedback'}.
-
-Persona: {agent_persona}
-Background: {agent_background}
-
-Instructions:
-- Respond naturally in Indian English with conversational style
-- {accent_hint}
-- Keep responses concise (2-3 sentences) like in a real conversation
-- Use casual fillers like "hmm", "you know", "I think", "actually"
-- Be authentic and human, not robotic
-- Reference your background and experiences when relevant
-- For group calls: sometimes agree/disagree with implied previous speakers"""
-
-            user_prompt = f"User just said: '{transcript}'\n\nRespond naturally as {agent_name}:"
-            
-            # Generate response using OpenAI
+            # Generate response using OpenAI with persona-specific parameters
             response = self.client.chat.completions.create(
                 model=os.getenv('OPENAI_MODEL', 'gpt-4'),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.8,  # Higher temperature for more natural variation
-                max_tokens=150
+                temperature=0.9,  # Higher temperature for more natural variation
+                max_tokens=200,   # Allow longer responses for natural conversation
+                presence_penalty=0.1,  # Encourage natural variation
+                frequency_penalty=0.1  # Avoid repetition
             )
             
             response_text = response.choices[0].message.content.strip()
             
-            logger.info(f"Call {call_id}: {agent_name} responding to '{transcript[:50]}...'")
+            logger.info(f"Call {call_id}: {agent_name} ({region}) responding to '{transcript[:50]}...'")
             
             return {
                 'responseText': response_text,
@@ -124,6 +170,107 @@ Instructions:
                 'region': 'north',
                 'delay': 0
             }
+    
+    def _determine_region(self, location: str, demographics: Dict) -> str:
+        """Determine region based on location or demographics"""
+        if not location:
+            return 'north'
+        
+        location_lower = location.lower()
+        
+        # Tamil Nadu specific detection
+        if any(term in location_lower for term in ['tamil', 'tamilnadu', 'chennai', 'madurai', 'coimbatore']):
+            return 'tamil'
+        elif any(term in location_lower for term in ['delhi', 'punjab', 'haryana', 'rajasthan', 'uttar pradesh']):
+            return 'north'
+        elif any(term in location_lower for term in ['bangalore', 'karnataka', 'kerala', 'andhra', 'telangana']):
+            return 'south'
+        elif any(term in location_lower for term in ['mumbai', 'maharashtra', 'gujarat', 'goa']):
+            return 'west'
+        elif any(term in location_lower for term in ['kolkata', 'west bengal', 'odisha', 'bihar']):
+            return 'east'
+        else:
+            return 'north'  # Default fallback
+    
+    def _build_persona_prompt(
+        self, agent_name: str, location: str, demographics: Dict, traits: Dict,
+        communication_style: Dict, speech_patterns: Dict, vocabulary_profile: Dict,
+        emotional_profile: Dict, cognitive_profile: Dict, objectives: List,
+        frustrations: List, tech_savviness: str, regional_profile: Dict, topic: str
+    ) -> str:
+        """Build comprehensive persona-based system prompt"""
+        
+        # Extract key persona details
+        age = demographics.get('age', 'unknown')
+        gender = demographics.get('gender', 'unknown')
+        education = demographics.get('education', 'unknown')
+        income_range = demographics.get('income_range', 'unknown')
+        
+        personality_archetype = traits.get('personality_archetype', 'balanced')
+        adjectives = traits.get('adjectives', [])
+        
+        sentence_length = communication_style.get('sentence_length', 'medium')
+        formality = communication_style.get('formality', 'casual')
+        question_style = communication_style.get('question_style', 'curious')
+        
+        persona_fillers = speech_patterns.get('filler_words', regional_profile['fillers'])
+        persona_phrases = speech_patterns.get('common_phrases', regional_profile['phrases'])
+        
+        vocabulary_complexity = vocabulary_profile.get('complexity', 5)
+        common_words = vocabulary_profile.get('common_words', [])
+        
+        emotional_baseline = emotional_profile.get('baseline', 'neutral')
+        frustration_triggers = emotional_profile.get('frustration_triggers', [])
+        excitement_triggers = emotional_profile.get('excitement_triggers', [])
+        
+        comprehension_speed = cognitive_profile.get('comprehension_speed', 'normal')
+        patience = cognitive_profile.get('patience', 5)
+        
+        # Build the comprehensive prompt
+        prompt = f"""You are {agent_name}, a real person participating in a user research call about {topic or 'product feedback'}.
+
+PERSONAL BACKGROUND:
+- Location: {location}
+- Age: {age}, Gender: {gender}
+- Education: {education}, Income: {income_range}
+- Tech Savviness: {tech_savviness}
+
+PERSONALITY & TRAITS:
+- Archetype: {personality_archetype}
+- Key traits: {', '.join(adjectives) if adjectives else 'balanced'}
+- Emotional baseline: {emotional_baseline}
+- Patience level: {patience}/10
+
+COMMUNICATION STYLE:
+- Sentence length: {sentence_length}
+- Formality: {formality}
+- Question style: {question_style}
+- Vocabulary complexity: {vocabulary_complexity}/10
+- Common words: {', '.join(common_words[:5]) if common_words else 'natural'}
+
+SPEECH PATTERNS & ACCENT:
+- Regional accent: {regional_profile['accent']}
+- Natural fillers: {', '.join(persona_fillers[:3])}
+- Common phrases: {', '.join(persona_phrases[:3])}
+- Speech style: {regional_profile['speech_style']}
+
+GOALS & MOTIVATIONS:
+- Objectives: {', '.join(objectives[:3]) if objectives else 'helpful participation'}
+- Frustrations: {', '.join(frustrations[:3]) if frustrations else 'none specific'}
+
+RESPONSE INSTRUCTIONS:
+- Speak naturally in Indian English with your regional accent
+- Use your authentic personality and communication style
+- Keep responses conversational (2-4 sentences)
+- Use your natural fillers and phrases occasionally
+- Reference your background and experiences when relevant
+- Match your vocabulary complexity and formality level
+- Show your emotional baseline and patience level
+- Be human, not robotic - use natural pauses and hesitations
+- For group calls: sometimes agree/disagree naturally with implied previous speakers
+- If you're from Tamil Nadu with low English, mix in some Tamil words naturally"""
+
+        return prompt
     
     async def simulate_group_overlap(
         self,
