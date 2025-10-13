@@ -44,7 +44,7 @@ def get_db_connection():
         host=os.getenv('DB_HOST', 'localhost'),
         port=os.getenv('DB_PORT', '5432'),
         database=os.getenv('DB_NAME', 'avinci'),
-        user=os.getenv('DB_USER', 'postgres'),
+        user=os.getenv('DB_USER', 'avinci_admin'),
         password=os.getenv('DB_PASSWORD', 'postgres')
     )
 
@@ -104,8 +104,8 @@ async def process_call_input(request: ProcessInputRequest):
         cursor.execute(
             """
             SELECT 
-                id, name, persona, demographics, background, 
-                psychological_profile, behavioral_traits
+                id, name, background, demographics, personality,
+                conversation_style, background_story, system_prompt
             FROM ai_agents 
             WHERE id = ANY(%s)
             """,
@@ -139,11 +139,11 @@ async def process_call_input(request: ProcessInputRequest):
             
             agent_list.append({
                 'name': agent['name'],
-                'persona': agent.get('persona', ''),
+                'persona': agent.get('system_prompt', ''),
                 'background': agent.get('background', ''),
                 'region': region,
-                'psychological_profile': agent.get('psychological_profile', {}),
-                'behavioral_traits': agent.get('behavioral_traits', {})
+                'psychological_profile': agent.get('personality', {}),
+                'behavioral_traits': agent.get('conversation_style', {})
             })
         
         # Process input and generate response
