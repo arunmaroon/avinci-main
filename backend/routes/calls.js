@@ -81,43 +81,43 @@ if (!fs.existsSync(audioTempDir)) {
             default: 'pNInz6obpgDQGcFmaJgB' // Adam - Very natural Indian male
         };
         
-        // Enhanced voice settings for more natural, human-like speech
-        // Lower stability = more natural variation, higher style = more expressive
+        // Optimized voice settings for faster, more natural speech
+        // Higher stability = faster generation, balanced style = natural but quick
         const VOICE_SETTINGS = {
             north: {
-                stability: 0.3,        // Lower for more natural variation
-                similarity_boost: 0.6, // Lower for more naturalness
-                style: 0.6,           // Higher for more expressiveness
+                stability: 0.7,        // Higher for faster, more consistent generation
+                similarity_boost: 0.8, // Higher for better voice quality
+                style: 0.4,           // Moderate for natural but fast speech
                 use_speaker_boost: true
             },
             south: {
-                stability: 0.4,        // Slightly higher for clear pronunciation
-                similarity_boost: 0.5, // Lower for more naturalness
-                style: 0.5,           // Moderate expressiveness
+                stability: 0.8,        // Higher for faster, clear pronunciation
+                similarity_boost: 0.8, // Higher for better voice quality
+                style: 0.3,           // Lower for faster generation
                 use_speaker_boost: true
             },
             west: {
-                stability: 0.2,        // Lower for more natural variation
-                similarity_boost: 0.7, // Higher for enthusiastic expression
-                style: 0.7,           // Higher for expressive speech
+                stability: 0.6,        // Moderate for enthusiastic but fast speech
+                similarity_boost: 0.8, // Higher for better voice quality
+                style: 0.5,           // Moderate for expressive but fast speech
                 use_speaker_boost: true
             },
             east: {
-                stability: 0.4,        // Moderate for thoughtful speech
-                similarity_boost: 0.4, // Lower for more naturalness
-                style: 0.4,           // Moderate for poetic expression
+                stability: 0.8,        // Higher for faster, thoughtful speech
+                similarity_boost: 0.8, // Higher for better voice quality
+                style: 0.3,           // Lower for faster generation
                 use_speaker_boost: true
             },
             tamil: {
-                stability: 0.3,        // Lower for more natural variation
-                similarity_boost: 0.5, // Lower for more naturalness
-                style: 0.5,           // Moderate for clear Tamil accent
+                stability: 0.7,        // Higher for faster, clear Tamil accent
+                similarity_boost: 0.8, // Higher for better voice quality
+                style: 0.4,           // Moderate for clear but fast speech
                 use_speaker_boost: true
             },
             default: {
-                stability: 0.3,        // Lower for more natural variation
-                similarity_boost: 0.6, // Lower for more naturalness
-                style: 0.6,           // Higher for more expressiveness
+                stability: 0.7,        // Higher for faster generation
+                similarity_boost: 0.8, // Higher for better voice quality
+                style: 0.4,           // Moderate for natural but fast speech
                 use_speaker_boost: true
             }
         };

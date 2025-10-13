@@ -147,13 +147,25 @@ async def process_call_input(request: ProcessInputRequest):
             })
         
         # Process input and generate response
-        result = await call_simulator.process_input(
-            transcript=request.transcript,
-            call_id=request.callId,
-            session_type=request.type,
-            agents=agent_list,
-            topic=topic
-        )
+        if request.type == 'group':
+            # For group calls, generate multiple responses with overlaps
+            results = await call_simulator.simulate_group_overlap(
+                transcript=request.transcript,
+                call_id=request.callId,
+                agents=agent_list,
+                topic=topic
+            )
+            # Return the first response for now
+            result = results[0] if results else {'responseText': '', 'agentName': '', 'region': 'north'}
+        else:
+            # For 1:1 calls, single response
+            result = await call_simulator.process_input(
+                transcript=request.transcript,
+                call_id=request.callId,
+                session_type=request.type,
+                agents=agent_list,
+                topic=topic
+            )
         
         return ProcessInputResponse(**result)
         

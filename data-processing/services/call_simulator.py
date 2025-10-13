@@ -85,18 +85,28 @@ class CallSimulator:
                 logger.error(f"No agents provided for call {call_id}")
                 return {'responseText': '', 'agentName': '', 'region': 'north'}
             
-            # For group calls, randomly select an agent to respond
-            # Add natural variation (not every agent responds to everything)
+            # For group calls, select multiple agents to respond (2-3 agents)
+            # For 1:1, use the first agent
             if session_type == 'group':
-                # 70% chance any given agent responds
-                responding_agents = [a for a in agents if random.random() < 0.7]
-                if not responding_agents:
-                    responding_agents = [random.choice(agents)]
+                # Select 2-3 agents to respond for more dynamic conversation
+                num_responders = min(random.randint(2, 3), len(agents))
+                responding_agents = random.sample(agents, num_responders)
                 
-                agent = random.choice(responding_agents)
+                # Generate responses from multiple agents
+                responses = []
+                for i, agent in enumerate(responding_agents):
+                    response = await self._generate_single_response(
+                        agent, transcript, call_id, topic, i
+                    )
+                    if response:
+                        responses.append(response)
+                
+                # Return the first response for now, but we'll enhance this
+                return responses[0] if responses else {'responseText': '', 'agentName': '', 'region': 'north'}
             else:
                 # For 1:1, use the first agent
                 agent = agents[0]
+                return await self._generate_single_response(agent, transcript, call_id, topic, 0)
             
             # Extract rich agent details from persona data
             agent_name = agent.get('name', 'Agent')
@@ -126,7 +136,7 @@ class CallSimulator:
             vocabulary_complexity = vocabulary_profile.get('complexity', 5)
             
             # Add natural delay simulation for human feel (used by frontend)
-            delay_ms = random.randint(500, 2000)
+            delay_ms = random.randint(200, 800)  # Much faster response
             
             # Build comprehensive persona-based prompt
             system_prompt = self._build_persona_prompt(
@@ -138,18 +148,18 @@ class CallSimulator:
 
             user_prompt = f"User just said: '{transcript}'\n\nRespond naturally as {agent_name} with your authentic personality and speech patterns:"
             
-            # Generate response using OpenAI with persona-specific parameters
+            # Generate response using OpenAI with faster, more natural parameters
             response = self.client.chat.completions.create(
                 model=os.getenv('OPENAI_MODEL', 'gpt-4'),
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=1.2,  # Higher temperature for more natural, varied responses
-                max_tokens=150,   # Shorter responses for more natural conversation
-                presence_penalty=0.3,  # Higher penalty to encourage natural variation
-                frequency_penalty=0.2,  # Higher penalty to avoid repetition
-                top_p=0.9  # Use nucleus sampling for more natural responses
+                temperature=0.8,  # Balanced for natural but consistent responses
+                max_tokens=80,    # Much shorter for faster, snappier responses
+                presence_penalty=0.1,  # Lower penalty for faster generation
+                frequency_penalty=0.1,  # Lower penalty for faster generation
+                top_p=0.95  # Slightly higher for more natural responses
             )
             
             response_text = response.choices[0].message.content.strip()
@@ -277,6 +287,71 @@ RESPONSE INSTRUCTIONS:
 - Show personality through your word choices and speaking style"""
 
         return prompt
+    
+    async def _generate_single_response(self, agent, transcript, call_id, topic, agent_index):
+        """Generate a single agent response"""
+        try:
+            # Extract rich agent details from persona data
+            agent_name = agent.get('name', 'Agent')
+            location = agent.get('location', '')
+            demographics = agent.get('demographics', {})
+            traits = agent.get('traits', {})
+            communication_style = agent.get('communication_style', {})
+            speech_patterns = agent.get('speech_patterns', {})
+            vocabulary_profile = agent.get('vocabulary_profile', {})
+            emotional_profile = agent.get('emotional_profile', {})
+            cognitive_profile = agent.get('cognitive_profile', {})
+            objectives = agent.get('objectives', [])
+            frustrations = agent.get('frustrations', [])
+            tech_savviness = agent.get('tech_savviness', 'medium')
+            
+            # Determine region based on location or demographics
+            region = self._determine_region(location, demographics)
+            
+            # Get regional speech profile
+            regional_profile = self.regional_profiles.get(region, self.regional_profiles['default'])
+            
+            # Add natural delay simulation for human feel (used by frontend)
+            delay_ms = random.randint(200, 800)  # Much faster response
+            
+            # Build comprehensive persona-based prompt
+            system_prompt = self._build_persona_prompt(
+                agent_name, location, demographics, traits, 
+                communication_style, speech_patterns, vocabulary_profile,
+                emotional_profile, cognitive_profile, objectives, frustrations,
+                tech_savviness, regional_profile, topic
+            )
+
+            user_prompt = f"User just said: '{transcript}'\n\nRespond naturally as {agent_name} with your authentic personality and speech patterns:"
+            
+            # Generate response using OpenAI with faster, more natural parameters
+            response = self.client.chat.completions.create(
+                model=os.getenv('OPENAI_MODEL', 'gpt-4'),
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.8,  # Balanced for natural but consistent responses
+                max_tokens=80,    # Much shorter for faster, snappier responses
+                presence_penalty=0.1,  # Lower penalty for faster generation
+                frequency_penalty=0.1,  # Lower penalty for faster generation
+                top_p=0.95  # Slightly higher for more natural responses
+            )
+            
+            response_text = response.choices[0].message.content.strip()
+            
+            logger.info(f"Call {call_id}: {agent_name} ({region}) responding to '{transcript[:50]}...'")
+            
+            return {
+                'responseText': response_text,
+                'agentName': agent_name,
+                'region': region,
+                'delay': delay_ms
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating single response: {e}")
+            return None
     
     async def simulate_group_overlap(
         self,
