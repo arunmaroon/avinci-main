@@ -29,6 +29,7 @@ router.get('/', async (req, res) => {
                 tone,
                 avatar_url,
                 background_story,
+                voice_id,
                 created_at
             FROM ai_agents
             WHERE is_active = true
