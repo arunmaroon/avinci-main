@@ -155,8 +155,14 @@ async def process_call_input(request: ProcessInputRequest):
                 agents=agent_list,
                 topic=topic
             )
-            # Return the first response for now
-            result = results[0] if results else {'responseText': '', 'agentName': '', 'region': 'north'}
+            # Return the first response for now, but log all responses
+            if results:
+                logger.info(f"Group call generated {len(results)} responses")
+                for i, res in enumerate(results):
+                    logger.info(f"Response {i+1}: {res.get('agentName', 'Unknown')} - {res.get('responseText', '')[:50]}...")
+                result = results[0]
+            else:
+                result = {'responseText': '', 'agentName': '', 'region': 'north'}
         else:
             # For 1:1 calls, single response
             result = await call_simulator.process_input(
@@ -225,7 +231,8 @@ async def process_group_overlap(request: ProcessInputRequest):
             topic=topic
         )
         
-        return {"responses": responses}
+        # Return responses directly as array
+        return responses
         
     except Exception as e:
         logger.error(f"Error processing group overlap: {e}")

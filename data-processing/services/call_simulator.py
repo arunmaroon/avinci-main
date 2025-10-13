@@ -367,26 +367,29 @@ RESPONSE INSTRUCTIONS:
             List of responses with different delays for natural overlap
         """
         try:
-            # Randomly select 1-3 agents to respond
-            num_responders = min(random.randint(1, 3), len(agents))
+            # Select 2-3 agents to respond for dynamic group conversation
+            num_responders = min(random.randint(2, 3), len(agents))
             responding_agents = random.sample(agents, num_responders)
             
             responses = []
-            base_delay = 500
+            base_delay = 200  # Faster base delay
             
+            # Generate responses from multiple agents
             for i, agent in enumerate(responding_agents):
-                response = await self.process_input(
+                response = await self._generate_single_response(
+                    agent=agent,
                     transcript=transcript,
                     call_id=call_id,
-                    session_type='group',
-                    agents=[agent],
-                    topic=topic
+                    topic=topic,
+                    agent_index=i
                 )
                 
-                # Stagger responses for natural overlap
-                response['delay'] = base_delay + (i * random.randint(800, 1500))
-                responses.append(response)
+                if response:
+                    # Stagger responses for natural overlap
+                    response['delay'] = base_delay + (i * random.randint(300, 600))
+                    responses.append(response)
             
+            logger.info(f"Group overlap: {len(responses)} agents responding to '{transcript[:50]}...'")
             return responses
             
         except Exception as e:
