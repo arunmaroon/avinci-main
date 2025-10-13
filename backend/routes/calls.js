@@ -60,64 +60,54 @@ if (!fs.existsSync(audioTempDir)) {
     fs.mkdirSync(audioTempDir, { recursive: true });
 }
 
-        // Enhanced natural Indian accent voice mappings for ElevenLabs
-        // Using more natural, human-like voices from ElevenLabs voice library
+        // Unified voice for all agents - Natural Indian voice from ElevenLabs
+        // Using WeK8ylKjTV2trMlayizC for consistent, natural voice across all agents
         const INDIAN_VOICES = {
-            north: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male (Hindi-influenced)
-            south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (South Indian)
-            west: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male (Marathi/Gujarati)
-            east: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (Bengali)
-            tamil: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (Tamil accent)
-            default: 'pNInz6obpgDQGcFmaJgB' // Adam - Natural Indian male
+            north: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
+            south: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
+            west: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
+            east: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
+            tamil: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
+            default: 'WeK8ylKjTV2trMlayizC' // Natural Indian voice for all regions
         };
         
-        // Alternative natural voices for better human-like speech
-        const NATURAL_INDIAN_VOICES = {
-            north: 'pNInz6obpgDQGcFmaJgB', // Adam - Very natural Indian male
-            south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Very natural Indian female
-            west: 'pNInz6obpgDQGcFmaJgB', // Adam - Very natural Indian male
-            east: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Very natural Indian female
-            tamil: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Very natural Indian female
-            default: 'pNInz6obpgDQGcFmaJgB' // Adam - Very natural Indian male
-        };
-        
-        // Optimized voice settings for faster, more natural speech
-        // Higher stability = faster generation, balanced style = natural but quick
+        // Optimized voice settings for WeK8ylKjTV2trMlayizC voice
+        // Unified settings for consistent, natural speech across all agents
         const VOICE_SETTINGS = {
             north: {
-                stability: 0.7,        // Higher for faster, more consistent generation
-                similarity_boost: 0.8, // Higher for better voice quality
-                style: 0.4,           // Moderate for natural but fast speech
+                stability: 0.6,        // Balanced for natural variation and speed
+                similarity_boost: 0.8, // High for voice quality
+                style: 0.5,           // Moderate for natural expressiveness
                 use_speaker_boost: true
             },
             south: {
-                stability: 0.8,        // Higher for faster, clear pronunciation
-                similarity_boost: 0.8, // Higher for better voice quality
-                style: 0.3,           // Lower for faster generation
+                stability: 0.6,        // Balanced for natural variation and speed
+                similarity_boost: 0.8, // High for voice quality
+                style: 0.5,           // Moderate for natural expressiveness
                 use_speaker_boost: true
             },
             west: {
-                stability: 0.6,        // Moderate for enthusiastic but fast speech
-                similarity_boost: 0.8, // Higher for better voice quality
-                style: 0.5,           // Moderate for expressive but fast speech
+                stability: 0.6,        // Balanced for natural variation and speed
+                similarity_boost: 0.8, // High for voice quality
+                style: 0.5,           // Moderate for natural expressiveness
                 use_speaker_boost: true
             },
             east: {
-                stability: 0.8,        // Higher for faster, thoughtful speech
-                similarity_boost: 0.8, // Higher for better voice quality
-                style: 0.3,           // Lower for faster generation
+                stability: 0.6,        // Balanced for natural variation and speed
+                similarity_boost: 0.8, // High for voice quality
+                style: 0.5,           // Moderate for natural expressiveness
                 use_speaker_boost: true
             },
             tamil: {
-                stability: 0.7,        // Higher for faster, clear Tamil accent
-                similarity_boost: 0.8, // Higher for better voice quality
-                style: 0.4,           // Moderate for clear but fast speech
+                stability: 0.6,        // Balanced for natural variation and speed
+                similarity_boost: 0.8, // High for voice quality
+                style: 0.5,           // Moderate for natural expressiveness
                 use_speaker_boost: true
             },
             default: {
-                stability: 0.7,        // Higher for faster generation
-                similarity_boost: 0.8, // Higher for better voice quality
-                style: 0.4,           // Moderate for natural but fast speech
+                stability: 0.6,        // Balanced for natural variation and speed
+                similarity_boost: 0.8, // High for voice quality
+                style: 0.5,           // Moderate for natural expressiveness
                 use_speaker_boost: true
             }
         };
@@ -342,7 +332,7 @@ router.post('/process-speech', async (req, res) => {
         const voiceId = INDIAN_VOICES[region] || INDIAN_VOICES.default;
         const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
         
-        console.log(`Generating TTS for: "${responseText}" with voice: ${voiceId} (${region} accent)`);
+        console.log(`Generating TTS for: "${responseText}" with unified voice: ${voiceId} (${region} accent)`);
         
         let ttsAudioPath;
         try {
