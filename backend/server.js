@@ -28,6 +28,9 @@ if (!fs.existsSync('uploads/ui')) {
 if (!fs.existsSync('uploads/audio')) {
     fs.mkdirSync('uploads/audio');
 }
+if (!fs.existsSync('uploads/audio/sessions')) {
+    fs.mkdirSync('uploads/audio/sessions');
+}
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({

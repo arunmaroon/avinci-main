@@ -137,8 +137,8 @@ async function generateVoiceAudio(text, agentLocation, agentVoiceId) {
         }
         fileStream.end();
 
-        // Return URL path
-        return `/audio/sessions/${filename}`;
+        // Return URL path (must match express.static('/uploads') route)
+        return `/uploads/audio/sessions/${filename}`;
     } catch (error) {
         console.error('❌ ElevenLabs TTS error:', error);
         return null;
