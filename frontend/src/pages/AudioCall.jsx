@@ -373,7 +373,7 @@ const AudioCall = () => {
 
     const handleAgentResponse = (data) => {
         console.log('handleAgentResponse called with:', data);
-        const { responseText, agentName, timestamp, audioUrl } = data;
+        const { responseText, agentName, timestamp, audioUrl, region = 'north' } = data;
         
         // Add to transcript
         setTranscript(prev => {
@@ -381,7 +381,8 @@ const AudioCall = () => {
                 speaker: agentName,
                 text: responseText,
                 timestamp: timestamp || new Date().toISOString(),
-                type: 'agent'
+                type: 'agent',
+                region
             }];
             console.log('Updated transcript:', newTranscript);
             return newTranscript;
@@ -394,16 +395,29 @@ const AudioCall = () => {
             audio.play().catch(console.error);
         } else if (window.speechSynthesis && responseText) {
             try {
-                // Try to find a natural Indian voice
+                // Try to find a natural Indian voice based on region
                 const voices = speechSynthesis.getVoices();
-                console.log('Available voices:', voices.length);
+                console.log(`🌏 Region: ${region} | Available voices: ${voices.length}`);
                 
-                // Look for Indian English voices first
-                let selectedVoice = voices.find(voice => 
-                    voice.lang.includes('en-IN') || 
-                    voice.name.toLowerCase().includes('indian') ||
-                    voice.name.toLowerCase().includes('india')
-                );
+                let selectedVoice;
+                
+                // Tamil region: Look for Tamil-specific voices
+                if (region === 'tamil') {
+                    selectedVoice = voices.find(voice => 
+                        voice.lang.includes('ta') || 
+                        voice.lang.includes('en-IN') ||
+                        voice.name.toLowerCase().includes('tamil') ||
+                        voice.name.toLowerCase().includes('indian')
+                    );
+                    console.log('🎯 Looking for Tamil voice...');
+                } else {
+                    // Other regions: Look for general Indian English voices
+                    selectedVoice = voices.find(voice => 
+                        voice.lang.includes('en-IN') || 
+                        voice.name.toLowerCase().includes('indian') ||
+                        voice.name.toLowerCase().includes('india')
+                    );
+                }
                 
                 // Fallback to any English voice if no Indian voice found
                 if (!selectedVoice) {
@@ -421,12 +435,13 @@ const AudioCall = () => {
                 const utterance = new SpeechSynthesisUtterance(responseText);
                 if (selectedVoice) {
                     utterance.voice = selectedVoice;
-                    console.log('🗣️ Using selected voice:', selectedVoice.name, selectedVoice.lang);
+                    console.log(`🗣️ Using ${region} voice:`, selectedVoice.name, selectedVoice.lang);
                 }
                 
                 // Optimized speech parameters for faster, natural speech
-                utterance.rate = 1.1;  // Faster for quicker responses
-                utterance.pitch = 1.0; // Normal pitch for natural sound
+                // Tamil voices get slightly different parameters for better pronunciation
+                utterance.rate = region === 'tamil' ? 1.05 : 1.1;  // Slightly slower for Tamil
+                utterance.pitch = region === 'tamil' ? 1.05 : 1.0; // Slightly higher pitch for Tamil
                 utterance.volume = 0.9; // High volume for clarity
                 
                 // Add minimal pauses for faster, natural speech
@@ -440,15 +455,15 @@ const AudioCall = () => {
                 
                 // Add natural speech interruptions and variations
                 utterance.onstart = () => {
-                    console.log('🗣️ Starting natural speech synthesis');
+                    console.log(`🗣️ Starting ${region} speech synthesis`);
                 };
                 
                 utterance.onend = () => {
-                    console.log('🗣️ Natural speech synthesis completed');
+                    console.log(`🗣️ ${region} speech synthesis completed`);
                 };
                 
                 speechSynthesis.speak(utterance);
-                console.log('🗣️ Using natural browser TTS for response');
+                console.log(`🗣️ Using natural browser TTS for ${region} region`);
             } catch (e) {
                 console.warn('Browser TTS failed:', e);
             }

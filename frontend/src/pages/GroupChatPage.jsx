@@ -139,7 +139,7 @@ const GroupChatPage = () => {
         if (agent.english_savvy) return agent.english_savvy;
         if (agent.communication_style?.english_proficiency) return agent.communication_style.english_proficiency;
         if (agent.communication_style?.english_level) return agent.communication_style.english_level;
-        return 'Medium'; // Default fallback
+        return 'Intermediate'; // Default fallback (new scale)
     };
 
     const filteredAgents = allAgents.filter((agent) => {
@@ -156,10 +156,26 @@ const GroupChatPage = () => {
     const techSavvyLevels = [...new Set(allAgents.map((agent) => getTechSavvyLevel(agent)))];
     const englishSavvyLevels = [...new Set(allAgents.map((agent) => getEnglishSavvyLevel(agent)))];
     
-    // Sort English levels for better UX
+    // Sort Tech levels for better UX (Beginner to Expert scale)
+    const sortedTechLevels = techSavvyLevels.sort((a, b) => {
+        const order = ['Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'];
+        const indexA = order.indexOf(a);
+        const indexB = order.indexOf(b);
+        // Put unknown/invalid values at the end
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+    });
+    
+    // Sort English levels for better UX (Beginner to Expert scale)
     const sortedEnglishLevels = englishSavvyLevels.sort((a, b) => {
-        const order = ['Advanced', 'High', 'Medium', 'Low'];
-        return order.indexOf(a) - order.indexOf(b);
+        const order = ['Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'];
+        const indexA = order.indexOf(a);
+        const indexB = order.indexOf(b);
+        // Put unknown/invalid values at the end
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
     });
 
     const clearFilters = () => {
@@ -408,7 +424,7 @@ const GroupChatPage = () => {
                                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
                                         <option value="">All Tech Levels</option>
-                                        {techSavvyLevels.map(level => (
+                                        {sortedTechLevels.map(level => (
                                             <option key={level} value={level}>{level}</option>
                                         ))}
                                     </select>

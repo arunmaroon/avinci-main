@@ -60,19 +60,20 @@ if (!fs.existsSync(audioTempDir)) {
     fs.mkdirSync(audioTempDir, { recursive: true });
 }
 
-        // Unified voice for all agents - Natural Indian voice from ElevenLabs
-        // Using WeK8ylKjTV2trMlayizC for consistent, natural voice across all agents
+        // Regional-specific voices from ElevenLabs Voice Library
+        // Tamil Nadu agents use specific Tamil voice for authentic regional accent
+        // Reference: https://elevenlabs.io/app/voice-library?voiceId=rgltZvTfiMmgWweZhh7n
         const INDIAN_VOICES = {
-            north: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
-            south: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
-            west: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
-            east: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
-            tamil: 'WeK8ylKjTV2trMlayizC', // Natural Indian voice for all regions
-            default: 'WeK8ylKjTV2trMlayizC' // Natural Indian voice for all regions
+            north: 'WeK8ylKjTV2trMlayizC', // Natural North Indian voice
+            south: 'WeK8ylKjTV2trMlayizC', // Natural South Indian voice
+            west: 'WeK8ylKjTV2trMlayizC', // Natural West Indian voice
+            east: 'WeK8ylKjTV2trMlayizC', // Natural East Indian voice
+            tamil: 'rgltZvTfiMmgWweZhh7n', // Authentic Tamil voice from ElevenLabs library
+            default: 'WeK8ylKjTV2trMlayizC' // Natural Indian voice (default)
         };
         
-        // Optimized voice settings for WeK8ylKjTV2trMlayizC voice
-        // Unified settings for consistent, natural speech across all agents
+        // Optimized voice settings per region
+        // Tamil voice (rgltZvTfiMmgWweZhh7n) uses tuned settings for natural Tamil accent
         const VOICE_SETTINGS = {
             north: {
                 stability: 0.6,        // Balanced for natural variation and speed
@@ -99,9 +100,9 @@ if (!fs.existsSync(audioTempDir)) {
                 use_speaker_boost: true
             },
             tamil: {
-                stability: 0.6,        // Balanced for natural variation and speed
-                similarity_boost: 0.8, // High for voice quality
-                style: 0.5,           // Moderate for natural expressiveness
+                stability: 0.65,       // Slightly higher stability for clear Tamil pronunciation
+                similarity_boost: 0.85, // Higher for authentic Tamil voice
+                style: 0.6,            // Enhanced expressiveness for Tamil intonation
                 use_speaker_boost: true
             },
             default: {

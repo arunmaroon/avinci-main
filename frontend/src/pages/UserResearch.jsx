@@ -62,6 +62,7 @@ const UserResearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState(0);
   const [filteredAgents, setFilteredAgents] = useState([]);
+  const [selectedState, setSelectedState] = useState('All');
 
   useEffect(() => {
     fetchAgents();
