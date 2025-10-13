@@ -195,6 +195,30 @@ class CallSimulator:
                 'delay': 0
             }
     
+    def _get_mixing_rule(self, english_level: str) -> str:
+        """Get language mixing rule based on English proficiency level (Beginner to Expert)"""
+        level_lower = english_level.lower()
+        
+        if 'beginner' in level_lower:
+            return 'VERY HEAVY MIXING - Use native language words 4-5 times per sentence. Prefer native language.'
+        elif 'elementary' in level_lower:
+            return 'HEAVY MIXING - Use native language words 3-4 times per sentence'
+        elif 'intermediate' in level_lower:
+            return 'MODERATE MIXING - Use native language words 1-2 times per sentence'
+        elif 'advanced' in level_lower:
+            return 'LIGHT MIXING - Use native language words occasionally for emphasis'
+        elif 'expert' in level_lower:
+            return 'MINIMAL MIXING - Use native words rarely, only for cultural expressions'
+        # Fallback for old levels
+        elif 'low' in level_lower or 'basic' in level_lower:
+            return 'HEAVY MIXING - Use native language words 3-4 times per sentence'
+        elif 'medium' in level_lower:
+            return 'MODERATE MIXING - Use native language words 1-2 times per sentence'
+        elif 'high' in level_lower:
+            return 'LIGHT MIXING - Use native language words occasionally'
+        else:
+            return 'MODERATE MIXING - Use native language words 1-2 times per sentence'
+    
     def _determine_region(self, location: str, demographics: Dict) -> str:
         """Determine region based on location or demographics"""
         if not location:
@@ -312,12 +336,13 @@ YOUR SPECIFIC LANGUAGE MIXING INSTRUCTIONS:
 - Your common fillers: {', '.join(persona_fillers[:3]) if isinstance(persona_fillers, list) else ', '.join(regional_profile['fillers'][:3])}
 
 LANGUAGE MIXING RULES (MANDATORY - BASED ON YOUR PROFILE):
-{'HEAVY MIXING - Use native language words 3-4 times per sentence' if 'low' in english_level.lower() or 'basic' in english_level.lower() else 'MODERATE MIXING - Use native language words 1-2 times per sentence' if 'medium' in english_level.lower() else 'LIGHT MIXING - Use native language words occasionally'}
+{self._get_mixing_rule(english_level)}
 - Use YOUR specific phrases: {', '.join(persona_phrases[:3]) if isinstance(persona_phrases, list) else ', '.join(regional_profile['phrases'][:3])}
 - Use YOUR native words: {', '.join(native_phrases[:3]) if native_phrases else ', '.join(regional_profile['local_words'][:3])}
 - Examples matching YOUR style:
-  * If Low English: "Seri pa, {', '.join(native_phrases[:2]) if native_phrases else 'local words'} this feature romba nalla irukku da!"
-  * If Medium English: "Actually yaar, this is theek hai but {', '.join(native_phrases[:1]) if native_phrases else 'some improvements'} needed na?"
+  * If Beginner/Elementary: "Seri pa, {', '.join(native_phrases[:2]) if native_phrases else 'local words'} this feature romba nalla irukku da!"
+  * If Intermediate: "Actually yaar, this is theek hai but {', '.join(native_phrases[:1]) if native_phrases else 'some improvements'} needed na!"
+  * If Advanced/Expert: "This is excellent. {', '.join(native_phrases[:1]) if native_phrases else 'Maybe'} we can improve it further."
   
 RESPONSE INSTRUCTIONS (BE YOURSELF):
 - Speak naturally as {agent_name} with {regional_profile['accent']}

@@ -4,6 +4,17 @@
 
 class PromptBuilder {
     /**
+     * English level mapping (old to new Beginner-Expert scale)
+     */
+    static ENGLISH_LEVEL_MAP = {
+        'Very Low': 'Beginner',
+        'Low': 'Elementary',
+        'Medium': 'Intermediate',
+        'High': 'Advanced',
+        'Very High': 'Expert'
+    };
+
+    /**
      * Regional profiles with HEAVY language mixing for authentic Indian responses
      */
     static REGIONAL_PROFILES = {
@@ -82,15 +93,22 @@ class PromptBuilder {
         const region = this.getRegion(persona.location);
         const regionalProfile = this.REGIONAL_PROFILES[region] || this.REGIONAL_PROFILES.default;
         
-        // Determine mixing intensity based on English level
+        // Normalize English level to new scale (Beginner to Expert)
+        const normalizedEnglishLevel = this.ENGLISH_LEVEL_MAP[englishLevel] || englishLevel || 'Intermediate';
+        
+        // Determine mixing intensity based on English level (Beginner to Expert scale)
         let mixingInstructions = '';
-        const englishLower = (englishLevel || '').toLowerCase();
-        if (englishLower.includes('low') || englishLower.includes('basic')) {
-            mixingInstructions = `HEAVY MIXING (3-4 native words per sentence) - You prefer ${nativeLanguage} and mix it heavily with English.`;
-        } else if (englishLower.includes('medium') || englishLower.includes('intermediate')) {
+        const englishLower = normalizedEnglishLevel.toLowerCase();
+        if (englishLower === 'beginner') {
+            mixingInstructions = `VERY HEAVY MIXING (4-5 native words per sentence) - You struggle with English and prefer ${nativeLanguage}. Use native language primarily.`;
+        } else if (englishLower === 'elementary') {
+            mixingInstructions = `HEAVY MIXING (3-4 native words per sentence) - You mix ${nativeLanguage} heavily with English. More comfortable in native language.`;
+        } else if (englishLower === 'intermediate') {
             mixingInstructions = `MODERATE MIXING (1-2 native words per sentence) - You're comfortable with English but naturally mix ${nativeLanguage}.`;
-        } else {
-            mixingInstructions = `LIGHT MIXING (occasional native words) - You're fluent in English but use ${nativeLanguage} for emphasis.`;
+        } else if (englishLower === 'advanced') {
+            mixingInstructions = `LIGHT MIXING (occasional native words) - You're fluent in English but use ${nativeLanguage} for emphasis and emotions.`;
+        } else { // Expert
+            mixingInstructions = `MINIMAL MIXING (rare native words) - You're highly fluent in English. Use ${nativeLanguage} only for cultural expressions or emotions.`;
         }
         
         // Build language mixing instructions
@@ -115,7 +133,7 @@ CRITICAL RULES FOR LANGUAGE MIXING:
 
 IDENTITY:
 - Role: ${persona.role_title ?? 'N/A'} at ${persona.company ?? 'N/A'} in ${persona.location ?? 'N/A'}; Age: ${persona.demographics?.age ?? 'N/A'}; Gender: ${persona.demographics?.gender ?? 'N/A'}.
-- English Proficiency: ${englishLevel}.
+- English Proficiency: ${normalizedEnglishLevel} (Beginner to Expert scale).
 - Native Language: ${nativeLanguage}.
 
 OBJECTIVES: ${objectives}.
