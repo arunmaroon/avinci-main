@@ -100,12 +100,17 @@ async def process_call_input(request: ProcessInputRequest):
         agent_ids = call['agent_ids']
         topic = call['topic'] or 'general discussion'
         
-        # Fetch agent personas
+        # Fetch agent personas with ALL rich persona data
         cursor.execute(
             """
             SELECT 
-                id, name, background, demographics, personality,
-                conversation_style, background_story, system_prompt
+                id, name, location, age, gender, education, income_range,
+                background, demographics, personality, traits, behaviors,
+                objectives, needs, fears, apprehensions, motivations, frustrations,
+                domain_literacy, tech_savviness, communication_style, speech_patterns,
+                vocabulary_profile, emotional_profile, cognitive_profile, knowledge_bounds,
+                background_story, system_prompt, master_system_prompt,
+                key_quotes, cultural_background, social_context
             FROM ai_agents 
             WHERE id = ANY(%s)
             """,
@@ -119,31 +124,42 @@ async def process_call_input(request: ProcessInputRequest):
         if not agents:
             raise HTTPException(status_code=404, detail="No agents found for this call")
         
-        # Convert agents to dictionaries with region info
+        # Convert agents to dictionaries with ALL persona data for authentic responses
         agent_list = []
         for agent in agents:
+            location = agent.get('location', '')
             demographics = agent.get('demographics', {})
-            region = 'north'  # Default
-            
-            # Extract region from demographics
-            if demographics and isinstance(demographics, dict):
-                location = demographics.get('location', '')
-                if any(city in location for city in ['Delhi', 'Chandigarh', 'Jaipur', 'Lucknow']):
-                    region = 'north'
-                elif any(city in location for city in ['Mumbai', 'Pune', 'Ahmedabad']):
-                    region = 'west'
-                elif any(city in location for city in ['Bangalore', 'Chennai', 'Hyderabad']):
-                    region = 'south'
-                elif any(city in location for city in ['Kolkata', 'Bhubaneswar']):
-                    region = 'east'
             
             agent_list.append({
                 'name': agent['name'],
-                'persona': agent.get('system_prompt', ''),
-                'background': agent.get('background', ''),
-                'region': region,
-                'psychological_profile': agent.get('personality', {}),
-                'behavioral_traits': agent.get('conversation_style', {})
+                'location': location,
+                'demographics': demographics or {
+                    'age': agent.get('age'),
+                    'gender': agent.get('gender'),
+                    'education': agent.get('education'),
+                    'income_range': agent.get('income_range')
+                },
+                'traits': agent.get('traits', {}),
+                'behaviors': agent.get('behaviors', {}),
+                'communication_style': agent.get('communication_style', {}),
+                'speech_patterns': agent.get('speech_patterns', {}),
+                'vocabulary_profile': agent.get('vocabulary_profile', {}),
+                'emotional_profile': agent.get('emotional_profile', {}),
+                'cognitive_profile': agent.get('cognitive_profile', {}),
+                'objectives': agent.get('objectives', []),
+                'needs': agent.get('needs', []),
+                'fears': agent.get('fears', []),
+                'apprehensions': agent.get('apprehensions', []),
+                'motivations': agent.get('motivations', []),
+                'frustrations': agent.get('frustrations', []),
+                'tech_savviness': agent.get('tech_savviness', 'medium'),
+                'domain_literacy': agent.get('domain_literacy', {}),
+                'knowledge_bounds': agent.get('knowledge_bounds', {}),
+                'background_story': agent.get('background_story', ''),
+                'system_prompt': agent.get('master_system_prompt') or agent.get('system_prompt', ''),
+                'cultural_background': agent.get('cultural_background', {}),
+                'social_context': agent.get('social_context', {}),
+                'key_quotes': agent.get('key_quotes', [])
             })
         
         # Process input and generate response
@@ -204,8 +220,20 @@ async def process_group_overlap(request: ProcessInputRequest):
         agent_ids = call['agent_ids']
         topic = call['topic'] or 'general discussion'
         
+        # Fetch ALL rich persona data (same as process-input)
         cursor.execute(
-            "SELECT id, name, personality, background_story, demographics FROM ai_agents WHERE id = ANY(%s)",
+            """
+            SELECT 
+                id, name, location, age, gender, education, income_range,
+                background, demographics, personality, traits, behaviors,
+                objectives, needs, fears, apprehensions, motivations, frustrations,
+                domain_literacy, tech_savviness, communication_style, speech_patterns,
+                vocabulary_profile, emotional_profile, cognitive_profile, knowledge_bounds,
+                background_story, system_prompt, master_system_prompt,
+                key_quotes, cultural_background, social_context
+            FROM ai_agents 
+            WHERE id = ANY(%s)
+            """,
             (agent_ids,)
         )
         agents = cursor.fetchall()
@@ -213,16 +241,43 @@ async def process_group_overlap(request: ProcessInputRequest):
         cursor.close()
         conn.close()
         
-        agent_list = [
-            {
-                'name': a['name'],
-                'persona': a.get('personality', ''),
-                'background': a.get('background_story', ''),
-                'demographics': a.get('demographics', {}),
-                'region': 'north'  # Simplified for now
-            }
-            for a in agents
-        ]
+        # Convert agents to dictionaries with ALL persona data for authentic responses
+        agent_list = []
+        for agent in agents:
+            location = agent.get('location', '')
+            demographics = agent.get('demographics', {})
+            
+            agent_list.append({
+                'name': agent['name'],
+                'location': location,
+                'demographics': demographics or {
+                    'age': agent.get('age'),
+                    'gender': agent.get('gender'),
+                    'education': agent.get('education'),
+                    'income_range': agent.get('income_range')
+                },
+                'traits': agent.get('traits', {}),
+                'behaviors': agent.get('behaviors', {}),
+                'communication_style': agent.get('communication_style', {}),
+                'speech_patterns': agent.get('speech_patterns', {}),
+                'vocabulary_profile': agent.get('vocabulary_profile', {}),
+                'emotional_profile': agent.get('emotional_profile', {}),
+                'cognitive_profile': agent.get('cognitive_profile', {}),
+                'objectives': agent.get('objectives', []),
+                'needs': agent.get('needs', []),
+                'fears': agent.get('fears', []),
+                'apprehensions': agent.get('apprehensions', []),
+                'motivations': agent.get('motivations', []),
+                'frustrations': agent.get('frustrations', []),
+                'tech_savviness': agent.get('tech_savviness', 'medium'),
+                'domain_literacy': agent.get('domain_literacy', {}),
+                'knowledge_bounds': agent.get('knowledge_bounds', {}),
+                'background_story': agent.get('background_story', ''),
+                'system_prompt': agent.get('master_system_prompt') or agent.get('system_prompt', ''),
+                'cultural_background': agent.get('cultural_background', {}),
+                'social_context': agent.get('social_context', {}),
+                'key_quotes': agent.get('key_quotes', [])
+            })
         
         # Generate multiple responses with overlaps
         responses = await call_simulator.simulate_group_overlap(

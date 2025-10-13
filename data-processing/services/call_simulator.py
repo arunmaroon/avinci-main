@@ -20,42 +20,55 @@ class CallSimulator:
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
         # Enhanced regional accent and speech patterns for authentic Indian responses
+        # With STRONG language mixing (Hinglish, Tamglish, Tenglish, etc.)
         self.regional_profiles = {
             'north': {
-                'accent': 'North Indian (Hindi-influenced) accent',
-                'fillers': ['yaar', 'actually', 'basically', 'you know', 'I mean', 'hmm'],
-                'phrases': ['theek hai', 'achha', 'bilkul', 'exactly', 'very good', 'nice'],
-                'speech_style': 'confident, uses Hindi words naturally mixed with English, enthusiastic'
+                'accent': 'North Indian (Hindi-influenced) accent with heavy Hinglish mixing',
+                'fillers': ['yaar', 'actually', 'basically', 'you know', 'I mean', 'hmm', 'na', 'haan'],
+                'phrases': ['theek hai', 'achha', 'bilkul', 'haan ji', 'kya baat hai', 'sahi hai', 'bas', 'arre'],
+                'local_words': ['yaar', 'achha', 'theek hai', 'bilkul', 'kya', 'haan', 'nahi', 'bas', 'arre', 'aap'],
+                'language_mix': 'HEAVY Hindi-English mixing (Hinglish). Use Hindi words in EVERY sentence: yaar, achha, theek hai, bilkul, kya, haan, nahi.',
+                'speech_style': 'confident, enthusiastic, uses Hinglish naturally in every sentence'
             },
             'south': {
-                'accent': 'South Indian accent with clear pronunciation',
-                'fillers': ['okay', 'right', 'you see', 'I think', 'actually', 'hmm'],
-                'phrases': ['correct', 'yes', 'no problem', 'sure', 'very good', 'nice'],
-                'speech_style': 'polite, slightly formal, clear enunciation, helpful'
+                'accent': 'South Indian accent (Bangalore/Hyderabad) with Telugu/Kannada mixing',
+                'fillers': ['okay', 'right', 'you see', 'actually', 'hmm', 'kada', 'ra'],
+                'phrases': ['chala bagundi', 'sare', 'eppudu', 'correct', 'no problem', 'aitey'],
+                'local_words': ['kada', 'ra', 'sare', 'aitey', 'eppudu', 'chala', 'em chestham'],
+                'language_mix': 'Mix Telugu/Kannada words naturally: kada, ra, sare, eppudu, chala, aitey. Use local words in EVERY response.',
+                'speech_style': 'polite but uses Telugu/Kannada naturally, clear pronunciation'
             },
             'west': {
-                'accent': 'Marathi/Gujarati influenced accent',
-                'fillers': ['ho na', 'you know', 'basically', 'I think', 'hmm'],
-                'phrases': ['theek hai', 'good', 'nice', 'wonderful', 'very good'],
-                'speech_style': 'expressive, enthusiastic, uses local expressions, friendly'
+                'accent': 'Marathi/Gujarati influenced accent with regional mixing',
+                'fillers': ['ho na', 'you know', 'basically', 'hmm', 'mhanje', 'kay'],
+                'phrases': ['kay mhantos', 'theek hai', 'mast', 'kay re', 'chalu', 'ho na'],
+                'local_words': ['mhanje', 'kay', 'mast', 'chalu', 'ho na', 'kay re', 'ata'],
+                'language_mix': 'Mix Marathi naturally: mhanje (means), kay (what), mast (great), chalu (let\'s go), ho na.',
+                'speech_style': 'expressive, enthusiastic, uses Marathi/Gujarati words naturally'
             },
             'east': {
-                'accent': 'Bengali influenced accent',
-                'fillers': ['you know', 'I think', 'actually', 'basically', 'hmm'],
-                'phrases': ['very good', 'excellent', 'wonderful', 'amazing', 'nice'],
-                'speech_style': 'thoughtful, poetic, expressive, warm'
+                'accent': 'Bengali influenced accent with Bengali mixing',
+                'fillers': ['you know', 'actually', 'basically', 'hmm', 'toh', 'na'],
+                'phrases': ['bhalo', 'ekebare', 'darun', 'thik ache', 'ektu', 'bujhecho'],
+                'local_words': ['bhalo', 'darun', 'ektu', 'toh', 'na', 'ekebare', 'bujhecho'],
+                'language_mix': 'Mix Bengali naturally: bhalo (good), darun (wonderful), ektu (little), ekebare (absolutely).',
+                'speech_style': 'thoughtful, poetic, uses Bengali expressions naturally'
             },
             'tamil': {
-                'accent': 'Tamil-influenced accent with unique pronunciation',
-                'fillers': ['okay', 'you know', 'I think', 'actually', 'hmm'],
-                'phrases': ['correct', 'yes', 'no problem', 'sure', 'very good'],
-                'speech_style': 'polite, clear, sometimes uses Tamil words, helpful'
+                'accent': 'Tamil-influenced accent with heavy Tamglish mixing',
+                'fillers': ['okay', 'you know', 'actually', 'hmm', 'da', 'pa'],
+                'phrases': ['nalla irukku', 'seri', 'puriyuthu', 'romba nalla', 'enna pannalam', 'ponga'],
+                'local_words': ['da', 'pa', 'seri', 'puriyuthu', 'nalla', 'romba', 'enna', 'ponga', 'illa'],
+                'language_mix': 'HEAVY Tamil-English mixing (Tamglish). Use Tamil words FREQUENTLY: da/pa, seri, nalla, romba, enna, puriyuthu.',
+                'speech_style': 'uses heavy Tamglish, Tamil words in EVERY sentence, very natural and colloquial'
             },
             'default': {
-                'accent': 'General Indian English accent',
-                'fillers': ['you know', 'I think', 'actually', 'basically', 'hmm'],
-                'phrases': ['good', 'nice', 'correct', 'yes', 'very good'],
-                'speech_style': 'natural, conversational, friendly'
+                'accent': 'General Indian English accent with light mixing',
+                'fillers': ['you know', 'actually', 'basically', 'hmm', 'na'],
+                'phrases': ['theek hai', 'achha', 'nice', 'good', 'correct'],
+                'local_words': ['yaar', 'achha', 'theek hai'],
+                'language_mix': 'Light language mixing with common Indian words.',
+                'speech_style': 'natural, conversational, uses some Indian words'
             }
         }
         
@@ -269,27 +282,33 @@ GOALS & MOTIVATIONS:
 - Objectives: {', '.join(objectives[:3]) if objectives else 'helpful participation'}
 - Frustrations: {', '.join(frustrations[:3]) if frustrations else 'none specific'}
 
+REGIONAL LANGUAGE MIXING (CRITICAL):
+{regional_profile['language_mix']}
+
+LANGUAGE MIXING RULES (MANDATORY):
+- ALWAYS mix local language words in EVERY response
+- Use these specific words naturally: {', '.join(regional_profile['local_words'][:5])}
+- Examples of mixing:
+  * North: "Yaar, this looks theek hai na? Bilkul perfect!"
+  * Tamil: "Seri pa, nalla irukku this feature. Romba useful da!"
+  * South: "Chala bagundi kada this design. Aitey we can improve it more."
+  * West: "Mast hai yaar! Kay mhantos, this is really good na?"
+
 RESPONSE INSTRUCTIONS:
-- Speak naturally in Indian English with your regional accent
-- Use your authentic personality and communication style
+- Speak naturally in {regional_profile['accent']}
+- Mix local language words in EVERY SINGLE SENTENCE (MANDATORY)
 - Keep responses conversational and short (1-2 sentences)
-- Use Indian English patterns and expressions:
-  * "Yaar", "actually", "basically", "you know", "I think"
-  * "Theek hai", "achha", "bilkul", "exactly", "correct"
-  * "Very good", "nice", "wonderful", "amazing"
-  * "Hmm", "oh", "really?", "that's interesting"
 - Use Indian sentence structures and word order
 - Reference your background and experiences when relevant
 - Match your vocabulary complexity and formality level
 - Show your emotional baseline and patience level
-- Be human, not robotic - use natural pauses, hesitations, and incomplete thoughts
+- Be human, not robotic - use natural pauses, hesitations
 - Use contractions (I'm, you're, don't, can't) for natural speech
-- For group calls: respond simultaneously with other agents, don't wait
-- If you're from Tamil Nadu with low English, mix in some Tamil words naturally
-- Sound like a real Indian person having a casual conversation
-- Use natural Indian speech patterns like starting with "So...", "Well...", "Actually..."
-- Show personality through your word choices and speaking style
-- Use Indian English grammar and expressions naturally"""
+- Sound like a REAL Indian person having a casual conversation
+- Use natural Indian speech patterns like starting with "Yaar...", "Actually...", "Seri..."
+- Show personality through word choices and speaking style
+- DO NOT sound generic or robotic
+- DO NOT speak pure English - ALWAYS mix local words"""
 
         return prompt
     

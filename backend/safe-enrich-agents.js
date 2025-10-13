@@ -119,7 +119,11 @@ const agentProfiles = {
         fintech_usage: 'Uses UPI, online banking, expense tracking apps',
         triggers: 'Rejection, difficult clients, missed targets',
         community_values: 'Hard work, persistence, customer service, family support',
-        life_events: ['Marriage 5 years ago', 'First child 2 years ago', 'Best sales month 6 months ago'],
+        life_events: [
+            { milestone: 'Marriage', year: 2020, impact: 'High', description: 'Married college sweetheart, started family life' },
+            { milestone: 'First Child', year: 2023, impact: 'High', description: 'Became a father, increased financial responsibilities' },
+            { milestone: 'Best Sales Month', year: 2024, impact: 'Medium', description: 'Achieved highest sales target, gained recognition' }
+        ],
         recommendations: 'Focus on relationship building, learn new sales techniques, manage stress'
     }
 };
@@ -254,12 +258,40 @@ async function enrichAgents() {
                     values: baseProfile.community_values,
                     beliefs: baseProfile.beliefs || `Success comes from dedication and hard work. ${baseProfile.community_values}.`
                 }),
+                // Emotional profile used by UI for Emotional Landscape
+                emotional_profile: JSON.stringify({
+                    triggers: Array.isArray(baseProfile.pain_points)
+                        ? baseProfile.pain_points
+                        : (typeof baseProfile.triggers === 'string' ? baseProfile.triggers.split(',').map(s => s.trim()).filter(Boolean) : []),
+                    responses: [
+                        'Takes a breath and asks clarifying questions',
+                        'Requests simpler steps or a quick walkthrough',
+                        'Shares specific examples to explain the issue',
+                        'Defers/escalates if repeatedly blocked'
+                    ]
+                }),
                 beliefs: baseProfile.beliefs || `Success comes from dedication and hard work. ${baseProfile.community_values}.`,
                 sample_quote: generateSampleQuote(profileKey, regional.key_phrases),
                 tone: 'professional',
                 personality_traits: baseProfile.personality,
                 life_background: baseProfile.background_story,
-                life_events: JSON.stringify(baseProfile.life_events),
+                // Normalize life events to expected UI shape: { event, year, impact, description }
+                life_events: JSON.stringify(
+                    (baseProfile.life_events || []).map(ev => {
+                        if (typeof ev === 'string') {
+                            return { event: ev, year: null, impact: 'Medium', description: ev };
+                        }
+                        if (ev && typeof ev === 'object') {
+                            return {
+                                event: ev.event || ev.milestone || 'Milestone',
+                                year: ev.year || null,
+                                impact: ev.impact || 'Medium',
+                                description: ev.description || ''
+                            };
+                        }
+                        return { event: 'Milestone', year: null, impact: 'Medium', description: '' };
+                    })
+                ),
                 lifestyle_interests: JSON.stringify({
                     hobbies: baseProfile.hobbies,
                     interests: baseProfile.hobbies
@@ -339,10 +371,8 @@ async function enrichAgents() {
                     personality = $5,
                     background_story = $6,
                     goals = $7,
-                    goals_detail = $8,
-                    pain_points = $9,
-                    pain_points_detail = $10,
-                    motivations = $11,
+                    pain_points = $8,
+                    motivations = $9,
                     hobbies = $10,
                     daily_routine = $11,
                     decision_making = $12,
@@ -381,8 +411,9 @@ async function enrichAgents() {
                     knowledge_areas = $45,
                     ui_pain_points = $46,
                     financial_preferences = $47,
-                    domain_knowledge = $48
-                WHERE id = $49
+                    domain_knowledge = $48,
+                    emotional_profile = $49
+                WHERE id = $50
             `, [
                 enrichedProfile.age,
                 enrichedProfile.gender,
@@ -432,6 +463,7 @@ async function enrichAgents() {
                 enrichedProfile.ui_pain_points,
                 enrichedProfile.financial_preferences,
                 enrichedProfile.domain_knowledge,
+                enrichedProfile.emotional_profile,
                 agent.id
             ]);
             
