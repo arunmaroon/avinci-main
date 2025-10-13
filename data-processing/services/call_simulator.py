@@ -237,8 +237,25 @@ class CallSimulator:
         formality = communication_style.get('formality', 'casual')
         question_style = communication_style.get('question_style', 'curious')
         
-        persona_fillers = speech_patterns.get('filler_words', regional_profile['fillers'])
-        persona_phrases = speech_patterns.get('common_phrases', regional_profile['phrases'])
+        # Extract fillers and phrases from speech_patterns (handle multiple formats)
+        persona_fillers = (
+            speech_patterns.get('filler_words') or 
+            speech_patterns.get('fillers') or 
+            regional_profile['fillers']
+        )
+        persona_phrases = (
+            speech_patterns.get('common_phrases') or 
+            speech_patterns.get('phrases') or 
+            regional_profile['phrases']
+        )
+        
+        # Extract native language phrases if available
+        native_phrases = speech_patterns.get('native_phrases', [])
+        
+        # Detect language mixing level from speech_patterns
+        english_level = speech_patterns.get('english_level', 'Medium')
+        speech_style = speech_patterns.get('style', regional_profile.get('speech_style', ''))
+        vocab_mixing = speech_patterns.get('vocabulary_mixing', 'moderate')
         
         vocabulary_complexity = vocabulary_profile.get('complexity', 5)
         common_words = vocabulary_profile.get('common_words', [])
@@ -274,9 +291,12 @@ COMMUNICATION STYLE:
 
 SPEECH PATTERNS & ACCENT:
 - Regional accent: {regional_profile['accent']}
-- Natural fillers: {', '.join(persona_fillers[:3])}
-- Common phrases: {', '.join(persona_phrases[:3])}
-- Speech style: {regional_profile['speech_style']}
+- Your speech style: {speech_style or regional_profile['speech_style']}
+- English proficiency: {english_level}
+- Vocabulary mixing level: {vocab_mixing}
+- Natural fillers: {', '.join(persona_fillers[:5]) if isinstance(persona_fillers, list) else ', '.join(regional_profile['fillers'][:5])}
+- Common phrases: {', '.join(persona_phrases[:5]) if isinstance(persona_phrases, list) else ', '.join(regional_profile['phrases'][:5])}
+- Native language phrases: {', '.join(native_phrases[:5]) if native_phrases else 'N/A'}
 
 GOALS & MOTIVATIONS:
 - Objectives: {', '.join(objectives[:3]) if objectives else 'helpful participation'}
@@ -285,30 +305,36 @@ GOALS & MOTIVATIONS:
 REGIONAL LANGUAGE MIXING (CRITICAL):
 {regional_profile['language_mix']}
 
-LANGUAGE MIXING RULES (MANDATORY):
-- ALWAYS mix local language words in EVERY response
-- Use these specific words naturally: {', '.join(regional_profile['local_words'][:5])}
-- Examples of mixing:
-  * North: "Yaar, this looks theek hai na? Bilkul perfect!"
-  * Tamil: "Seri pa, nalla irukku this feature. Romba useful da!"
-  * South: "Chala bagundi kada this design. Aitey we can improve it more."
-  * West: "Mast hai yaar! Kay mhantos, this is really good na?"
+YOUR SPECIFIC LANGUAGE MIXING INSTRUCTIONS:
+- English Level: {english_level}
+- Mixing Style: {speech_style}
+- Native phrases YOU use: {', '.join(native_phrases[:5]) if native_phrases else ', '.join(regional_profile['local_words'][:5])}
+- Your common fillers: {', '.join(persona_fillers[:3]) if isinstance(persona_fillers, list) else ', '.join(regional_profile['fillers'][:3])}
 
-RESPONSE INSTRUCTIONS:
-- Speak naturally in {regional_profile['accent']}
-- Mix local language words in EVERY SINGLE SENTENCE (MANDATORY)
+LANGUAGE MIXING RULES (MANDATORY - BASED ON YOUR PROFILE):
+{'HEAVY MIXING - Use native language words 3-4 times per sentence' if 'low' in english_level.lower() or 'basic' in english_level.lower() else 'MODERATE MIXING - Use native language words 1-2 times per sentence' if 'medium' in english_level.lower() else 'LIGHT MIXING - Use native language words occasionally'}
+- Use YOUR specific phrases: {', '.join(persona_phrases[:3]) if isinstance(persona_phrases, list) else ', '.join(regional_profile['phrases'][:3])}
+- Use YOUR native words: {', '.join(native_phrases[:3]) if native_phrases else ', '.join(regional_profile['local_words'][:3])}
+- Examples matching YOUR style:
+  * If Low English: "Seri pa, {', '.join(native_phrases[:2]) if native_phrases else 'local words'} this feature romba nalla irukku da!"
+  * If Medium English: "Actually yaar, this is theek hai but {', '.join(native_phrases[:1]) if native_phrases else 'some improvements'} needed na?"
+  
+RESPONSE INSTRUCTIONS (BE YOURSELF):
+- Speak naturally as {agent_name} with {regional_profile['accent']}
+- Use YOUR speech style: {speech_style or regional_profile['speech_style']}
+- Mix YOUR native phrases in sentences based on your {english_level} proficiency
 - Keep responses conversational and short (1-2 sentences)
-- Use Indian sentence structures and word order
-- Reference your background and experiences when relevant
-- Match your vocabulary complexity and formality level
-- Show your emotional baseline and patience level
-- Be human, not robotic - use natural pauses, hesitations
+- Use Indian sentence structures and word order from your region
+- Reference your background ({location}) when relevant
+- Match YOUR formality level: {formality}
+- Show YOUR emotional baseline: {emotional_baseline}
+- Be HUMAN, not robotic - use natural pauses, hesitations
 - Use contractions (I'm, you're, don't, can't) for natural speech
-- Sound like a REAL Indian person having a casual conversation
-- Use natural Indian speech patterns like starting with "Yaar...", "Actually...", "Seri..."
-- Show personality through word choices and speaking style
+- Sound like a REAL person from {location} having a casual conversation
+- Start sentences naturally: "Yaar...", "Actually...", "Seri...", or YOUR phrases
+- Show YOUR personality through word choices
 - DO NOT sound generic or robotic
-- DO NOT speak pure English - ALWAYS mix local words"""
+- DO NOT speak pure English - ALWAYS use YOUR native mixing style"""
 
         return prompt
     
