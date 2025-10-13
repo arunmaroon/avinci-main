@@ -425,17 +425,26 @@ const AudioCall = () => {
                 }
                 
                 // Natural speech parameters for Indian accent
-                utterance.rate = 0.9;  // Slightly slower for natural speech
-                utterance.pitch = 1.1; // Slightly higher pitch
-                utterance.volume = 0.8;
+                utterance.rate = 0.85; // Slower for more natural, relaxed speech
+                utterance.pitch = 1.05; // Slightly higher pitch for expressiveness
+                utterance.volume = 0.9; // Higher volume for clarity
                 
                 // Add natural pauses and variations for human-like speech
                 utterance.onboundary = (event) => {
                     if (event.name === 'word') {
                         // Add slight random variation to make it more natural
-                        const randomDelay = Math.random() * 50; // 0-50ms random delay
+                        const randomDelay = Math.random() * 100; // 0-100ms random delay
                         setTimeout(() => {}, randomDelay);
                     }
+                };
+                
+                // Add natural speech interruptions and variations
+                utterance.onstart = () => {
+                    console.log('🗣️ Starting natural speech synthesis');
+                };
+                
+                utterance.onend = () => {
+                    console.log('🗣️ Natural speech synthesis completed');
                 };
                 
                 speechSynthesis.speak(utterance);

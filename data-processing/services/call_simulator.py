@@ -145,10 +145,11 @@ class CallSimulator:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.9,  # Higher temperature for more natural variation
-                max_tokens=200,   # Allow longer responses for natural conversation
-                presence_penalty=0.1,  # Encourage natural variation
-                frequency_penalty=0.1  # Avoid repetition
+                temperature=1.2,  # Higher temperature for more natural, varied responses
+                max_tokens=150,   # Shorter responses for more natural conversation
+                presence_penalty=0.3,  # Higher penalty to encourage natural variation
+                frequency_penalty=0.2,  # Higher penalty to avoid repetition
+                top_p=0.9  # Use nucleus sampling for more natural responses
             )
             
             response_text = response.choices[0].message.content.strip()
@@ -261,14 +262,19 @@ GOALS & MOTIVATIONS:
 RESPONSE INSTRUCTIONS:
 - Speak naturally in Indian English with your regional accent
 - Use your authentic personality and communication style
-- Keep responses conversational (2-4 sentences)
-- Use your natural fillers and phrases occasionally
+- Keep responses conversational and short (1-3 sentences)
+- Use your natural fillers and phrases frequently (yaar, actually, you know, etc.)
 - Reference your background and experiences when relevant
 - Match your vocabulary complexity and formality level
 - Show your emotional baseline and patience level
-- Be human, not robotic - use natural pauses and hesitations
+- Be human, not robotic - use natural pauses, hesitations, and incomplete thoughts
+- Use contractions (I'm, you're, don't, can't) for natural speech
+- Add natural reactions like "oh", "hmm", "really?", "that's interesting"
 - For group calls: sometimes agree/disagree naturally with implied previous speakers
-- If you're from Tamil Nadu with low English, mix in some Tamil words naturally"""
+- If you're from Tamil Nadu with low English, mix in some Tamil words naturally
+- Sound like a real person having a casual conversation, not an AI assistant
+- Use natural speech patterns like starting with "So...", "Well...", "Actually..."
+- Show personality through your word choices and speaking style"""
 
         return prompt
     

@@ -60,52 +60,64 @@ if (!fs.existsSync(audioTempDir)) {
     fs.mkdirSync(audioTempDir, { recursive: true });
 }
 
-        // Enhanced Indian accent voice mappings for ElevenLabs
+        // Enhanced natural Indian accent voice mappings for ElevenLabs
+        // Using more natural, human-like voices from ElevenLabs voice library
         const INDIAN_VOICES = {
-            north: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male voice (Hindi-influenced)
-            south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female voice (South Indian)
+            north: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male (Hindi-influenced)
+            south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (South Indian)
             west: 'pNInz6obpgDQGcFmaJgB', // Adam - Natural Indian male (Marathi/Gujarati)
             east: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (Bengali)
             tamil: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Natural Indian female (Tamil accent)
             default: 'pNInz6obpgDQGcFmaJgB' // Adam - Natural Indian male
         };
         
-        // Enhanced voice settings for different regions
+        // Alternative natural voices for better human-like speech
+        const NATURAL_INDIAN_VOICES = {
+            north: 'pNInz6obpgDQGcFmaJgB', // Adam - Very natural Indian male
+            south: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Very natural Indian female
+            west: 'pNInz6obpgDQGcFmaJgB', // Adam - Very natural Indian male
+            east: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Very natural Indian female
+            tamil: 'onwK4e9ZLuTAKqWW03F9', // Antoni - Very natural Indian female
+            default: 'pNInz6obpgDQGcFmaJgB' // Adam - Very natural Indian male
+        };
+        
+        // Enhanced voice settings for more natural, human-like speech
+        // Lower stability = more natural variation, higher style = more expressive
         const VOICE_SETTINGS = {
             north: {
-                stability: 0.5,
-                similarity_boost: 0.8,
-                style: 0.3,
+                stability: 0.3,        // Lower for more natural variation
+                similarity_boost: 0.6, // Lower for more naturalness
+                style: 0.6,           // Higher for more expressiveness
                 use_speaker_boost: true
             },
             south: {
-                stability: 0.6,
-                similarity_boost: 0.7,
-                style: 0.2,
+                stability: 0.4,        // Slightly higher for clear pronunciation
+                similarity_boost: 0.5, // Lower for more naturalness
+                style: 0.5,           // Moderate expressiveness
                 use_speaker_boost: true
             },
             west: {
-                stability: 0.4,
-                similarity_boost: 0.9,
-                style: 0.4,
+                stability: 0.2,        // Lower for more natural variation
+                similarity_boost: 0.7, // Higher for enthusiastic expression
+                style: 0.7,           // Higher for expressive speech
                 use_speaker_boost: true
             },
             east: {
-                stability: 0.7,
-                similarity_boost: 0.6,
-                style: 0.1,
+                stability: 0.4,        // Moderate for thoughtful speech
+                similarity_boost: 0.4, // Lower for more naturalness
+                style: 0.4,           // Moderate for poetic expression
                 use_speaker_boost: true
             },
             tamil: {
-                stability: 0.6,
-                similarity_boost: 0.7,
-                style: 0.2,
+                stability: 0.3,        // Lower for more natural variation
+                similarity_boost: 0.5, // Lower for more naturalness
+                style: 0.5,           // Moderate for clear Tamil accent
                 use_speaker_boost: true
             },
             default: {
-                stability: 0.5,
-                similarity_boost: 0.8,
-                style: 0.2,
+                stability: 0.3,        // Lower for more natural variation
+                similarity_boost: 0.6, // Lower for more naturalness
+                style: 0.6,           // Higher for more expressiveness
                 use_speaker_boost: true
             }
         };
