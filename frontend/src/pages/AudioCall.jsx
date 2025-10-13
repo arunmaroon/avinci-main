@@ -894,7 +894,7 @@ const AudioCall = () => {
     }
 
     return (
-        <div className="h-screen bg-gray-900 flex flex-col overflow-hidden">
+        <div className="h-screen max-h-screen bg-gray-900 flex flex-col overflow-hidden">
             {/* Top Bar - Google Meet Style */}
             <div className="bg-gray-800 text-white p-4 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center space-x-4">
@@ -922,9 +922,9 @@ const AudioCall = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex overflow-hidden min-h-0">
+            <div className="flex-1 flex overflow-hidden h-full">
                 {/* Video Grid Area */}
-                <div className="flex-1 p-6 overflow-hidden">
+                <div className="flex-1 p-6 overflow-hidden h-full">
                     {/* Agent Video Tiles - Google Meet Style */}
                     <div className={`grid gap-4 h-full ${
                         participants.length === 1 ? 'grid-cols-1' :

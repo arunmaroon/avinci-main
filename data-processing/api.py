@@ -205,7 +205,7 @@ async def process_group_overlap(request: ProcessInputRequest):
         topic = call['topic'] or 'general discussion'
         
         cursor.execute(
-            "SELECT id, name, persona, demographics, background FROM ai_agents WHERE id = ANY(%s)",
+            "SELECT id, name, personality, background_story, demographics FROM ai_agents WHERE id = ANY(%s)",
             (agent_ids,)
         )
         agents = cursor.fetchall()
@@ -216,8 +216,9 @@ async def process_group_overlap(request: ProcessInputRequest):
         agent_list = [
             {
                 'name': a['name'],
-                'persona': a.get('persona', ''),
-                'background': a.get('background', ''),
+                'persona': a.get('personality', ''),
+                'background': a.get('background_story', ''),
+                'demographics': a.get('demographics', {}),
                 'region': 'north'  # Simplified for now
             }
             for a in agents

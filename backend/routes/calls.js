@@ -338,8 +338,78 @@ router.post('/process-speech', async (req, res) => {
                     }
                 }
             } catch (groupError) {
-                console.warn('Group overlap service unavailable, falling back to single response:', groupError.message);
-                // Fall through to single response logic
+                console.warn('Group overlap service unavailable, falling back to multiple single responses:', groupError.message);
+                
+                // Fallback: Generate multiple responses by calling single response multiple times
+                try {
+                    const fallbackResponses = [];
+                    const agentIds = callData.agent_ids || [];
+                    
+                    // Get 2-3 agents to respond
+                    const numResponders = Math.min(2, agentIds.length);
+                    const respondingAgents = agentIds.slice(0, numResponders);
+                    
+                    console.log(`🎭 Fallback: Generating ${respondingAgents.length} single responses`);
+                    
+                    // Generate responses from multiple agents
+                    for (let i = 0; i < respondingAgents.length; i++) {
+                        try {
+                            const singleResponse = await axios.post(
+                                `${process.env.DATA_PROCESSING_URL || 'http://localhost:8000'}/process-input`,
+                                { transcript, callId, type: '1on1' },
+                                { timeout: 10000 }
+                            );
+                            
+                            if (singleResponse.data && singleResponse.data.responseText) {
+                                fallbackResponses.push({
+                                    agentName: singleResponse.data.agentName || `Agent ${i + 1}`,
+                                    responseText: singleResponse.data.responseText,
+                                    region: singleResponse.data.region || 'north'
+                                });
+                            }
+                        } catch (singleError) {
+                            console.warn(`Single response ${i + 1} failed:`, singleError.message);
+                        }
+                    }
+                    
+                    if (fallbackResponses.length > 0) {
+                        console.log(`🎭 Fallback: Generated ${fallbackResponses.length} responses`);
+                        
+                        // Emit all fallback responses simultaneously
+                        const roomName = `call-${callId}`;
+                        
+                        // Emit all typing indicators at once
+                        fallbackResponses.forEach((response, index) => {
+                            io.to(roomName).emit('agent-typing', {
+                                callId,
+                                agentName: response.agentName,
+                                isTyping: true
+                            });
+                        });
+                        
+                        // Emit all responses simultaneously after a short delay
+                        setTimeout(() => {
+                            fallbackResponses.forEach((response, index) => {
+                                io.to(roomName).emit('agent-response', {
+                                    callId,
+                                    agentName: response.agentName,
+                                    responseText: response.responseText,
+                                    audioUrl: null,
+                                    timestamp: new Date().toISOString(),
+                                    region: response.region || 'north'
+                                });
+                                
+                                console.log(`✅ Fallback response ${index + 1} sent:`, response.agentName);
+                            });
+                        }, 1000);
+                        
+                        // Use first response for main response
+                        ({ responseText, agentName, region = 'north' } = fallbackResponses[0]);
+                    }
+                } catch (fallbackError) {
+                    console.warn('Fallback multiple responses failed:', fallbackError.message);
+                    // Fall through to single response logic
+                }
             }
         }
         
