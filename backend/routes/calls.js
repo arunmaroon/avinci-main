@@ -359,8 +359,9 @@ router.post('/process-speech', async (req, res) => {
             }
         }
         
-        } catch (aiError) {
-            console.warn('Data processing service unavailable, using intelligent fallback response:', aiError.message);
+        // If still no response, use intelligent fallback
+        if (!responseText) {
+            console.warn('Data processing service unavailable, using intelligent fallback response');
             
             // Intelligent fallback: Generate contextual responses based on what user said
             agentName = 'AI Assistant';
