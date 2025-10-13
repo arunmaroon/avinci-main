@@ -508,10 +508,10 @@ const UserResearch = () => {
       <Dialog 
         open={agentDialogOpen} 
         onClose={() => setAgentDialogOpen(false)}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3, maxHeight: '80vh' }
+          sx: { borderRadius: 3, maxHeight: '85vh' }
         }}
       >
         <DialogTitle sx={{ pb: 1 }}>
@@ -557,8 +557,8 @@ const UserResearch = () => {
             </Tabs>
           </Box>
 
-          {/* Agent List */}
-          <Box sx={{ maxHeight: '400px', overflow: 'auto' }}>
+          {/* Agent Grid */}
+          <Box sx={{ maxHeight: '400px', overflow: 'auto', p: 2 }}>
             {filteredAgents.length === 0 ? (
               <Box sx={{ p: 4, textAlign: 'center' }}>
                 <Typography color="text.secondary">
@@ -566,65 +566,115 @@ const UserResearch = () => {
                 </Typography>
               </Box>
             ) : (
-              <List sx={{ p: 0 }}>
+              <Grid container spacing={2}>
                 {filteredAgents.map((agent) => {
                   const isSelected = selectedAgents.find(a => a.id === agent.id);
                   const canSelect = sessionType === '1on1' ? true : selectedAgents.length < 5 || isSelected;
                   
                   return (
-                    <ListItem key={agent.id} disablePadding>
-                      <ListItemButton
+                    <Grid item xs={12} sm={6} md={4} key={agent.id}>
+                      <Card
                         onClick={() => canSelect && handleAgentToggle(agent)}
-                        disabled={!canSelect && !isSelected}
-                        sx={{ 
-                          px: 3, 
-                          py: 2,
+                        sx={{
+                          cursor: canSelect ? 'pointer' : 'not-allowed',
                           opacity: canSelect ? 1 : 0.5,
-                          '&:hover': {
-                            backgroundColor: isSelected ? '#EFF6FF' : '#F8FAFC'
-                          }
+                          border: isSelected ? '2px solid #3B82F6' : '1px solid #E2E8F0',
+                          backgroundColor: isSelected ? '#EFF6FF' : 'white',
+                          transition: 'all 0.2s ease',
+                          '&:hover': canSelect ? {
+                            borderColor: '#3B82F6',
+                            backgroundColor: isSelected ? '#EFF6FF' : '#F8FAFC',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                          } : {},
+                          position: 'relative'
                         }}
                       >
-                        <ListItemAvatar>
-                          <Avatar 
-                            sx={{ 
+                        <CardContent sx={{ p: 2, textAlign: 'center' }}>
+                          {/* Selection Indicator */}
+                          {isSelected && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                backgroundColor: '#3B82F6',
+                                borderRadius: '50%',
+                                width: 24,
+                                height: 24,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              <Check sx={{ color: 'white', fontSize: 16 }} />
+                            </Box>
+                          )}
+                          
+                          {/* Avatar */}
+                          <Avatar
+                            sx={{
+                              width: 60,
+                              height: 60,
+                              mx: 'auto',
+                              mb: 1.5,
                               backgroundColor: isSelected ? '#3B82F6' : '#E2E8F0',
-                              color: isSelected ? 'white' : '#64748B'
+                              color: isSelected ? 'white' : '#64748B',
+                              fontSize: '1.5rem',
+                              fontWeight: 600
                             }}
                           >
                             {agent.avatar || agent.name?.charAt(0) || 'A'}
                           </Avatar>
-                        </ListItemAvatar>
-                        
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                                {agent.name}
-                              </Typography>
-                              {isSelected && (
-                                <Check sx={{ color: '#3B82F6', fontSize: 20 }} />
-                              )}
-                            </Box>
-                          }
-                          secondary={
-                            <Box>
-                              <Typography variant="body2" color="text.secondary">
-                                {agent.role}
-                              </Typography>
-                              {agent.location && (
-                                <Typography variant="caption" color="text.secondary">
-                                  📍 {agent.location}
-                                </Typography>
-                              )}
-                            </Box>
-                          }
-                        />
-                      </ListItemButton>
-                    </ListItem>
+                          
+                          {/* Name */}
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              fontWeight: 600, 
+                              mb: 0.5,
+                              fontSize: '1rem',
+                              lineHeight: 1.2
+                            }}
+                          >
+                            {agent.name}
+                          </Typography>
+                          
+                          {/* Role */}
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary"
+                            sx={{ 
+                              mb: 1,
+                              fontSize: '0.875rem',
+                              lineHeight: 1.2
+                            }}
+                          >
+                            {agent.role}
+                          </Typography>
+                          
+                          {/* Location */}
+                          {agent.location && (
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary"
+                              sx={{ 
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 0.5,
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              📍 {agent.location}
+                            </Typography>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
                   );
                 })}
-              </List>
+              </Grid>
             )}
           </Box>
         </DialogContent>
