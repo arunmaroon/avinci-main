@@ -45,7 +45,8 @@ const ChatInterface = () => {
     const fetchAgents = async () => {
         try {
             const response = await api.get('/agents/v4?view=short');
-            setAgents(response.data);
+            // Fix: Handle both array and object response formats
+            setAgents(Array.isArray(response.data) ? response.data : (response.data.agents || []));
         } catch (error) {
             console.error('Error fetching agents:', error);
         }

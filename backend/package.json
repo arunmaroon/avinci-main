@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
+    "@deepgram/sdk": "^3.4.0",
     "@langchain/openai": "^0.6.14",
     "@pinecone-database/pinecone": "^6.1.2",
     "axios": "^1.12.2",
@@ -24,6 +25,7 @@
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
     "dotenv": "^16.6.1",
+    "elevenlabs": "^0.8.2",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "langchain": "^0.3.35",
@@ -32,6 +34,8 @@
     "pdf-parse": "^2.2.0",
     "pg": "^8.16.3",
     "redis": "^4.7.1",
+    "socket.io": "^4.7.2",
+    "twilio": "^5.0.0",
     "unsplash-js": "^7.0.20",
     "uuid": "^13.0.0",
     "xlsx": "^0.18.5"

@@ -3,10 +3,20 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
+const http = require('http');
+const socketIO = require('socket.io');
 const { createTables, redis } = require('./models/database');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIO(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || 'http://localhost:9000',
+        methods: ['GET', 'POST']
+    }
+});
+
 const PORT = process.env.PORT || 9001;
 
 if (!fs.existsSync('uploads')) {
@@ -14,6 +24,9 @@ if (!fs.existsSync('uploads')) {
 }
 if (!fs.existsSync('uploads/ui')) {
     fs.mkdirSync('uploads/ui');
+}
+if (!fs.existsSync('uploads/audio')) {
+    fs.mkdirSync('uploads/audio');
 }
 
 // Configure multer for file uploads
@@ -49,6 +62,44 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static('uploads'));
+
+// Socket.IO for real-time audio call events
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('join-call', (callId) => {
+        socket.join(`call-${callId}`);
+        console.log(`Socket ${socket.id} joined call ${callId}`);
+        socket.to(`call-${callId}`).emit('user-joined', { socketId: socket.id });
+    });
+
+    socket.on('agent-response', (data) => {
+        const { callId, audioUrl, responseText, agentName, delay = 0 } = data;
+        
+        // Add human-like delay for group calls (simulating thinking/overlap)
+        setTimeout(() => {
+            io.to(`call-${callId}`).emit('play-audio', {
+                audioUrl,
+                responseText,
+                agentName,
+                timestamp: new Date().toISOString()
+            });
+        }, delay);
+    });
+
+    socket.on('leave-call', (callId) => {
+        socket.leave(`call-${callId}`);
+        console.log(`Socket ${socket.id} left call ${callId}`);
+        socket.to(`call-${callId}`).emit('user-left', { socketId: socket.id });
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
+// Make io available to routes
+app.set('io', io);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -86,9 +137,16 @@ app.use('/api/design-feedback', require('./routes/designFeedback')); // Design f
 app.use('/api/transcript-upload', require('./routes/transcriptUpload')); // Transcript upload for persona generation
 app.use('/api/upload', require('./routes/upload')); // General file uploads
 
+// ✅ User Research & Sessions
+app.use('/api/research-agents', require('./routes/agentsForResearch')); // Agents for user research
+app.use('/api/sessions', require('./routes/sessions')); // User research sessions (group & 1:1)
+
 // ✅ Utility Routes
 app.use('/api/generate', require('./routes/generate'));
 app.use('/api/debug', require('./routes/debug'));
+
+// ✅ User Interview (voice calls)
+app.use('/api/call', require('./routes/calls'));
 
 // Note: Legacy routes (agents_v2-v4, chat_v2-v4, feedback_v2) moved to /tests folder
 
@@ -114,10 +172,11 @@ async function startServer() {
         console.log(`   AI Provider: ${process.env.AI_PROVIDER || 'grok'}`);
         console.log(`   Database: ${process.env.DB_NAME || 'avinci'}`);
         
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             console.log('\n🚀 Avinci Backend is running!');
             console.log(`   Port: ${PORT}`);
             console.log(`   Health: http://localhost:${PORT}/api/health`);
+            console.log(`   Socket.IO: Real-time audio calls enabled`);
             console.log('\n✨ Ready to generate AI agents!\n');
         });
         

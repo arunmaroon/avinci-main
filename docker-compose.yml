@@ -44,6 +44,15 @@ services:
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-persona-vectors}
       - GROK_API_KEY=${GROK_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_API_KEY=${TWILIO_API_KEY}
+      - TWILIO_API_SECRET=${TWILIO_API_SECRET}
+      - TWILIO_TWIML_APP_SID=${TWILIO_TWIML_APP_SID}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - DATA_PROCESSING_URL=http://data-processing:8000
+      - FRONTEND_URL=http://frontend:9000
     ports:
       - "9001:9001"
     depends_on:
@@ -53,6 +62,7 @@ services:
       - ./backend:/app
       - /app/node_modules
       - ./uploads:/app/uploads
+      - audio_temp:/app/uploads/audio
     networks:
       - avinci-network
 
@@ -85,8 +95,14 @@ services:
       - DATABASE_URL=postgresql://avinci_user:avinci_password@postgres:5432/avinci
       - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-persona-vectors}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=avinci
+      - DB_USER=avinci_user
+      - DB_PASSWORD=avinci_password
     ports:
       - "8000:8000"
     depends_on:
@@ -96,6 +112,7 @@ services:
       - ./data-processing:/app
       - ./uploads:/app/uploads
       - ./transcripts:/app/transcripts
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - avinci-network
 
@@ -145,6 +162,8 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  audio_temp:
+    driver: local
 
 networks:
   avinci-network:

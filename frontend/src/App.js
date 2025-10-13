@@ -16,6 +16,10 @@ import AgentChatPage from './pages/AgentChatPage';
 import EnhancedChatPage from './pages/EnhancedChatPage';
 import GroupChatPage from './pages/GroupChatPage';
 import DesignFeedback from './components/DesignFeedback';
+import UserResearch from './pages/UserResearch';
+import SessionCall from './pages/SessionCall';
+import UserInterview from './pages/UserInterview';
+import AudioCall from './pages/AudioCall';
 import m3Theme from './theme/m3Theme';
 import './index.css';
 
@@ -84,6 +88,10 @@ function App() {
             <Route path="/agents" element={<AgentLibrary />} />
             <Route path="/group-chat" element={<GroupChatPage />} />
             <Route path="/design-feedback" element={<DesignFeedback />} />
+            <Route path="/user-research" element={<UserResearch />} />
+            <Route path="/user-research/session/:sessionId" element={<SessionCall />} />
+            <Route path="/user-interview" element={<UserInterview />} />
+            <Route path="/audio-call" element={<AudioCall />} />
             <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
             <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />
             <Route path="/projects" element={<ProjectsDashboard />} />

@@ -27,7 +27,8 @@ const RealTimeChat = ({ agentId, agentName }) => {
 
   const createSession = async () => {
     try {
-      const response = await api.post('/chat/v2/sessions', {
+      // Use enhanced-chat endpoint for human-like persona responses
+      const response = await api.post('/enhanced-chat/sessions', {
         agent_id: agentId
       });
       setSessionId(response.data.session_id);
@@ -38,35 +39,48 @@ const RealTimeChat = ({ agentId, agentName }) => {
   };
 
   const connectToSSE = (sessionId) => {
-    const eventSource = new EventSource(`http://localhost:9001/api/chat/v2/stream/${sessionId}`);
+    // Connect to enhanced chat SSE stream for persona-aware responses
+    const eventSource = new EventSource(`http://localhost:9001/api/enhanced-chat/stream/${sessionId}`);
     eventSourceRef.current = eventSource;
 
-    eventSource.onopen = () => {
-      console.log('SSE connection opened');
+    eventSource.addEventListener('ready', (event) => {
+      console.log('Enhanced SSE connection ready:', JSON.parse(event.data));
       setIsConnected(true);
-    };
+    });
 
-    eventSource.onmessage = (event) => {
+    eventSource.addEventListener('typing_start', (event) => {
       const data = JSON.parse(event.data);
-      console.log('SSE message received:', data);
+      console.log('Agent typing:', data.persona);
+      setIsTyping(true);
+    });
+
+    eventSource.addEventListener('typing_stop', (event) => {
+      setIsTyping(false);
+    });
+
+    eventSource.addEventListener('message', (event) => {
+      const data = JSON.parse(event.data);
+      console.log('Enhanced message received:', data);
       
-      if (data.type === 'typing_start') {
-        setIsTyping(true);
-      } else if (data.type === 'typing_end') {
-        setIsTyping(false);
-      } else if (data.type === 'message') {
-        setMessages(prev => [...prev, {
-          id: data.message.id,
-          text: data.message.content,
-          isUser: false,
-          timestamp: data.message.created_at
-        }]);
-        setIsTyping(false);
-      }
-    };
+      setMessages(prev => [...prev, {
+        id: Date.now() + Math.random(),
+        text: data.content,
+        isUser: false,
+        timestamp: data.timestamp,
+        emotion: data.emotion,
+        persona: data.persona
+      }]);
+      setIsTyping(false);
+    });
+
+    eventSource.addEventListener('error', (event) => {
+      const data = JSON.parse(event.data);
+      console.error('Enhanced SSE error:', data);
+      setIsConnected(false);
+    });
 
     eventSource.onerror = (error) => {
-      console.error('SSE error:', error);
+      console.error('SSE connection error:', error);
       setIsConnected(false);
     };
   };
@@ -85,7 +99,8 @@ const RealTimeChat = ({ agentId, agentName }) => {
     setInputText('');
 
     try {
-      await api.post('/chat/v2/messages', {
+      // Use enhanced-chat endpoint for persona-aware responses
+      await api.post('/enhanced-chat/messages', {
         session_id: sessionId,
         user_text: inputText
       });
