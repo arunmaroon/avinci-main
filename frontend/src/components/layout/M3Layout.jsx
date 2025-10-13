@@ -17,34 +17,41 @@ import {
   MenuItem,
   useTheme,
   useMediaQuery,
+  Chip,
+  TextField,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   SmartToy as AgentsIcon,
-  People as PersonasIcon,
   Chat as ChatIcon,
-  Archive as ArchiveIcon,
   Feedback as FeedbackIcon,
   AccountCircle as AccountIcon,
   Logout as LogoutIcon,
+  FolderOpen as ProjectsIcon,
+  TrendingUp as TrendingIcon,
+  Notifications as NotificationsIcon,
+  Settings,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 
-const drawerWidth = 280;
+const drawerWidth = 80; // Narrow sidebar like the design
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
-  backgroundColor: theme.palette.surface.main,
-  color: theme.palette.onSurface.main,
-  boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
+  backgroundColor: '#FFFFFF',
+  color: '#1E293B',
+  boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06)',
+  borderBottom: '1px solid #E2E8F0',
 }));
 
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
   '& .MuiDrawer-paper': {
     width: drawerWidth,
-    backgroundColor: theme.palette.surface.main,
-    borderRight: `1px solid ${theme.palette.outlineVariant}`,
+    backgroundColor: '#1E293B', // Dark sidebar
+    borderRight: 'none',
+    boxShadow: 'none',
   },
 }));
 
@@ -56,8 +63,23 @@ const Main = styled('main')(({ theme, open }) => ({
     duration: theme.transitions.duration.leavingScreen,
   }),
   marginLeft: open ? 0 : `-${drawerWidth}px`,
+  backgroundColor: '#F8FAFC', // Light gray background
+  minHeight: '100vh',
   [theme.breakpoints.up('sm')]: {
     marginLeft: 0,
+  },
+}));
+
+const SidebarIcon = styled(IconButton)(({ theme, active }) => ({
+  width: 48,
+  height: 48,
+  margin: theme.spacing(1),
+  backgroundColor: active ? '#FFFFFF' : 'transparent',
+  color: active ? '#1E293B' : '#FFFFFF',
+  borderRadius: '50%',
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    backgroundColor: active ? '#FFFFFF' : 'rgba(255, 255, 255, 0.1)',
   },
 }));
 
@@ -87,68 +109,46 @@ const M3Layout = ({ children, user, onLogout }) => {
   };
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Generate Agents', icon: <AgentsIcon />, path: '/generate' },
-    { text: 'Agent Library', icon: <AgentsIcon />, path: '/agents' },
-    { text: 'Personas', icon: <PersonasIcon />, path: '/personas' },
-    { text: 'Group Chat', icon: <ChatIcon />, path: '/group-chat' },
-    { text: 'Archive', icon: <ArchiveIcon />, path: '/archive' },
-    { text: 'Design Feedback', icon: <FeedbackIcon />, path: '/design-feedback' },
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/', badge: null },
+    { text: 'Generate Agents', icon: <AgentsIcon />, path: '/generate', badge: null },
+    { text: 'Agent Library', icon: <AgentsIcon />, path: '/agents', badge: '12' },
+    { text: 'Group Chat', icon: <ChatIcon />, path: '/group-chat', badge: null },
+    { text: 'Design Feedback', icon: <FeedbackIcon />, path: '/design-feedback', badge: null },
+    { text: 'Projects', icon: <ProjectsIcon />, path: '/projects', badge: '3' },
   ];
 
   const drawer = (
-    <Box>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 500 }}>
-          Sirius AI
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => {
-                navigate(item.path);
-                if (isMobile) setMobileOpen(false);
-              }}
-              sx={{
-                borderRadius: 2,
-                mx: 1,
-                my: 0.5,
-                '&.Mui-selected': {
-                  backgroundColor: theme.palette.primary.main + '0A',
-                  '&:hover': {
-                    backgroundColor: theme.palette.primary.main + '14',
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.text}
-                sx={{
-                  color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
+      {menuItems.map((item, index) => (
+        <SidebarIcon
+          key={item.text}
+          active={location.pathname === item.path}
+          onClick={() => {
+            navigate(item.path);
+            if (isMobile) setMobileOpen(false);
+          }}
+          sx={{ mb: 1 }}
+        >
+          {item.icon}
+        </SidebarIcon>
+      ))}
+      
+      {/* Bottom icons */}
+      <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <SidebarIcon sx={{ mb: 1 }}>
+          <Settings />
+        </SidebarIcon>
+        <SidebarIcon>
+          <AccountIcon />
+        </SidebarIcon>
+      </Box>
     </Box>
   );
 
   return (
     <Box sx={{ display: 'flex' }}>
       <StyledAppBar position="fixed" open={mobileOpen}>
-        <Toolbar>
+        <Toolbar sx={{ px: 3 }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -158,36 +158,107 @@ const M3Layout = ({ children, user, onLogout }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            AI Agent Portal
-          </Typography>
-          <IconButton
-            size="large"
-            edge="end"
-            aria-label="account of current user"
-            aria-controls="primary-search-account-menu"
-            aria-haspopup="true"
-            onClick={handleProfileMenuOpen}
-            color="inherit"
-          >
-            <Avatar sx={{ width: 32, height: 32 }}>
-              {user?.name?.charAt(0) || <AccountIcon />}
-            </Avatar>
-          </IconButton>
+          
+                 <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+                   <Typography variant="h4" sx={{ fontWeight: 700, color: '#1E293B' }}>
+                     Projects
+                   </Typography>
+                   <TextField
+                     placeholder="Q Search by project name"
+                     variant="outlined"
+                     size="small"
+                     sx={{ 
+                       minWidth: 300,
+                       '& .MuiOutlinedInput-root': {
+                         backgroundColor: '#F8FAFC',
+                       }
+                     }}
+                   />
+                 </Box>
+          
+                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                   <Box sx={{ display: 'flex', gap: 1 }}>
+                     {['All', 'Current', 'Finished', 'On Hold', 'Archive'].map((tab) => (
+                       <Button
+                         key={tab}
+                         variant={tab === 'All' || tab === 'Current' ? 'contained' : 'text'}
+                         sx={{
+                           textTransform: 'none',
+                           fontWeight: 500,
+                           px: 2,
+                           py: 1,
+                           minWidth: 'auto',
+                           backgroundColor: tab === 'All' || tab === 'Current' ? '#1E293B' : 'transparent',
+                           color: tab === 'All' || tab === 'Current' ? '#FFFFFF' : '#64748B',
+                           '&:hover': {
+                             backgroundColor: tab === 'All' || tab === 'Current' ? '#0F172A' : '#F8FAFC',
+                           }
+                         }}
+                       >
+                         {tab}
+                       </Button>
+                     ))}
+                   </Box>
+                   
+                   <TextField
+                     select
+                     value="time"
+                     size="small"
+                     sx={{ minWidth: 150 }}
+                   >
+                     <MenuItem value="time">Sort by time expire</MenuItem>
+                   </TextField>
+                   
+                   <Box sx={{ display: 'flex', gap: 1 }}>
+                     <IconButton size="small" sx={{ backgroundColor: '#F8FAFC' }}>
+                       <DashboardIcon />
+                     </IconButton>
+                     <IconButton size="small" sx={{ backgroundColor: '#F8FAFC' }}>
+                       <DashboardIcon />
+                     </IconButton>
+                     <IconButton size="small" sx={{ backgroundColor: '#F8FAFC' }}>
+                       <DashboardIcon />
+                     </IconButton>
+                   </Box>
+                   
+                   <Typography variant="body2" sx={{ color: '#64748B', mr: 1 }}>
+                     {user?.name || 'Timothee'}
+                   </Typography>
+                   <Avatar 
+                     sx={{ 
+                       width: 32, 
+                       height: 32, 
+                       backgroundColor: '#3B82F6',
+                       cursor: 'pointer'
+                     }}
+                     onClick={handleProfileMenuOpen}
+                   >
+                     {user?.name?.charAt(0) || 'T'}
+                   </Avatar>
+                 </Box>
+          
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleProfileMenuClose}
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                border: '1px solid #E2E8F0',
+                mt: 1,
+              }
+            }}
           >
-            <MenuItem onClick={handleProfileMenuClose}>
+            <MenuItem onClick={handleProfileMenuClose} sx={{ borderRadius: 1 }}>
               <ListItemIcon>
                 <AccountIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText>Profile</ListItemText>
             </MenuItem>
-            <MenuItem onClick={handleLogout}>
+            <MenuItem onClick={handleLogout} sx={{ borderRadius: 1 }}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
@@ -206,7 +277,7 @@ const M3Layout = ({ children, user, onLogout }) => {
           open={isMobile ? mobileOpen : true}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
         >
           {drawer}

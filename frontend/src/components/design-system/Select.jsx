@@ -6,10 +6,10 @@ const StyledFormControl = styled(FormControl)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 4,
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.primary.main,
+      borderColor: theme.palette.primary?.main || '#6750A4',
     },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.primary.main,
+      borderColor: theme.palette.primary?.main || '#6750A4',
       borderWidth: 2,
     },
   },

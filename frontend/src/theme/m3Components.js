@@ -26,12 +26,12 @@ import {
   ListItem as MuiListItem,
   ListItemText,
   ListItemIcon,
-  ListItemButton,
+  ListItemButton as MuiListItemButton,
   Divider as MuiDivider,
   Paper as MuiPaper,
   Box,
   Typography,
-  Stack,
+  Stack as MuiStack,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -43,7 +43,7 @@ export const Button = styled(MuiButton)(({ theme, variant = 'filled' }) => ({
   padding: '10px 24px',
   minHeight: 40,
   ...(variant === 'filled' && {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.primary?.main || '#6750A4',
     color: theme.palette.primary.contrastText,
     boxShadow: 'none',
     '&:hover': {
@@ -53,16 +53,16 @@ export const Button = styled(MuiButton)(({ theme, variant = 'filled' }) => ({
   }),
   ...(variant === 'outlined' && {
     borderColor: theme.palette.outline,
-    color: theme.palette.primary.main,
+    color: theme.palette.primary?.main || '#6750A4',
     '&:hover': {
-      backgroundColor: theme.palette.primary.main + '0A',
-      borderColor: theme.palette.primary.main,
+      backgroundColor: `${theme.palette.primary?.main || '#6750A4'}0A`,
+      borderColor: theme.palette.primary?.main || '#6750A4',
     },
   }),
   ...(variant === 'text' && {
-    color: theme.palette.primary.main,
+    color: theme.palette.primary?.main || '#6750A4',
     '&:hover': {
-      backgroundColor: theme.palette.primary.main + '0A',
+      backgroundColor: `${theme.palette.primary?.main || '#6750A4'}0A`,
     },
   }),
 }));
@@ -81,10 +81,10 @@ export const TextField = styled(MuiTextField)(({ theme }) => ({
   '& .MuiOutlinedInput-root': {
     borderRadius: 4,
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.primary.main,
+      borderColor: theme.palette.primary?.main || '#6750A4',
     },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.primary.main,
+      borderColor: theme.palette.primary?.main || '#6750A4',
       borderWidth: 2,
     },
   },
@@ -94,7 +94,7 @@ export const TextField = styled(MuiTextField)(({ theme }) => ({
 export const Chip = styled(MuiChip)(({ theme, variant = 'filled' }) => ({
   borderRadius: 8,
   ...(variant === 'filled' && {
-    backgroundColor: theme.palette.secondary.main,
+    backgroundColor: theme.palette.secondary?.main || '#625B71',
     color: theme.palette.secondary.contrastText,
   }),
   ...(variant === 'outlined' && {
@@ -122,7 +122,7 @@ export const Avatar = styled(MuiAvatar)(({ theme, size = 'medium' }) => ({
 // M3 Badge Component
 export const Badge = styled(MuiBadge)(({ theme }) => ({
   '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.error.main,
+    backgroundColor: theme.palette.error?.main || '#B3261E',
     color: theme.palette.error.contrastText,
     borderRadius: 10,
   },
@@ -132,7 +132,7 @@ export const Badge = styled(MuiBadge)(({ theme }) => ({
 export const IconButton = styled(MuiIconButton)(({ theme }) => ({
   borderRadius: 20,
   '&:hover': {
-    backgroundColor: theme.palette.primary.main + '0A',
+    backgroundColor: `${theme.palette.primary?.main || '#6750A4'}0A`,
   },
 }));
 
@@ -149,9 +149,9 @@ export const Fab = styled(MuiFab)(({ theme }) => ({
 export const Switch = styled(MuiSwitch)(({ theme }) => ({
   '& .MuiSwitch-switchBase': {
     '&.Mui-checked': {
-      color: theme.palette.primary.main,
+      color: theme.palette.primary?.main || '#6750A4',
       '& + .MuiSwitch-track': {
-        backgroundColor: theme.palette.primary.main,
+        backgroundColor: theme.palette.primary?.main || '#6750A4',
       },
     },
   },
@@ -160,14 +160,14 @@ export const Switch = styled(MuiSwitch)(({ theme }) => ({
 // M3 Checkbox Component
 export const Checkbox = styled(MuiCheckbox)(({ theme }) => ({
   '&.Mui-checked': {
-    color: theme.palette.primary.main,
+    color: theme.palette.primary?.main || '#6750A4',
   },
 }));
 
 // M3 Radio Component
 export const Radio = styled(MuiRadio)(({ theme }) => ({
   '&.Mui-checked': {
-    color: theme.palette.primary.main,
+    color: theme.palette.primary?.main || '#6750A4',
   },
 }));
 
@@ -175,7 +175,7 @@ export const Radio = styled(MuiRadio)(({ theme }) => ({
 export const Slider = styled(MuiSlider)(({ theme }) => ({
   '& .MuiSlider-thumb': {
     '&:hover, &.Mui-focusVisible': {
-      boxShadow: `0px 0px 0px 8px ${theme.palette.primary.main}20`,
+      boxShadow: `0px 0px 0px 8px ${theme.palette.primary?.main || '#6750A4'}20`,
     },
   },
 }));
@@ -185,43 +185,43 @@ export const LinearProgress = styled(MuiLinearProgress)(({ theme }) => ({
   borderRadius: 2,
   backgroundColor: theme.palette.surfaceVariant,
   '& .MuiLinearProgress-bar': {
-    backgroundColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.primary?.main || '#6750A4',
   },
 }));
 
 export const CircularProgress = styled(MuiCircularProgress)(({ theme }) => ({
-  color: theme.palette.primary.main,
+  color: theme.palette.primary?.main || '#6750A4',
 }));
 
 // M3 Alert Component
 export const Alert = styled(MuiAlert)(({ theme, severity = 'info' }) => ({
   borderRadius: 12,
   ...(severity === 'error' && {
-    backgroundColor: theme.palette.error.main + '0A',
-    color: theme.palette.error.main,
+    backgroundColor: `${theme.palette.error?.main || '#B3261E'}0A`,
+    color: theme.palette.error?.main || '#B3261E',
     '& .MuiAlert-icon': {
-      color: theme.palette.error.main,
+      color: theme.palette.error?.main || '#B3261E',
     },
   }),
   ...(severity === 'warning' && {
-    backgroundColor: theme.palette.warning.main + '0A',
-    color: theme.palette.warning.main,
+    backgroundColor: `${theme.palette.warning?.main || '#F57C00'}0A`,
+    color: theme.palette.warning?.main || '#F57C00',
     '& .MuiAlert-icon': {
-      color: theme.palette.warning.main,
+      color: theme.palette.warning?.main || '#F57C00',
     },
   }),
   ...(severity === 'info' && {
-    backgroundColor: theme.palette.info.main + '0A',
-    color: theme.palette.info.main,
+    backgroundColor: `${theme.palette.info?.main || '#1976D2'}0A`,
+    color: theme.palette.info?.main || '#1976D2',
     '& .MuiAlert-icon': {
-      color: theme.palette.info.main,
+      color: theme.palette.info?.main || '#1976D2',
     },
   }),
   ...(severity === 'success' && {
-    backgroundColor: theme.palette.success.main + '0A',
-    color: theme.palette.success.main,
+    backgroundColor: `${theme.palette.success?.main || '#388E3C'}0A`,
+    color: theme.palette.success?.main || '#388E3C',
     '& .MuiAlert-icon': {
-      color: theme.palette.success.main,
+      color: theme.palette.success?.main || '#388E3C',
     },
   }),
 }));
@@ -251,14 +251,14 @@ export const List = styled(MuiList)(({ theme }) => ({
 export const ListItem = styled(MuiListItem)(({ theme }) => ({
   borderRadius: 0,
   '&:hover': {
-    backgroundColor: theme.palette.primary.main + '0A',
+    backgroundColor: `${theme.palette.primary?.main || '#6750A4'}0A`,
   },
 }));
 
 export const ListItemButton = styled(MuiListItemButton)(({ theme }) => ({
   borderRadius: 0,
   '&:hover': {
-    backgroundColor: theme.palette.primary.main + '0A',
+    backgroundColor: `${theme.palette.primary?.main || '#6750A4'}0A`,
   },
 }));
 
@@ -340,6 +340,6 @@ export const Center = styled(Box)({
   alignItems: 'center',
 });
 
-export const Stack = styled(Stack)(({ theme, spacing = 1 }) => ({
+export const Stack = styled(MuiStack)(({ theme, spacing = 1 }) => ({
   gap: spacing * 8,
 }));

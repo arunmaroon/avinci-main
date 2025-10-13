@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card as MuiCard, CardContent, CardActions, CardHeader, CardMedia } from '@mui/material';
+import { Card as MuiCard, CardContent, CardActions, CardHeader as MuiCardHeader, CardMedia } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 
@@ -38,7 +38,7 @@ const Card = ({
     <CardComponent {...motionProps}>
       <StyledCard className={className} {...props}>
         {media && <CardMedia {...media} />}
-        {header && <CardHeader {...header} />}
+        {header && <MuiCardHeader {...header} />}
         <CardContent sx={{ p: paddingMap[padding] }}>
           {children}
         </CardContent>
@@ -49,9 +49,9 @@ const Card = ({
 };
 
 const CardHeader = ({ children, className = '', ...props }) => (
-  <CardHeader {...props} className={className}>
+  <MuiCardHeader {...props} className={className}>
     {children}
-  </CardHeader>
+  </MuiCardHeader>
 );
 
 const CardBody = ({ children, className = '', ...props }) => (

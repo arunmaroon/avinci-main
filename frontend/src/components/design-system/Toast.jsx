@@ -13,31 +13,31 @@ const StyledSnackbar = styled(MuiSnackbar)(({ theme }) => ({
 const StyledAlert = styled(MuiAlert)(({ theme, severity = 'info' }) => ({
   borderRadius: 12,
   ...(severity === 'error' && {
-    backgroundColor: theme.palette.error.main + '0A',
-    color: theme.palette.error.main,
+    backgroundColor: `${theme.palette.error?.main || '#B3261E'}0A`,
+    color: theme.palette.error?.main || '#B3261E',
     '& .MuiAlert-icon': {
-      color: theme.palette.error.main,
+      color: theme.palette.error?.main || '#B3261E',
     },
   }),
   ...(severity === 'warning' && {
-    backgroundColor: theme.palette.warning.main + '0A',
-    color: theme.palette.warning.main,
+    backgroundColor: `${theme.palette.warning?.main || '#F57C00'}0A`,
+    color: theme.palette.warning?.main || '#F57C00',
     '& .MuiAlert-icon': {
-      color: theme.palette.warning.main,
+      color: theme.palette.warning?.main || '#F57C00',
     },
   }),
   ...(severity === 'info' && {
-    backgroundColor: theme.palette.info.main + '0A',
-    color: theme.palette.info.main,
+    backgroundColor: `${theme.palette.info?.main || '#1976D2'}0A`,
+    color: theme.palette.info?.main || '#1976D2',
     '& .MuiAlert-icon': {
-      color: theme.palette.info.main,
+      color: theme.palette.info?.main || '#1976D2',
     },
   }),
   ...(severity === 'success' && {
-    backgroundColor: theme.palette.success.main + '0A',
-    color: theme.palette.success.main,
+    backgroundColor: `${theme.palette.success?.main || '#388E3C'}0A`,
+    color: theme.palette.success?.main || '#388E3C',
     '& .MuiAlert-icon': {
-      color: theme.palette.success.main,
+      color: theme.palette.success?.main || '#388E3C',
     },
   }),
 }));

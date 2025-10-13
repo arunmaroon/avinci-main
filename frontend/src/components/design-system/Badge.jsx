@@ -4,7 +4,7 @@ import { styled } from '@mui/material/styles';
 
 const StyledBadge = styled(MuiBadge)(({ theme, variant = 'standard' }) => ({
   '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.error.main,
+    backgroundColor: theme.palette.error?.main || '#B3261E',
     color: theme.palette.error.contrastText,
     borderRadius: 10,
     ...(variant === 'dot' && {
@@ -18,7 +18,7 @@ const StyledBadge = styled(MuiBadge)(({ theme, variant = 'standard' }) => ({
 const StyledChip = styled(MuiChip)(({ theme, variant = 'filled' }) => ({
   borderRadius: 8,
   ...(variant === 'filled' && {
-    backgroundColor: theme.palette.secondary.main,
+    backgroundColor: theme.palette.secondary?.main || '#625B71',
     color: theme.palette.secondary.contrastText,
   }),
   ...(variant === 'outlined' && {

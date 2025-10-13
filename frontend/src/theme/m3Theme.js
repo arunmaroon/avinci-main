@@ -238,117 +238,226 @@ const m3Typography = {
 const m3Theme = createTheme({
   palette: {
     mode: 'light',
+    // Clean modern project management palette
     primary: {
-      main: m3Colors.primary[40], // #6750A4
-      light: m3Colors.primary[80], // #D0BCFF
-      dark: m3Colors.primary[20], // #381E72
-      contrastText: m3Colors.primary[100], // #FFFFFF
+      main: '#1E293B', // Dark slate for primary elements
+      light: '#334155',
+      dark: '#0F172A',
+      contrastText: '#FFFFFF',
     },
     secondary: {
-      main: m3Colors.secondary[40], // #625B71
-      light: m3Colors.secondary[80], // #CCC2DC
-      dark: m3Colors.secondary[20], // #332D41
-      contrastText: m3Colors.secondary[100], // #FFFFFF
+      main: '#3B82F6', // Blue for secondary actions
+      light: '#60A5FA',
+      dark: '#2563EB',
+      contrastText: '#FFFFFF',
     },
     tertiary: {
-      main: m3Colors.tertiary[40], // #7D5260
-      light: m3Colors.tertiary[80], // #F0B8C8
-      dark: m3Colors.tertiary[20], // #492532
-      contrastText: m3Colors.tertiary[100], // #FFFFFF
+      main: '#10B981', // Green for success states
+      light: '#34D399',
+      dark: '#059669',
+      contrastText: '#FFFFFF',
     },
     error: {
-      main: m3Colors.error[40], // #B3261E
-      light: m3Colors.error[80], // #F2B8B5
-      dark: m3Colors.error[20], // #601410
-      contrastText: m3Colors.error[100], // #FFFFFF
+      main: '#EF4444', // Red for errors
+      light: '#F87171',
+      dark: '#DC2626',
+      contrastText: '#FFFFFF',
+    },
+    warning: {
+      main: '#F59E0B', // Amber for warnings
+      light: '#FBBF24',
+      dark: '#D97706',
+      contrastText: '#FFFFFF',
+    },
+    success: {
+      main: '#10B981', // Emerald for success
+      light: '#34D399',
+      dark: '#059669',
+      contrastText: '#FFFFFF',
     },
     background: {
-      default: m3Colors.neutral[99], // #FFFBFE
-      paper: m3Colors.neutral[100], // #FFFFFF
+      default: '#F8FAFC', // Very light gray background
+      paper: '#FFFFFF', // Pure white cards
     },
     surface: {
-      main: m3Colors.neutral[100], // #FFFFFF
-      variant: m3Colors.neutralVariant[90], // #E2DCE5
+      main: '#FFFFFF',
+      variant: '#F1F5F9',
     },
     text: {
-      primary: m3Colors.neutral[10], // #1C1B1F
-      secondary: m3Colors.neutralVariant[50], // #78737A
-      disabled: m3Colors.neutralVariant[40], // #5F5B63
+      primary: '#1E293B', // Dark slate for primary text
+      secondary: '#64748B', // Medium gray for secondary text
+      disabled: '#94A3B8', // Light gray for disabled text
     },
-    divider: m3Colors.neutralVariant[80], // #C6C0C9
+    divider: '#E2E8F0', // Very light border
   },
   typography: {
-    fontFamily: m3Typography.fontFamily,
-    h1: m3Typography.displayLarge,
-    h2: m3Typography.displayMedium,
-    h3: m3Typography.displaySmall,
-    h4: m3Typography.headlineLarge,
-    h5: m3Typography.headlineMedium,
-    h6: m3Typography.headlineSmall,
-    subtitle1: m3Typography.titleLarge,
-    subtitle2: m3Typography.titleMedium,
-    body1: m3Typography.bodyLarge,
-    body2: m3Typography.bodyMedium,
-    button: m3Typography.labelLarge,
-    caption: m3Typography.bodySmall,
-    overline: m3Typography.labelSmall,
+    // Clean modern typography
+    fontFamily: [
+      'Inter',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      'Segoe UI',
+      'Roboto',
+      'Helvetica Neue',
+      'Arial',
+      'sans-serif',
+    ].join(','),
+    h1: {
+      fontFamily: 'Inter',
+      fontSize: '2.5rem',
+      fontWeight: 700,
+      lineHeight: 1.2,
+      letterSpacing: '-0.025em',
+      color: '#1E293B',
+    },
+    h2: {
+      fontFamily: 'Inter',
+      fontSize: '2rem',
+      fontWeight: 600,
+      lineHeight: 1.3,
+      letterSpacing: '-0.025em',
+      color: '#1E293B',
+    },
+    h3: {
+      fontFamily: 'Inter',
+      fontSize: '1.5rem',
+      fontWeight: 600,
+      lineHeight: 1.4,
+      letterSpacing: '-0.025em',
+      color: '#1E293B',
+    },
+    h4: {
+      fontFamily: 'Inter',
+      fontSize: '1.25rem',
+      fontWeight: 600,
+      lineHeight: 1.4,
+      letterSpacing: '-0.025em',
+      color: '#1E293B',
+    },
+    h5: {
+      fontFamily: 'Inter',
+      fontSize: '1.125rem',
+      fontWeight: 600,
+      lineHeight: 1.4,
+      letterSpacing: '-0.025em',
+      color: '#1E293B',
+    },
+    h6: {
+      fontFamily: 'Inter',
+      fontSize: '1rem',
+      fontWeight: 600,
+      lineHeight: 1.4,
+      letterSpacing: '-0.025em',
+      color: '#1E293B',
+    },
+    body1: {
+      fontFamily: 'Inter',
+      fontSize: '1rem',
+      fontWeight: 400,
+      lineHeight: 1.6,
+      letterSpacing: '0em',
+      color: '#1E293B',
+    },
+    body2: {
+      fontFamily: 'Inter',
+      fontSize: '0.875rem',
+      fontWeight: 400,
+      lineHeight: 1.5,
+      letterSpacing: '0em',
+      color: '#64748B',
+    },
+    button: {
+      fontFamily: 'Inter',
+      fontSize: '0.875rem',
+      fontWeight: 500,
+      lineHeight: 1.4,
+      letterSpacing: '0em',
+      textTransform: 'none',
+    },
+    caption: {
+      fontFamily: 'Inter',
+      fontSize: '0.75rem',
+      fontWeight: 400,
+      lineHeight: 1.4,
+      letterSpacing: '0em',
+      color: '#64748B',
+    },
   },
   shape: {
-    borderRadius: 12, // M3 uses 12px as the default border radius
+    borderRadius: 12, // Clean rounded corners
   },
-  spacing: 8, // 8px base spacing unit
+  spacing: 8,
   components: {
-    // MUI Button customization for M3
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 20, // M3 button border radius
-          textTransform: 'none', // M3 doesn't use uppercase
+          borderRadius: 8,
+          textTransform: 'none',
           fontWeight: 500,
-          padding: '10px 24px',
-          minHeight: 40,
-        },
-        contained: {
+          padding: '8px 16px',
+          minHeight: 36,
+          fontSize: '0.875rem',
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+          },
+        },
+        contained: {
+          backgroundColor: '#1E293B',
+          color: '#FFFFFF',
+          '&:hover': {
+            backgroundColor: '#0F172A',
           },
         },
         outlined: {
           borderWidth: 1,
+          borderColor: '#E2E8F0',
+          color: '#1E293B',
           '&:hover': {
             borderWidth: 1,
+            backgroundColor: '#F8FAFC',
+            borderColor: '#1E293B',
           },
         },
       },
     },
-    // MUI Card customization for M3
     MuiCard: {
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
+          boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06)',
+          border: '1px solid #F1F5F9',
+          transition: 'all 0.2s ease-in-out',
           '&:hover': {
-            boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 2px 6px 2px rgba(0, 0, 0, 0.15)',
+            boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1), 0px 2px 4px rgba(0, 0, 0, 0.06)',
+            transform: 'translateY(-1px)',
           },
         },
       },
     },
-    // MUI TextField customization for M3
     MuiTextField: {
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: 4, // M3 text field border radius
+            borderRadius: 8,
+            backgroundColor: '#FFFFFF',
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#1E293B',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#1E293B',
+              borderWidth: 2,
+            },
           },
         },
       },
     },
-    // MUI Chip customization for M3
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 8, // M3 chip border radius
+          borderRadius: 6,
+          fontWeight: 500,
+          fontSize: '0.75rem',
         },
       },
     },

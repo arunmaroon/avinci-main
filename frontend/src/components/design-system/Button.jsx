@@ -11,25 +11,25 @@ const StyledButton = styled(MuiButton)(({ theme, variant = 'filled' }) => ({
   minHeight: 40,
   boxShadow: 'none',
   ...(variant === 'filled' && {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
+    backgroundColor: theme.palette.primary?.main || '#6750A4',
+    color: theme.palette.primary?.contrastText || '#FFFFFF',
     '&:hover': {
-      backgroundColor: theme.palette.primary.dark,
+      backgroundColor: theme.palette.primary?.dark || '#381E72',
       boxShadow: '0px 1px 2px 0px rgba(0, 0, 0, 0.30), 0px 1px 3px 1px rgba(0, 0, 0, 0.15)',
     },
   }),
   ...(variant === 'outlined' && {
-    borderColor: theme.palette.outline,
-    color: theme.palette.primary.main,
+    borderColor: theme.palette.outline || theme.palette.divider,
+    color: theme.palette.primary?.main || '#6750A4',
     '&:hover': {
-      backgroundColor: theme.palette.primary.main + '0A',
-      borderColor: theme.palette.primary.main,
+      backgroundColor: `${theme.palette.primary?.main || '#6750A4'}0A`,
+      borderColor: theme.palette.primary?.main || '#6750A4',
     },
   }),
   ...(variant === 'text' && {
-    color: theme.palette.primary.main,
+    color: theme.palette.primary?.main || '#6750A4',
     '&:hover': {
-      backgroundColor: theme.palette.primary.main + '0A',
+      backgroundColor: `${theme.palette.primary?.main || '#6750A4'}0A`,
     },
   }),
 }));

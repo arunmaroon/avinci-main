@@ -27,7 +27,7 @@ const StyledAvatar = styled(MuiAvatar)(({ theme, size = 'medium' }) => ({
 
 const StyledBadge = styled(MuiBadge)(({ theme }) => ({
   '& .MuiBadge-badge': {
-    backgroundColor: theme.palette.error.main,
+    backgroundColor: theme.palette.error?.main || '#B3261E',
     color: theme.palette.error.contrastText,
     borderRadius: 10,
   },
