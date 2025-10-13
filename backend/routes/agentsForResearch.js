@@ -35,20 +35,58 @@ router.get('/', async (req, res) => {
             ORDER BY created_at DESC
         `);
 
-        // Format agents for research UI
-        const agents = result.rows.map(agent => {
+        // Format agents for research UI with unique Indian avatars
+        const agents = result.rows.map((agent, index) => {
             // Get initials for avatar
             const nameParts = (agent.name || 'Agent').split(' ');
             const avatar = nameParts.length > 1 
                 ? `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase()
                 : agent.name.substring(0, 2).toUpperCase();
 
+            // Generate unique Indian avatar based on persona
+            const generateIndianAvatar = (agent) => {
+                const gender = agent.gender?.toLowerCase() || 'male';
+                const location = agent.location?.toLowerCase() || '';
+                const age = agent.age || 30;
+                
+                // Indian avatar service URLs with different parameters for uniqueness
+                const baseUrl = 'https://api.dicebear.com/7.x/avataaars/svg';
+                const seed = `${agent.name}-${agent.id}-${index}`;
+                
+                // Different styles based on region and gender
+                let style = 'circle';
+                if (location.includes('tamil') || location.includes('chennai')) {
+                    style = 'circle'; // South Indian style
+                } else if (location.includes('delhi') || location.includes('punjab')) {
+                    style = 'circle'; // North Indian style
+                } else if (location.includes('mumbai') || location.includes('maharashtra')) {
+                    style = 'circle'; // West Indian style
+                } else if (location.includes('kolkata') || location.includes('bengal')) {
+                    style = 'circle'; // East Indian style
+                }
+                
+                const params = new URLSearchParams({
+                    seed: seed,
+                    backgroundColor: gender === 'female' ? 'ffd1dc' : '87ceeb', // Pink for female, light blue for male
+                    hairColor: ['black', 'brown', 'auburn', 'blonde'][index % 4],
+                    skinColor: ['fdbcb4', 'fd9841', 'c68642', '8d5524'][index % 4], // Different Indian skin tones
+                    eyeColor: ['brown', 'black', 'hazel'][index % 3],
+                    mouthType: ['smile', 'grin', 'smirk'][index % 3],
+                    eyebrowType: gender === 'female' ? 'raised' : 'default',
+                    accessoriesType: age > 40 ? 'prescription01' : 'blank',
+                    clotheType: ['shirtCrewNeck', 'blazerShirt', 'hoodie'][index % 3],
+                    clotheColor: ['262e33', '65c9ff', '5199e4'][index % 3]
+                });
+                
+                return `${baseUrl}?${params.toString()}`;
+            };
+
             return {
                 id: agent.id,
                 name: agent.name,
                 role: agent.role || 'Professional',
                 avatar: avatar,
-                avatar_url: agent.avatar_url,
+                avatar_url: agent.avatar_url || generateIndianAvatar(agent),
                 age: agent.age,
                 gender: agent.gender,
                 location: agent.location,
@@ -116,20 +154,58 @@ router.post('/by-ids', async (req, res) => {
             ORDER BY created_at DESC
         `, [agentIds]);
 
-        // Format agents for research UI
-        const agents = result.rows.map(agent => {
+        // Format agents for research UI with unique Indian avatars
+        const agents = result.rows.map((agent, index) => {
             // Get initials for avatar
             const nameParts = (agent.name || 'Agent').split(' ');
             const avatar = nameParts.length > 1 
                 ? `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase()
                 : agent.name.substring(0, 2).toUpperCase();
 
+            // Generate unique Indian avatar based on persona
+            const generateIndianAvatar = (agent) => {
+                const gender = agent.gender?.toLowerCase() || 'male';
+                const location = agent.location?.toLowerCase() || '';
+                const age = agent.age || 30;
+                
+                // Indian avatar service URLs with different parameters for uniqueness
+                const baseUrl = 'https://api.dicebear.com/7.x/avataaars/svg';
+                const seed = `${agent.name}-${agent.id}-${index}`;
+                
+                // Different styles based on region and gender
+                let style = 'circle';
+                if (location.includes('tamil') || location.includes('chennai')) {
+                    style = 'circle'; // South Indian style
+                } else if (location.includes('delhi') || location.includes('punjab')) {
+                    style = 'circle'; // North Indian style
+                } else if (location.includes('mumbai') || location.includes('maharashtra')) {
+                    style = 'circle'; // West Indian style
+                } else if (location.includes('kolkata') || location.includes('bengal')) {
+                    style = 'circle'; // East Indian style
+                }
+                
+                const params = new URLSearchParams({
+                    seed: seed,
+                    backgroundColor: gender === 'female' ? 'ffd1dc' : '87ceeb', // Pink for female, light blue for male
+                    hairColor: ['black', 'brown', 'auburn', 'blonde'][index % 4],
+                    skinColor: ['fdbcb4', 'fd9841', 'c68642', '8d5524'][index % 4], // Different Indian skin tones
+                    eyeColor: ['brown', 'black', 'hazel'][index % 3],
+                    mouthType: ['smile', 'grin', 'smirk'][index % 3],
+                    eyebrowType: gender === 'female' ? 'raised' : 'default',
+                    accessoriesType: age > 40 ? 'prescription01' : 'blank',
+                    clotheType: ['shirtCrewNeck', 'blazerShirt', 'hoodie'][index % 3],
+                    clotheColor: ['262e33', '65c9ff', '5199e4'][index % 3]
+                });
+                
+                return `${baseUrl}?${params.toString()}`;
+            };
+
             return {
                 id: agent.id,
                 name: agent.name,
                 role: agent.role || 'Professional',
                 avatar: avatar,
-                avatar_url: agent.avatar_url,
+                avatar_url: agent.avatar_url || generateIndianAvatar(agent),
                 age: agent.age,
                 gender: agent.gender,
                 location: agent.location,

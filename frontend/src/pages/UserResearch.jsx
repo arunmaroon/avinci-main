@@ -17,6 +17,19 @@ import {
   IconButton,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  ListItemButton,
+  Tabs,
+  Tab,
+  InputAdornment,
+  Badge,
 } from '@mui/material';
 import {
   Add,
@@ -26,6 +39,9 @@ import {
   Close,
   CheckCircle,
   Phone,
+  Search,
+  FilterList,
+  Check,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -40,11 +56,49 @@ const UserResearch = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // Agent selection dialog state
+  const [agentDialogOpen, setAgentDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterTab, setFilterTab] = useState(0);
+  const [filteredAgents, setFilteredAgents] = useState([]);
 
   useEffect(() => {
     fetchAgents();
     fetchRecentSessions();
   }, []);
+
+  // Filter agents based on search and category
+  useEffect(() => {
+    let filtered = availableAgents;
+    
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(agent => 
+        agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.location?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Apply category filter
+    if (filterTab === 1) { // Recent
+      filtered = filtered.slice(0, 10);
+    } else if (filterTab === 2) { // Popular
+      filtered = filtered.filter(agent => 
+        agent.role?.toLowerCase().includes('manager') ||
+        agent.role?.toLowerCase().includes('director') ||
+        agent.role?.toLowerCase().includes('senior')
+      );
+    } else if (filterTab === 3) { // By Role
+      const roles = [...new Set(availableAgents.map(a => a.role))];
+      filtered = filtered.filter(agent => 
+        roles.includes(agent.role)
+      );
+    }
+    
+    setFilteredAgents(filtered);
+  }, [availableAgents, searchQuery, filterTab]);
 
   const fetchAgents = async () => {
     try {
@@ -276,7 +330,7 @@ const UserResearch = () => {
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Select Agents from Agent Library {sessionType === '1on1' ? '(1 required)' : '(2-5 required)'}
+                    Select Agents {sessionType === '1on1' ? '(1 required)' : '(2-5 required)'}
                   </Typography>
                   <Button
                     size="small"
@@ -293,60 +347,60 @@ const UserResearch = () => {
                     or visit the <strong>Generate Agents</strong> page.
                   </Alert>
                 ) : (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {availableAgents.map((agent) => (
-                      <Chip
-                        key={agent.id}
-                        avatar={
-                          <Avatar sx={{ backgroundColor: '#3B82F6' }}>
-                            {agent.avatar || agent.name?.charAt(0) || 'A'}
-                          </Avatar>
+                  <Box>
+                    {/* Selected Agents Preview */}
+                    {selectedAgents.length > 0 && (
+                      <Box sx={{ mb: 2, p: 2, backgroundColor: '#F8FAFC', borderRadius: 2, border: '1px solid #E2E8F0' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#475569' }}>
+                          Selected Agents ({selectedAgents.length})
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {selectedAgents.map((agent) => (
+                            <Chip
+                              key={agent.id}
+                              avatar={
+                                <Avatar sx={{ width: 24, height: 24, backgroundColor: '#3B82F6' }}>
+                                  {agent.avatar || agent.name?.charAt(0) || 'A'}
+                                </Avatar>
+                              }
+                              label={agent.name}
+                              onDelete={() => handleAgentToggle(agent)}
+                              deleteIcon={<Close />}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                            />
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Agent Selection Button */}
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      startIcon={<People />}
+                      onClick={() => setAgentDialogOpen(true)}
+                      sx={{ 
+                        py: 2, 
+                        borderStyle: 'dashed',
+                        borderColor: selectedAgents.length > 0 ? '#3B82F6' : '#CBD5E1',
+                        color: selectedAgents.length > 0 ? '#3B82F6' : '#64748B',
+                        '&:hover': {
+                          borderColor: '#3B82F6',
+                          backgroundColor: '#F8FAFC'
                         }
-                        label={
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {agent.name}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                              {agent.role}
-                            </Typography>
-                          </Box>
-                        }
-                        onClick={() => handleAgentToggle(agent)}
-                        color={selectedAgents.find((a) => a.id === agent.id) ? 'primary' : 'default'}
-                        sx={{ 
-                          fontSize: '0.875rem', 
-                          py: 2.5,
-                          height: 'auto',
-                          '& .MuiChip-label': {
-                            py: 0.5
-                          }
-                        }}
-                      />
-                    ))}
+                      }}
+                    >
+                      {selectedAgents.length === 0 
+                        ? `Choose ${sessionType === '1on1' ? '1 Agent' : '2-5 Agents'}`
+                        : `${selectedAgents.length} Agent${selectedAgents.length > 1 ? 's' : ''} Selected`
+                      }
+                    </Button>
                   </Box>
                 )}
               </Box>
 
-              {/* Selected Agents Preview */}
-              {selectedAgents.length > 0 && (
-                <Box sx={{ mb: 3, p: 2, backgroundColor: '#F8FAFC', borderRadius: 2 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                    Selected ({selectedAgents.length})
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {selectedAgents.map((agent) => (
-                      <Chip
-                        key={agent.id}
-                        label={agent.name}
-                        onDelete={() => handleAgentToggle(agent)}
-                        deleteIcon={<Close />}
-                        size="small"
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
 
               {/* Create Buttons */}
               <Box sx={{ display: 'flex', gap: 2 }}>
@@ -449,6 +503,149 @@ const UserResearch = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Agent Selection Dialog */}
+      <Dialog 
+        open={agentDialogOpen} 
+        onClose={() => setAgentDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, maxHeight: '80vh' }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Select Agents
+            </Typography>
+            <Badge badgeContent={selectedAgents.length} color="primary">
+              <Typography variant="body2" color="text.secondary">
+                {sessionType === '1on1' ? '1 required' : '2-5 required'}
+              </Typography>
+            </Badge>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 0 }}>
+          {/* Search and Filter */}
+          <Box sx={{ p: 3, borderBottom: '1px solid #E2E8F0' }}>
+            <TextField
+              fullWidth
+              placeholder="Search agents by name, role, or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: '#64748B' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ mb: 2 }}
+            />
+            
+            <Tabs 
+              value={filterTab} 
+              onChange={(e, newValue) => setFilterTab(newValue)}
+              sx={{ minHeight: 'auto' }}
+            >
+              <Tab label="All" />
+              <Tab label="Recent" />
+              <Tab label="Popular" />
+              <Tab label="By Role" />
+            </Tabs>
+          </Box>
+
+          {/* Agent List */}
+          <Box sx={{ maxHeight: '400px', overflow: 'auto' }}>
+            {filteredAgents.length === 0 ? (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  {searchQuery ? 'No agents found matching your search.' : 'No agents available.'}
+                </Typography>
+              </Box>
+            ) : (
+              <List sx={{ p: 0 }}>
+                {filteredAgents.map((agent) => {
+                  const isSelected = selectedAgents.find(a => a.id === agent.id);
+                  const canSelect = sessionType === '1on1' ? true : selectedAgents.length < 5 || isSelected;
+                  
+                  return (
+                    <ListItem key={agent.id} disablePadding>
+                      <ListItemButton
+                        onClick={() => canSelect && handleAgentToggle(agent)}
+                        disabled={!canSelect && !isSelected}
+                        sx={{ 
+                          px: 3, 
+                          py: 2,
+                          opacity: canSelect ? 1 : 0.5,
+                          '&:hover': {
+                            backgroundColor: isSelected ? '#EFF6FF' : '#F8FAFC'
+                          }
+                        }}
+                      >
+                        <ListItemAvatar>
+                          <Avatar 
+                            sx={{ 
+                              backgroundColor: isSelected ? '#3B82F6' : '#E2E8F0',
+                              color: isSelected ? 'white' : '#64748B'
+                            }}
+                          >
+                            {agent.avatar || agent.name?.charAt(0) || 'A'}
+                          </Avatar>
+                        </ListItemAvatar>
+                        
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                                {agent.name}
+                              </Typography>
+                              {isSelected && (
+                                <Check sx={{ color: '#3B82F6', fontSize: 20 }} />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box>
+                              <Typography variant="body2" color="text.secondary">
+                                {agent.role}
+                              </Typography>
+                              {agent.location && (
+                                <Typography variant="caption" color="text.secondary">
+                                  📍 {agent.location}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  );
+                })}
+              </List>
+            )}
+          </Box>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 3, borderTop: '1px solid #E2E8F0' }}>
+          <Button 
+            onClick={() => setAgentDialogOpen(false)}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => setAgentDialogOpen(false)}
+            variant="contained"
+            disabled={selectedAgents.length < (sessionType === '1on1' ? 1 : 2)}
+            sx={{ textTransform: 'none' }}
+          >
+            Done ({selectedAgents.length})
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
