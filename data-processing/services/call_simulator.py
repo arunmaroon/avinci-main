@@ -23,39 +23,39 @@ class CallSimulator:
         self.regional_profiles = {
             'north': {
                 'accent': 'North Indian (Hindi-influenced) accent',
-                'fillers': ['yaar', 'actually', 'basically', 'you know', 'I mean'],
-                'phrases': ['theek hai', 'achha', 'bilkul', 'exactly'],
-                'speech_style': 'confident, uses Hindi words naturally mixed with English'
+                'fillers': ['yaar', 'actually', 'basically', 'you know', 'I mean', 'hmm'],
+                'phrases': ['theek hai', 'achha', 'bilkul', 'exactly', 'very good', 'nice'],
+                'speech_style': 'confident, uses Hindi words naturally mixed with English, enthusiastic'
             },
             'south': {
                 'accent': 'South Indian accent with clear pronunciation',
-                'fillers': ['okay', 'right', 'you see', 'I think', 'actually'],
-                'phrases': ['correct', 'yes', 'no problem', 'sure'],
-                'speech_style': 'polite, slightly formal, clear enunciation'
+                'fillers': ['okay', 'right', 'you see', 'I think', 'actually', 'hmm'],
+                'phrases': ['correct', 'yes', 'no problem', 'sure', 'very good', 'nice'],
+                'speech_style': 'polite, slightly formal, clear enunciation, helpful'
             },
             'west': {
                 'accent': 'Marathi/Gujarati influenced accent',
-                'fillers': ['ho na', 'you know', 'basically', 'I think'],
-                'phrases': ['theek hai', 'good', 'nice', 'wonderful'],
-                'speech_style': 'expressive, enthusiastic, uses local expressions'
+                'fillers': ['ho na', 'you know', 'basically', 'I think', 'hmm'],
+                'phrases': ['theek hai', 'good', 'nice', 'wonderful', 'very good'],
+                'speech_style': 'expressive, enthusiastic, uses local expressions, friendly'
             },
             'east': {
                 'accent': 'Bengali influenced accent',
-                'fillers': ['you know', 'I think', 'actually', 'basically'],
-                'phrases': ['very good', 'excellent', 'wonderful', 'amazing'],
-                'speech_style': 'thoughtful, poetic, expressive'
+                'fillers': ['you know', 'I think', 'actually', 'basically', 'hmm'],
+                'phrases': ['very good', 'excellent', 'wonderful', 'amazing', 'nice'],
+                'speech_style': 'thoughtful, poetic, expressive, warm'
             },
             'tamil': {
                 'accent': 'Tamil-influenced accent with unique pronunciation',
-                'fillers': ['okay', 'you know', 'I think', 'actually'],
-                'phrases': ['correct', 'yes', 'no problem', 'sure'],
-                'speech_style': 'polite, clear, sometimes uses Tamil words'
+                'fillers': ['okay', 'you know', 'I think', 'actually', 'hmm'],
+                'phrases': ['correct', 'yes', 'no problem', 'sure', 'very good'],
+                'speech_style': 'polite, clear, sometimes uses Tamil words, helpful'
             },
             'default': {
                 'accent': 'General Indian English accent',
-                'fillers': ['you know', 'I think', 'actually', 'basically'],
-                'phrases': ['good', 'nice', 'correct', 'yes'],
-                'speech_style': 'natural, conversational'
+                'fillers': ['you know', 'I think', 'actually', 'basically', 'hmm'],
+                'phrases': ['good', 'nice', 'correct', 'yes', 'very good'],
+                'speech_style': 'natural, conversational, friendly'
             }
         }
         
@@ -272,19 +272,24 @@ GOALS & MOTIVATIONS:
 RESPONSE INSTRUCTIONS:
 - Speak naturally in Indian English with your regional accent
 - Use your authentic personality and communication style
-- Keep responses conversational and short (1-3 sentences)
-- Use your natural fillers and phrases frequently (yaar, actually, you know, etc.)
+- Keep responses conversational and short (1-2 sentences)
+- Use Indian English patterns and expressions:
+  * "Yaar", "actually", "basically", "you know", "I think"
+  * "Theek hai", "achha", "bilkul", "exactly", "correct"
+  * "Very good", "nice", "wonderful", "amazing"
+  * "Hmm", "oh", "really?", "that's interesting"
+- Use Indian sentence structures and word order
 - Reference your background and experiences when relevant
 - Match your vocabulary complexity and formality level
 - Show your emotional baseline and patience level
 - Be human, not robotic - use natural pauses, hesitations, and incomplete thoughts
 - Use contractions (I'm, you're, don't, can't) for natural speech
-- Add natural reactions like "oh", "hmm", "really?", "that's interesting"
-- For group calls: sometimes agree/disagree naturally with implied previous speakers
+- For group calls: respond simultaneously with other agents, don't wait
 - If you're from Tamil Nadu with low English, mix in some Tamil words naturally
-- Sound like a real person having a casual conversation, not an AI assistant
-- Use natural speech patterns like starting with "So...", "Well...", "Actually..."
-- Show personality through your word choices and speaking style"""
+- Sound like a real Indian person having a casual conversation
+- Use natural Indian speech patterns like starting with "So...", "Well...", "Actually..."
+- Show personality through your word choices and speaking style
+- Use Indian English grammar and expressions naturally"""
 
         return prompt
     
@@ -372,9 +377,8 @@ RESPONSE INSTRUCTIONS:
             responding_agents = random.sample(agents, num_responders)
             
             responses = []
-            base_delay = 200  # Faster base delay
             
-            # Generate responses from multiple agents
+            # Generate responses from multiple agents simultaneously
             for i, agent in enumerate(responding_agents):
                 response = await self._generate_single_response(
                     agent=agent,
@@ -385,8 +389,8 @@ RESPONSE INSTRUCTIONS:
                 )
                 
                 if response:
-                    # Stagger responses for natural overlap
-                    response['delay'] = base_delay + (i * random.randint(300, 600))
+                    # No delay - all agents respond simultaneously
+                    response['delay'] = 0
                     responses.append(response)
             
             logger.info(f"Group overlap: {len(responses)} agents responding to '{transcript[:50]}...'")
