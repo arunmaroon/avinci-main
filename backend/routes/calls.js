@@ -304,7 +304,7 @@ router.post('/process-speech', async (req, res) => {
                     { timeout: 6000 }
                 );
                 
-                if (groupResponse.data && Array.isArray(groupResponse.data)) {
+                if (groupResponse.data && Array.isArray(groupResponse.data) && groupResponse.data.length > 0) {
                     console.log(`🎭 Group call: Generated ${groupResponse.data.length} raw agent responses`);
                     // Ensure unique agents and sequence them with short staggered delays
                     const seen = new Set();
@@ -383,9 +383,10 @@ router.post('/process-speech', async (req, res) => {
                     });
                     
                     // Return the first response for the main response
-                    if (groupResponse.data.length > 0) {
-                        ({ responseText, agentName, region = 'north' } = groupResponse.data[0]);
-                    }
+                    ({ responseText, agentName, region = 'north' } = groupResponse.data[0]);
+                } else {
+                    console.warn('Group overlap service returned empty response, falling back to persona generation');
+                    // Fall through to single response logic
                 }
             } catch (groupError) {
                 console.warn('Group overlap service unavailable, falling back to multiple single responses:', groupError.message);
@@ -472,38 +473,92 @@ router.post('/process-speech', async (req, res) => {
                     { timeout: 5000 }
                 );
                 
-                ({ responseText, agentName, region = 'north' } = aiResponse.data);
+                const { responseText: aiResponseText, agentName: aiAgentName, region: aiRegion } = aiResponse.data;
+                
+                // Only use the response if it's not empty
+                if (aiResponseText && aiResponseText.trim() !== '') {
+                    responseText = aiResponseText;
+                    agentName = aiAgentName;
+                    region = aiRegion || 'north';
+                    console.log(`✅ Using data-processing response: ${agentName} - ${responseText}`);
+                } else {
+                    console.warn('Data-processing service returned empty response, falling back to persona generation');
+                }
             } catch (aiError) {
                 console.warn('Single AI service unavailable, using fallback:', aiError.message);
                 // Fall through to fallback logic
             }
         }
         
-        // If still no response, use intelligent fallback
+        // If still no response, generate persona-based response directly
         if (!responseText) {
-            console.warn('Data processing service unavailable, using intelligent fallback response');
+            console.warn('Data processing service unavailable, generating persona response directly');
             
-            // Intelligent fallback: Generate contextual responses based on what user said
-            agentName = 'AI Assistant';
-            
-            // Analyze the transcript and generate appropriate responses
-            const lowerTranscript = transcript.toLowerCase();
-            
-            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                responseText = `Hello! Great to meet you. I'm here to help with your research. What would you like to discuss today?`;
-            } else if (lowerTranscript.includes('how are you')) {
-                responseText = `I'm doing well, thank you for asking! I'm excited to be part of this discussion. What's on your mind?`;
-            } else if (lowerTranscript.includes('what') || lowerTranscript.includes('tell me')) {
-                responseText = `That's an interesting question. I'd be happy to share my perspective on that. Could you tell me more about what specifically you'd like to know?`;
-            } else if (lowerTranscript.includes('thank you') || lowerTranscript.includes('thanks')) {
-                responseText = `You're very welcome! I'm glad I could help. Is there anything else you'd like to explore?`;
-            } else if (lowerTranscript.includes('bye') || lowerTranscript.includes('goodbye')) {
-                responseText = `It was great talking with you! Feel free to reach out anytime if you have more questions. Take care!`;
-            } else {
-                responseText = `I understand you said "${transcript}". That's really interesting. Could you elaborate on that? I'd love to hear more about your thoughts on this topic.`;
+            // Get agent data from database to generate persona-based response
+            try {
+                const callData = await pool.query('SELECT agent_ids FROM voice_calls WHERE id = $1', [callId]);
+                const agentIds = callData.rows[0]?.agent_ids || [];
+                
+                if (agentIds.length > 0) {
+                    // Get the first agent's data
+                    const agentResult = await pool.query('SELECT * FROM ai_agents WHERE id = $1', [agentIds[0]]);
+                    const agent = agentResult.rows[0];
+                    
+                    if (agent) {
+                        agentName = agent.name;
+                        region = getRegion(agent.location);
+                        
+                        // Generate persona-based response using the agent's master_system_prompt
+                        const systemPrompt = agent.master_system_prompt || '';
+                        const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
+                        
+                        // Simple persona-based response based on English level
+                        const lowerTranscript = transcript.toLowerCase();
+                        
+                        if (englishLevel === 'Beginner') {
+                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                responseText = `Namaste! Main ${agent.name} hun. Aap kaise hain? Main yahan research ke liye hun.`;
+                            } else {
+                                responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya kehna chahte hain?`;
+                            }
+                        } else if (englishLevel === 'Elementary') {
+                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                responseText = `Hello! Main ${agent.name} hun. Aap kaise hain? Main yahan research discussion ke liye hun.`;
+                            } else {
+                                responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya discuss karna chahte hain?`;
+                            }
+                        } else if (englishLevel === 'Intermediate') {
+                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                responseText = `Hello! I'm ${agent.name}. How are you? I'm here for the research discussion.`;
+                            } else {
+                                responseText = `I understand. I'm ${agent.name}. What would you like to discuss?`;
+                            }
+                        } else if (englishLevel === 'Advanced') {
+                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                responseText = `Hello! I'm ${agent.name}. It's great to be part of this research discussion. How are you doing?`;
+                            } else {
+                                responseText = `I see. I'm ${agent.name}. I'd be happy to share my perspective on this topic. What specifically would you like to know?`;
+                            }
+                        } else { // Expert
+                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                responseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
+                            } else {
+                                responseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
+                            }
+                        }
+                        
+                        console.log(`✅ Generated persona response for ${agentName} (${englishLevel}): ${responseText}`);
+                    }
+                }
+            } catch (dbError) {
+                console.error('Error generating persona response:', dbError);
             }
             
-            region = 'north';
+            // If still no response, return empty (no AI Assistant)
+            if (!responseText) {
+                console.warn('Could not generate persona response, returning empty');
+                return res.json({ responseText: '', audioUrl: null, transcript });
+            }
         }
 
         if (!responseText) {
