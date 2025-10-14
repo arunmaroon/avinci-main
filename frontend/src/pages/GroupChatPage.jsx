@@ -67,8 +67,9 @@ const GroupChatPage = () => {
     const fetchAllAgents = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/enhanced-chat/personas');
-            setAllAgents(response.data.personas);
+            // Use the same central Agent Library endpoint for consistency
+            const response = await api.get('/agents/v5');
+            setAllAgents(response.data || []);
         } catch (err) {
             console.error('Error fetching agents:', err);
         } finally {
@@ -135,7 +136,8 @@ const GroupChatPage = () => {
     const getTechSavvyLevel = (agent) => agent.tech_savviness || 'Unknown';
     const getDomainSavvyLevel = (agent) => agent.domain_savvy || 'Medium';
     const getEnglishSavvyLevel = (agent) => {
-        // Check multiple possible locations for English proficiency
+        // Check multiple possible locations for English proficiency (prioritize speech_patterns)
+        if (agent.speech_patterns?.english_level) return agent.speech_patterns.english_level;
         if (agent.english_savvy) return agent.english_savvy;
         if (agent.communication_style?.english_proficiency) return agent.communication_style.english_proficiency;
         if (agent.communication_style?.english_level) return agent.communication_style.english_level;
