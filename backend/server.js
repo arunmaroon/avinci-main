@@ -66,6 +66,15 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static('uploads'));
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+    if (req.path.includes('process-speech')) {
+        console.log(`🔍 DEBUG: Request received - ${req.method} ${req.path}`);
+        console.log(`🔍 DEBUG: Request body:`, JSON.stringify(req.body, null, 2));
+    }
+    next();
+});
+
 // Socket.IO for real-time audio call events
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
@@ -153,7 +162,14 @@ app.use('/api/generate', require('./routes/generate'));
 app.use('/api/debug', require('./routes/debug'));
 
 // ✅ User Interview (voice calls)
-app.use('/api/call', require('./routes/calls'));
+app.use('/api/call', (req, res, next) => {
+    console.log(`🔍 DEBUG: Call route hit - ${req.method} ${req.path}`);
+    next();
+}, require('./routes/calls'));
+
+// ✅ PRD Management
+app.use('/api/products', require('./routes/products')); // Product management
+app.use('/api/prds', require('./routes/prds')); // PRD management
 
 // Note: Legacy routes (agents_v2-v4, chat_v2-v4, feedback_v2) moved to /tests folder
 

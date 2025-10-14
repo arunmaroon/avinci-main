@@ -8,6 +8,25 @@ const { ElevenLabsClient } = require('elevenlabs');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+
+// Helper function to determine region from location
+function getRegion(location) {
+    if (!location) return 'north';
+    
+    const locationLower = location.toLowerCase();
+    if (locationLower.includes('tamil') || locationLower.includes('chennai') || locationLower.includes('madras')) {
+        return 'tamil';
+    } else if (locationLower.includes('mumbai') || locationLower.includes('pune') || locationLower.includes('maharashtra')) {
+        return 'west';
+    } else if (locationLower.includes('kolkata') || locationLower.includes('bengal') || locationLower.includes('odisha')) {
+        return 'east';
+    } else if (locationLower.includes('bangalore') || locationLower.includes('karnataka') || locationLower.includes('kerala')) {
+        return 'south';
+    } else {
+        return 'north';
+    }
+}
 
 // Initialize services lazily (only when audio features are used)
 let twilioClient = null;
@@ -37,7 +56,13 @@ function initializeAudioServices() {
             });
         }
     if (!elevenlabsClient && process.env.ELEVENLABS_API_KEY) {
-        elevenlabsClient = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });
+        elevenlabsClient = new ElevenLabsClient({ 
+            apiKey: process.env.ELEVENLABS_API_KEY,
+            // Disable SSL verification for development (not recommended for production)
+            httpsAgent: new https.Agent({
+                rejectUnauthorized: false
+            })
+        });
     }
     
     // Check if all required services are available
@@ -61,16 +86,50 @@ if (!fs.existsSync(audioTempDir)) {
 }
 
         // Regional-specific voices from ElevenLabs Voice Library
-        // Tamil Nadu agents use specific Tamil voice for authentic regional accent
-        // Reference: https://elevenlabs.io/app/voice-library?voiceId=rgltZvTfiMmgWweZhh7n
+        // Authentic Indian voices for different regions and genders
         const INDIAN_VOICES = {
-            north: 'WeK8ylKjTV2trMlayizC', // Natural North Indian voice
-            south: 'WeK8ylKjTV2trMlayizC', // Natural South Indian voice
-            west: 'WeK8ylKjTV2trMlayizC', // Natural West Indian voice
-            east: 'WeK8ylKjTV2trMlayizC', // Natural East Indian voice
-            tamil: 'rgltZvTfiMmgWweZhh7n', // Authentic Tamil voice from ElevenLabs library
-            default: 'WeK8ylKjTV2trMlayizC' // Natural Indian voice (default)
+            north: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
+            south: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
+            west: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
+            east: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
+            tamil: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
+            default: 'WeK8ylKjTV2trMlayizC' // Male Hindi voice (default)
         };
+
+        // Gender-specific voice selection with authentic Indian voices
+        function getVoiceId(agent, region) {
+            // Always use regional voices instead of database voice_id for consistency
+            console.log(`🎙️ Assigning voice for ${agent.name} (${agent.gender}, ${region})`);
+            
+            // Use different voices for male and female with authentic Indian voices
+            if (agent.gender === 'F') {
+                // Female voices - authentic Indian female voices
+                const femaleVoices = {
+                    north: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice (fallback)
+                    south: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
+                    west: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice (fallback)
+                    east: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice (fallback)
+                    tamil: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
+                    default: 'WeK8ylKjTV2trMlayizC'
+                };
+                const voiceId = femaleVoices[region] || femaleVoices.default;
+                console.log(`🎙️ Selected female voice: ${voiceId} for region: ${region}`);
+                return voiceId;
+            } else {
+                // Male voices - authentic Indian male voices
+                const maleVoices = {
+                    north: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
+                    south: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
+                    west: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
+                    east: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
+                    tamil: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
+                    default: 'WeK8ylKjTV2trMlayizC'
+                };
+                const voiceId = maleVoices[region] || maleVoices.default;
+                console.log(`🎙️ Selected male voice: ${voiceId} for region: ${region}`);
+                return voiceId;
+            }
+        }
         
         // Optimized voice settings per region
         // Tamil voice (rgltZvTfiMmgWweZhh7n) uses tuned settings for natural Tamil accent
@@ -128,6 +187,11 @@ router.get('/status', (req, res) => {
             ? 'Audio calling is available' 
             : 'Audio services not configured. See AUDIO_CALLING_QUICKSTART.md'
     });
+});
+
+router.get('/test-debug', (req, res) => {
+    console.log('🔍 DEBUG: test-debug route hit!');
+    res.json({ message: 'Debug route working!' });
 });
 
 // Create a new User Interview call session with Twilio token
@@ -195,8 +259,10 @@ router.post('/create', async (req, res) => {
 // Process speech input (STT → AI → TTS)
 // Body: { audio: base64, callId: UUID, type: 'group' | '1on1' }
 router.post('/process-speech', async (req, res) => {
+    console.log('🔍 DEBUG: process-speech route hit!');
     try {
         console.log('=== Processing speech request ===');
+        console.log('🔍 DEBUG: Updated calls.js is being used!');
         
         // Initialize audio services
         const audioServicesAvailable = initializeAudioServices();
@@ -211,6 +277,7 @@ router.post('/process-speech', async (req, res) => {
         
         const { audio, callId, type = 'group', transcript: providedTranscript } = req.body;
         console.log('Request params:', { callId, type, audioLength: audio?.length, hasTranscript: !!providedTranscript });
+        console.log('🔍 DEBUG: Full request body:', JSON.stringify(req.body, null, 2));
 
         if (!callId) {
             return res.status(400).json({ error: 'callId is required' });
@@ -289,7 +356,7 @@ router.post('/process-speech', async (req, res) => {
         console.log(`Transcript: ${transcript}`);
 
         // Step 2: Get AI response from data-processing service or use fallback
-        let responseText, agentName, region = 'north';
+        let responseText = '', agentName = '', region = 'north';
         
         // For group calls, prioritize group response
         if (type === 'group') {
@@ -386,7 +453,8 @@ router.post('/process-speech', async (req, res) => {
                     ({ responseText, agentName, region = 'north' } = groupResponse.data[0]);
                 } else {
                     console.warn('Group overlap service returned empty response, falling back to persona generation');
-                    // Fall through to single response logic
+                    // Don't fall through to single response logic for group calls
+                    // The persona generation logic below will handle group calls
                 }
             } catch (groupError) {
                 console.warn('Group overlap service unavailable, falling back to multiple single responses:', groupError.message);
@@ -494,6 +562,7 @@ router.post('/process-speech', async (req, res) => {
         
         // If still no response, generate persona-based response directly
         console.log(`🔍 Debug: Before persona check - responseText: "${responseText}", type: ${typeof responseText}, empty: ${!responseText}, trim empty: ${responseText && responseText.trim() === ''}`);
+        console.log(`🔍 Debug: About to check persona generation - responseText: "${responseText}", type: ${type}`);
         if (!responseText || responseText.trim() === '') {
             console.warn('Data processing service unavailable, generating persona response directly');
             console.log(`🔍 Debug: responseText is empty, callId: ${callId}, transcript: ${transcript}`);
@@ -508,60 +577,197 @@ router.post('/process-speech', async (req, res) => {
                 console.log(`🔍 Debug: Agent IDs:`, agentIds);
                 
                 if (agentIds.length > 0) {
-                    console.log(`🔍 Debug: Querying agent data for ID: ${agentIds[0]}`);
-                    // Get the first agent's data
-                    const agentResult = await pool.query('SELECT * FROM ai_agents WHERE id = $1', [agentIds[0]]);
-                    console.log(`🔍 Debug: Agent result:`, agentResult.rows[0] ? 'Found agent' : 'No agent found');
-                    const agent = agentResult.rows[0];
-                    
-                    if (agent) {
-                        agentName = agent.name;
-                        region = getRegion(agent.location);
+                    // For group calls, generate responses for multiple agents
+                    if (type === 'group') {
+                        console.log(`🎭 Generating persona responses for ${agentIds.length} agents in group call`);
+                        const ioLocal = req.app.get('io');
+                        const roomName = `call-${callId}`;
+                        const baseGap = 400 + Math.floor(Math.random() * 300);
                         
-                        // Generate persona-based response using the agent's master_system_prompt
-                        const systemPrompt = agent.master_system_prompt || '';
-                        const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
+                        console.log(`🔍 Socket.IO available:`, !!ioLocal);
+                        console.log(`🔍 Room name:`, roomName);
                         
-                        console.log(`🔍 Debug: Agent ${agentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
-                        
-                        // Simple persona-based response based on English level
-                        const lowerTranscript = transcript.toLowerCase();
-                        
-                        if (englishLevel === 'Beginner') {
-                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                responseText = `Namaste! Main ${agent.name} hun. Aap kaise hain? Main yahan research ke liye hun.`;
+                        // Generate responses for all agents
+                        for (let i = 0; i < agentIds.length; i++) {
+                            const agentResult = await pool.query('SELECT * FROM ai_agents WHERE id = $1', [agentIds[i]]);
+                            const agent = agentResult.rows[0];
+                            
+                            if (agent) {
+                                const currentAgentName = agent.name;
+                                const currentRegion = getRegion(agent.location);
+                                const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
+                                
+                                console.log(`🔍 Debug: Agent ${currentAgentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
+                                
+                                // Generate persona-based response based on English level
+                                const lowerTranscript = transcript.toLowerCase();
+                                let agentResponseText = '';
+                                
+                                if (englishLevel === 'Beginner') {
+                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                        agentResponseText = `Namaste! Main ${agent.name} hun. Aap kaise hain? Main yahan research ke liye hun.`;
+                                    } else {
+                                        agentResponseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya kehna chahte hain?`;
+                                    }
+                                } else if (englishLevel === 'Elementary') {
+                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                        agentResponseText = `Hello! Main ${agent.name} hun. Aap kaise hain? Main yahan research discussion ke liye hun.`;
+                                    } else {
+                                        agentResponseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya discuss karna chahte hain?`;
+                                    }
+                                } else if (englishLevel === 'Intermediate') {
+                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                        agentResponseText = `Hello! I'm ${agent.name}. How are you? I'm here for the research discussion.`;
+                                    } else {
+                                        agentResponseText = `I understand. I'm ${agent.name}. What would you like to discuss?`;
+                                    }
+                                } else if (englishLevel === 'Advanced') {
+                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                        agentResponseText = `Hello! I'm ${agent.name}. It's great to be part of this research discussion. How are you doing?`;
+                                    } else {
+                                        agentResponseText = `I see. I'm ${agent.name}. I'd be happy to share my perspective on this topic. What specifically would you like to know?`;
+                                    }
+                                } else { // Expert
+                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                        agentResponseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
+                                    } else {
+                                        agentResponseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
+                                    }
+                                }
+                                
+                                console.log(`✅ Generated persona response for ${currentAgentName} (${englishLevel}): ${agentResponseText}`);
+                                
+                                // Generate audio for this agent response
+                                let audioUrl = null;
+                                try {
+                                    const voiceId = getVoiceId(agent, currentRegion);
+                                    const voiceSettings = VOICE_SETTINGS[currentRegion] || VOICE_SETTINGS.default;
+                                    
+                                    console.log(`🎙️ Generating voice for ${currentAgentName} (${currentRegion}): ${voiceId}`);
+                                    
+                                    // Use axios directly to bypass SSL issues
+                                    const response = await axios.post(
+                                        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+                                        {
+                                            text: agentResponseText,
+                                            model_id: 'eleven_multilingual_v2',
+                                            voice_settings: voiceSettings
+                                        },
+                                        {
+                                            headers: {
+                                                'Accept': 'audio/mpeg',
+                                                'Content-Type': 'application/json',
+                                                'xi-api-key': process.env.ELEVENLABS_API_KEY
+                                            },
+                                            responseType: 'arraybuffer',
+                                            httpsAgent: new https.Agent({
+                                                rejectUnauthorized: false
+                                            })
+                                        }
+                                    );
+                                    
+                                    const filename = `call_${callId}_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+                                    const filepath = path.join(audioTempDir, filename);
+                                    
+                                    fs.writeFileSync(filepath, response.data);
+                                    
+                                    audioUrl = `/uploads/audio/${filename}`;
+                                    console.log(`✅ Audio generated: ${audioUrl}`);
+                                } catch (audioError) {
+                                    console.warn('⚠️ Audio generation failed:', audioError.message);
+                                }
+                                
+                                // Emit agent response with delay
+                                const startDelay = i * baseGap;
+                                console.log(`🔍 Scheduling response for ${currentAgentName} with delay: ${startDelay}ms`);
+                                setTimeout(() => {
+                                    console.log(`🔍 Emitting typing for ${currentAgentName}`);
+                                    ioLocal && ioLocal.to(roomName).emit('agent-typing', {
+                                        callId,
+                                        agentName: currentAgentName,
+                                        isTyping: true
+                                    });
+                                    const speakDelay = 200 + Math.floor(Math.random() * 200);
+                                    setTimeout(() => {
+                                        console.log(`🔍 Emitting response for ${currentAgentName}: ${agentResponseText}`);
+                                        ioLocal && ioLocal.to(roomName).emit('agent-response', {
+                                            callId,
+                                            agentName: currentAgentName,
+                                            responseText: agentResponseText,
+                                            audioUrl: audioUrl,
+                                            timestamp: new Date().toISOString(),
+                                            region: currentRegion
+                                        });
+                                        console.log(`✅ Agent responded: ${currentAgentName}`);
+                                    }, speakDelay);
+                                }, startDelay);
+                                
+                                // Use first agent's response for the main response
+                                if (i === 0) {
+                                    responseText = agentResponseText;
+                                    agentName = currentAgentName;
+                                    region = currentRegion;
+                                }
                             } else {
-                                responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya kehna chahte hain?`;
-                            }
-                        } else if (englishLevel === 'Elementary') {
-                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                responseText = `Hello! Main ${agent.name} hun. Aap kaise hain? Main yahan research discussion ke liye hun.`;
-                            } else {
-                                responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya discuss karna chahte hain?`;
-                            }
-                        } else if (englishLevel === 'Intermediate') {
-                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                responseText = `Hello! I'm ${agent.name}. How are you? I'm here for the research discussion.`;
-                            } else {
-                                responseText = `I understand. I'm ${agent.name}. What would you like to discuss?`;
-                            }
-                        } else if (englishLevel === 'Advanced') {
-                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                responseText = `Hello! I'm ${agent.name}. It's great to be part of this research discussion. How are you doing?`;
-                            } else {
-                                responseText = `I see. I'm ${agent.name}. I'd be happy to share my perspective on this topic. What specifically would you like to know?`;
-                            }
-                        } else { // Expert
-                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                responseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
-                            } else {
-                                responseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
+                                console.warn(`❌ No agent found with ID: ${agentIds[i]}`);
                             }
                         }
-                        
-                        console.log(`✅ Generated persona response for ${agentName} (${englishLevel}): ${responseText}`);
                     } else {
-                        console.warn(`❌ No agent found with ID: ${agentIds[0]}`);
+                        // Single call - generate response for first agent only
+                        console.log(`🔍 Debug: Querying agent data for ID: ${agentIds[0]}`);
+                        const agentResult = await pool.query('SELECT * FROM ai_agents WHERE id = $1', [agentIds[0]]);
+                        console.log(`🔍 Debug: Agent result:`, agentResult.rows[0] ? 'Found agent' : 'No agent found');
+                        const agent = agentResult.rows[0];
+                        
+                        if (agent) {
+                            agentName = agent.name;
+                            region = getRegion(agent.location);
+                            
+                            // Generate persona-based response using the agent's master_system_prompt
+                            const systemPrompt = agent.master_system_prompt || '';
+                            const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
+                            
+                            console.log(`🔍 Debug: Agent ${agentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
+                            
+                            // Simple persona-based response based on English level
+                            const lowerTranscript = transcript.toLowerCase();
+                            
+                            if (englishLevel === 'Beginner') {
+                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                    responseText = `Namaste! Main ${agent.name} hun. Aap kaise hain? Main yahan research ke liye hun.`;
+                                } else {
+                                    responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya kehna chahte hain?`;
+                                }
+                            } else if (englishLevel === 'Elementary') {
+                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                    responseText = `Hello! Main ${agent.name} hun. Aap kaise hain? Main yahan research discussion ke liye hun.`;
+                                } else {
+                                    responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya discuss karna chahte hain?`;
+                                }
+                            } else if (englishLevel === 'Intermediate') {
+                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                    responseText = `Hello! I'm ${agent.name}. How are you? I'm here for the research discussion.`;
+                                } else {
+                                    responseText = `I understand. I'm ${agent.name}. What would you like to discuss?`;
+                                }
+                            } else if (englishLevel === 'Advanced') {
+                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                    responseText = `Hello! I'm ${agent.name}. It's great to be part of this research discussion. How are you doing?`;
+                                } else {
+                                    responseText = `I see. I'm ${agent.name}. I'd be happy to share my perspective on this topic. What specifically would you like to know?`;
+                                }
+                            } else { // Expert
+                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                    responseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
+                                } else {
+                                    responseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
+                                }
+                            }
+                            
+                            console.log(`✅ Generated persona response for ${agentName} (${englishLevel}): ${responseText}`);
+                        } else {
+                            console.warn(`❌ No agent found with ID: ${agentIds[0]}`);
+                        }
                     }
                 } else {
                     console.warn(`❌ No agent IDs found for call: ${callId}`);
@@ -584,12 +790,13 @@ router.post('/process-speech', async (req, res) => {
         // For group calls, we already emitted Socket.IO events and the frontend does TTS.
         // Return immediately to reduce latency.
         if (type === 'group') {
+            // For group calls, return empty response since agents respond via Socket.IO
             return res.json({ 
-                responseText: responseText || '',
+                responseText: '',
                 audioUrl: null,
                 transcript,
-                agentName: agentName || 'Agent',
-                region
+                agentName: '',
+                region: 'north'
             });
         }
 
