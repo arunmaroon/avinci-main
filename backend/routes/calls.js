@@ -31,6 +31,66 @@ function getRegion(location) {
 
 // Initialize OpenAI for vision analysis
 let openai = null;
+// Dynamic AI provider with fallback
+const getAIClient = async () => {
+    const providers = [
+        { name: 'openai', key: 'OPENAI_API_KEY', client: null },
+        { name: 'anthropic', key: 'ANTHROPIC_API_KEY', client: null },
+        { name: 'grok', key: 'GROK_API_KEY', client: null }
+    ];
+    
+    // Initialize clients
+    for (const provider of providers) {
+        if (process.env[provider.key]) {
+            try {
+                if (provider.name === 'openai') {
+                    provider.client = new OpenAI({ apiKey: process.env[provider.key] });
+                } else if (provider.name === 'anthropic') {
+                    const { Anthropic } = require('@anthropic-ai/sdk');
+                    provider.client = new Anthropic({ apiKey: process.env[provider.key] });
+                } else if (provider.name === 'grok') {
+                    provider.client = new OpenAI({ 
+                        apiKey: process.env[provider.key],
+                        baseURL: 'https://api.x.ai/v1'
+                    });
+                }
+                console.log(`✅ ${provider.name} client initialized`);
+            } catch (error) {
+                console.warn(`⚠️ Failed to initialize ${provider.name}:`, error.message);
+            }
+        }
+    }
+    
+    // Try providers in order of preference
+    for (const provider of providers) {
+        if (provider.client) {
+            try {
+                // Test the provider with a simple request
+                if (provider.name === 'openai' || provider.name === 'grok') {
+                    await provider.client.chat.completions.create({
+                        model: provider.name === 'grok' ? 'grok-beta' : 'gpt-4o',
+                        messages: [{ role: 'user', content: 'test' }],
+                        max_tokens: 1
+                    });
+                } else if (provider.name === 'anthropic') {
+                    await provider.client.messages.create({
+                        model: 'claude-3-sonnet-20240229',
+                        max_tokens: 1,
+                        messages: [{ role: 'user', content: 'test' }]
+                    });
+                }
+                console.log(`🎯 Using ${provider.name} as AI provider`);
+                return { client: provider.client, provider: provider.name };
+            } catch (error) {
+                console.warn(`⚠️ ${provider.name} test failed:`, error.message);
+            }
+        }
+    }
+    
+    throw new Error('No working AI provider available');
+};
+
+// Legacy function for backward compatibility
 const getOpenAI = () => {
     if (!openai) {
         if (!process.env.OPENAI_API_KEY) {
@@ -135,15 +195,41 @@ async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, c
                     });
                 }
                 
-                // Generate response using OpenAI
-                const response = await getOpenAI().chat.completions.create({
-                    model: "gpt-4o",
-                    messages: messages,
-                    temperature: 0.7,
-                    max_tokens: 500
-                });
-                
-                const responseText = response.choices[0].message.content;
+                // Generate response using dynamic AI provider with fallback
+                let responseText;
+                try {
+                    const { client, provider } = await getAIClient();
+                    
+                    if (provider === 'anthropic') {
+                        // Anthropic Claude
+                        const response = await client.messages.create({
+                            model: 'claude-3-sonnet-20240229',
+                            messages: messages,
+                            max_tokens: 500
+                        });
+                        responseText = response.content[0].text;
+                    } else {
+                        // OpenAI or Grok
+                        const model = provider === 'grok' ? 'grok-beta' : 'gpt-4o';
+                        const response = await client.chat.completions.create({
+                            model: model,
+                            messages: messages,
+                            temperature: 0.7,
+                            max_tokens: 500
+                        });
+                        responseText = response.choices[0].message.content;
+                    }
+                } catch (aiError) {
+                    console.error('❌ AI provider failed, trying fallback:', aiError.message);
+                    // Fallback to basic OpenAI
+                    const response = await getOpenAI().chat.completions.create({
+                        model: "gpt-4o",
+                        messages: messages,
+                        temperature: 0.7,
+                        max_tokens: 500
+                    });
+                    responseText = response.choices[0].message.content;
+                }
                 console.log('✅ Generated response for', agent.name, ':', responseText.substring(0, 100) + '...');
                 
                 responses.push({
@@ -158,9 +244,12 @@ async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, c
             }
         }
         
+        console.log('🔍 generateGroupResponsesWithVision returning:', responses.length, 'responses');
         return responses;
     } catch (error) {
-        console.error('Error in generateGroupResponsesWithVision:', error);
+        console.error('❌ Error in generateGroupResponsesWithVision:', error);
+        console.error('Error details:', error.message);
+        console.error('Stack trace:', error.stack);
         return [];
     }
 }
@@ -174,10 +263,18 @@ let elevenlabsClient = null;
 function ensureElevenLabsClient() {
     if (!elevenlabsClient && process.env.ELEVENLABS_API_KEY) {
         console.log('🔧 Ensuring ElevenLabs client is initialized...');
-        elevenlabsClient = new ElevenLabsClient({ 
-            apiKey: process.env.ELEVENLABS_API_KEY
-        });
-        console.log('✅ ElevenLabs client ensured and initialized');
+        console.log('🔑 ElevenLabs API Key:', process.env.ELEVENLABS_API_KEY ? 'Present' : 'Missing');
+        console.log('🔑 Key length:', process.env.ELEVENLABS_API_KEY?.length || 0);
+        
+        try {
+            elevenlabsClient = new ElevenLabsClient({ 
+                apiKey: process.env.ELEVENLABS_API_KEY
+            });
+            console.log('✅ ElevenLabs client ensured and initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize ElevenLabs client:', error.message);
+            return null;
+        }
     }
     return elevenlabsClient;
 }
@@ -266,13 +363,23 @@ const INDIAN_VOICES = {
             // Select voice based on gender and English proficiency
             let voiceId;
             if (agent.gender === 'F') {
-                // Female voices - using working voice IDs
-                voiceId = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - Female, works for all levels
-                console.log(`🎙️ Selected female voice: ${voiceId}`);
+                // Female voices - using new working voice IDs
+                if (isIntermediateOrAbove) {
+                    voiceId = 'Ukfq9vQ0QNLZ4MGK0Uxc'; // Female | English Intermediate and above - NEW
+                    console.log(`🎙️ Selected female voice (Intermediate+): ${voiceId}`);
+                } else {
+                    voiceId = 'wGnf3uthTBwNQDmywjXE'; // Female | English Below Intermediate - NEW
+                    console.log(`🎙️ Selected female voice (Below Intermediate): ${voiceId}`);
+                }
             } else {
                 // Male voices - using working voice IDs
-                voiceId = 'rgltZvTfiMmgWweZhh7n'; // Male voice, works for all levels
-                console.log(`🎙️ Selected male voice: ${voiceId}`);
+                if (isIntermediateOrAbove) {
+                    voiceId = 'rgltZvTfiMmgWweZhh7n'; // Male | English Intermediate and above - WORKING
+                    console.log(`🎙️ Selected male voice (Intermediate+): ${voiceId}`);
+                } else {
+                    voiceId = 'JNaMjd7t4u3EhgkVknn3'; // Male | English Below Intermediate - NEW
+                    console.log(`🎙️ Selected male voice (Below Intermediate): ${voiceId}`);
+                }
             }
             
             return voiceId;
