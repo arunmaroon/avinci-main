@@ -483,6 +483,8 @@ router.post('/process-speech', async (req, res) => {
                     console.log(`✅ Using data-processing response: ${agentName} - ${responseText}`);
                 } else {
                     console.warn('Data-processing service returned empty response, falling back to persona generation');
+                    // Explicitly set responseText to empty to trigger persona generation
+                    responseText = '';
                 }
             } catch (aiError) {
                 console.warn('Single AI service unavailable, using fallback:', aiError.message);
@@ -491,9 +493,11 @@ router.post('/process-speech', async (req, res) => {
         }
         
         // If still no response, generate persona-based response directly
-        if (!responseText) {
+        console.log(`🔍 Debug: Before persona check - responseText: "${responseText}", type: ${typeof responseText}, empty: ${!responseText}, trim empty: ${responseText && responseText.trim() === ''}`);
+        if (!responseText || responseText.trim() === '') {
             console.warn('Data processing service unavailable, generating persona response directly');
             console.log(`🔍 Debug: responseText is empty, callId: ${callId}, transcript: ${transcript}`);
+            console.log(`🔍 Debug: responseText value: "${responseText}", type: ${typeof responseText}`);
             
             // Get agent data from database to generate persona-based response
             try {

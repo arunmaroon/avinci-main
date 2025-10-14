@@ -311,6 +311,7 @@ RULES:
         const fearsData = Array.isArray(persona.fears) ? persona.fears : [];
         const apprehensionsData = Array.isArray(persona.apprehensions) ? persona.apprehensions : [];
         
+        
         return {
             // Header Section
             id: persona.id,
