@@ -390,7 +390,10 @@ router.delete('/:id', async (req, res) => {
  */
 async function generateRealSession(type, agents, topic) {
     const log = [];
-    const DATA_PROCESSING_URL = process.env.DATA_PROCESSING_URL || 'http://localhost:8003';
+    const DATA_PROCESSING_URL = process.env.DATA_PROCESSING_URL || 'http://localhost:8000';
+    
+    console.log(`🤖 Generating real session with ${agents.length} agents`);
+    console.log(`🔗 Data Processing URL: ${DATA_PROCESSING_URL}`);
     
     try {
         if (type === '1on1') {
@@ -472,7 +475,9 @@ async function generateRealSession(type, agents, topic) {
                         });
                     }
                 } catch (error) {
-                    console.error('Error getting agent response:', error.message);
+                    console.error('❌ Error getting agent response:', error.message);
+                    console.error('❌ Error details:', error.response?.data || error);
+                    console.error(`❌ Failed to call: ${DATA_PROCESSING_URL}/call/simulate`);
                     // Fallback response
                     log.push({
                         speaker: agentPersona.name,
@@ -550,7 +555,9 @@ async function generateRealSession(type, agents, topic) {
                         timestamp: new Date().toISOString()
                     });
                 } catch (error) {
-                    console.error('Error getting agent response:', error.message);
+                    console.error('❌ Error getting agent response:', error.message);
+                    console.error('❌ Error details:', error.response?.data || error);
+                    console.error(`❌ Failed to call: ${DATA_PROCESSING_URL}/call/simulate`);
                     // Fallback response
                     log.push({
                         speaker: agentPersona.name,
