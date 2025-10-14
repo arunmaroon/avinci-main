@@ -129,13 +129,18 @@ async function generateVoiceAudio(text, agentLocation, agentVoiceId) {
         // Save audio to file
         const filename = `session_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
         const filepath = path.join(audioTempDir, filename);
-        const fileStream = fs.createWriteStream(filepath);
-
-        // Write audio stream to file
+        
+        // Write audio stream to file and wait for completion
+        const chunks = [];
         for await (const chunk of audioStream) {
-            fileStream.write(chunk);
+            chunks.push(chunk);
         }
-        fileStream.end();
+        const audioBuffer = Buffer.concat(chunks);
+        
+        // Write synchronously to ensure file is ready
+        fs.writeFileSync(filepath, audioBuffer);
+        
+        console.log(`✅ Audio saved: ${filepath} (${audioBuffer.length} bytes)`);
 
         // Return URL path (must match express.static('/uploads') route)
         return `/uploads/audio/sessions/${filename}`;

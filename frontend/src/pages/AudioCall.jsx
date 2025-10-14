@@ -473,6 +473,8 @@ const AudioCall = () => {
     const playAgentAudio = (data) => {
         const { audioUrl, responseText, agentName, timestamp } = data;
         
+        console.log('🎵 playAgentAudio called:', { audioUrl, responseText, agentName });
+        
         // Add to transcript
         setTranscript(prev => [...prev, {
             speaker: agentName,
@@ -481,9 +483,26 @@ const AudioCall = () => {
             type: 'agent'
         }]);
 
-        // Play audio
-        const audio = new Audio(`http://localhost:9001${audioUrl}`);
-        audio.play().catch(err => console.error('Error playing audio:', err));
+        // Play audio if available
+        if (audioUrl) {
+            const fullAudioUrl = `http://localhost:9001${audioUrl}`;
+            console.log('🎵 Attempting to play audio from:', fullAudioUrl);
+            const audio = new Audio(fullAudioUrl);
+            audio.play().catch(err => {
+                console.error('❌ Error playing audio:', err);
+                console.error('❌ Audio URL was:', fullAudioUrl);
+            });
+        } else {
+            console.warn('⚠️ No audioUrl provided, using browser TTS fallback');
+            // Fallback to browser TTS
+            if (window.speechSynthesis && responseText) {
+                const utterance = new SpeechSynthesisUtterance(responseText);
+                utterance.rate = 1.1;
+                utterance.pitch = 1.0;
+                utterance.volume = 0.9;
+                speechSynthesis.speak(utterance);
+            }
+        }
     };
 
     const toggleMute = async () => {
