@@ -46,9 +46,11 @@ const getOpenAI = () => {
 // Generate group responses with vision analysis (like Group Chat)
 async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, callId) {
     try {
+        console.log('🔍 generateGroupResponsesWithVision called with:', { agentIds, transcript, ui_path, callId });
         const responses = [];
         
         for (const agentId of agentIds) {
+            console.log('🔍 Processing agent ID:', agentId);
             try {
                 // Get agent data
                 const agentResult = await pool.query(
@@ -56,9 +58,13 @@ async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, c
                     [agentId]
                 );
                 
-                if (agentResult.rows.length === 0) continue;
+                if (agentResult.rows.length === 0) {
+                    console.log('❌ No agent found for ID:', agentId);
+                    continue;
+                }
                 
                 const agent = agentResult.rows[0];
+                console.log('✅ Found agent:', agent.name);
                 const region = getRegion(agent.location);
                 
                 // Build context for the agent
@@ -138,6 +144,7 @@ async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, c
                 });
                 
                 const responseText = response.choices[0].message.content;
+                console.log('✅ Generated response for', agent.name, ':', responseText.substring(0, 100) + '...');
                 
                 responses.push({
                     agentName: agent.name,
@@ -146,7 +153,8 @@ async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, c
                 });
                 
             } catch (error) {
-                console.error(`Error generating response for agent ${agentId}:`, error);
+                console.error(`❌ Error generating response for agent ${agentId}:`, error);
+                console.error('Error details:', error.message);
             }
         }
         
@@ -161,6 +169,18 @@ async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, c
 let twilioClient = null;
 let deepgramClient = null;
 let elevenlabsClient = null;
+
+// Ensure ElevenLabs client is always available
+function ensureElevenLabsClient() {
+    if (!elevenlabsClient && process.env.ELEVENLABS_API_KEY) {
+        console.log('🔧 Ensuring ElevenLabs client is initialized...');
+        elevenlabsClient = new ElevenLabsClient({ 
+            apiKey: process.env.ELEVENLABS_API_KEY
+        });
+        console.log('✅ ElevenLabs client ensured and initialized');
+    }
+    return elevenlabsClient;
+}
 
 function initializeAudioServices() {
     if (!twilioClient && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
@@ -185,10 +205,15 @@ function initializeAudioServices() {
             });
         }
     if (!elevenlabsClient && process.env.ELEVENLABS_API_KEY) {
+        console.log('🔧 Initializing ElevenLabs client...');
         elevenlabsClient = new ElevenLabsClient({ 
             apiKey: process.env.ELEVENLABS_API_KEY
         });
-        console.log('✅ ElevenLabs client initialized');
+        console.log('✅ ElevenLabs client initialized successfully');
+    } else if (elevenlabsClient) {
+        console.log('✅ ElevenLabs client already initialized');
+    } else {
+        console.log('❌ ElevenLabs client not initialized - no API key');
     }
     
     // Check if all required services are available
@@ -484,15 +509,22 @@ router.post('/process-speech', async (req, res) => {
         if (type === 'group') {
             try {
                 console.log('🎭 Processing group call with image analysis...');
+                console.log('🔍 Type check passed, processing group call');
                 // Load agent_ids for the call
+                console.log('🔍 Querying call data for callId:', callId);
                 const callRow = await pool.query('SELECT agent_ids FROM voice_calls WHERE id = $1', [callId]);
+                console.log('🔍 Call query result:', callRow.rows.length, 'rows');
                 const agentIds = (callRow.rows[0]?.agent_ids || []).filter(Boolean);
+                console.log('🔍 Agent IDs extracted:', agentIds);
                 
                 // Use direct OpenAI vision analysis like Group Chat
+                console.log('🔍 About to call generateGroupResponsesWithVision with agentIds:', agentIds);
                 const responses = await generateGroupResponsesWithVision(agentIds, transcript, ui_path, callId);
+                console.log('🔍 generateGroupResponsesWithVision returned:', responses.length, 'responses');
                 
                 if (responses && responses.length > 0) {
                     console.log(`🎭 Group call: Generated ${responses.length} responses with vision`);
+                    console.log('🔍 Debug responses:', responses.map(r => ({ agentName: r.agentName, hasText: !!r.responseText })));
                     const ioLocal = req.app.get('io');
                     const roomName = `call-${callId}`;
                     const baseGap = 400 + Math.floor(Math.random() * 300);
@@ -521,7 +553,13 @@ router.post('/process-speech', async (req, res) => {
                                         const voiceId = getVoiceId(agent, region);
                                         const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
                                         
-                                        const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
+                                        // Ensure ElevenLabs client is available
+                                        const client = ensureElevenLabsClient();
+                                        if (!client) {
+                                            throw new Error('ElevenLabs client not available');
+                                        }
+                                        
+                                        const audioStream = await client.textToSpeech.convert(voiceId, {
                                             text: resp.responseText,
                                             model_id: 'eleven_multilingual_v2',
                                             voice_settings: voiceSettings
@@ -624,7 +662,13 @@ router.post('/process-speech', async (req, res) => {
                                             
                                             console.log(`🎙️ Generating voice for ${resp.agentName} (${region}): ${voiceId}`);
                                             
-                                            const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
+                                            // Ensure ElevenLabs client is available
+                                            const client = ensureElevenLabsClient();
+                                            if (!client) {
+                                                throw new Error('ElevenLabs client not available');
+                                            }
+                                            
+                                            const audioStream = await client.textToSpeech.convert(voiceId, {
                                                 text: resp.responseText,
                                                 model_id: 'eleven_multilingual_v2',
                                                 voice_settings: voiceSettings
@@ -1003,7 +1047,13 @@ router.post('/process-speech', async (req, res) => {
         
         let ttsAudioPath;
         try {
-            const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
+            // Ensure ElevenLabs client is available
+            const client = ensureElevenLabsClient();
+            if (!client) {
+                throw new Error('ElevenLabs client not available');
+            }
+            
+            const audioStream = await client.textToSpeech.convert(voiceId, {
                 text: responseText,
                 model_id: 'eleven_multilingual_v2',
                 voice_settings: voiceSettings

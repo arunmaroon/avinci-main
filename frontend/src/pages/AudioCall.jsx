@@ -188,7 +188,7 @@ const AudioCall = () => {
             // Create call session
             let response;
             try {
-                response = await axios.post('http://localhost:9001/api/call/create', {
+                response = await axios.post('/api/call/create', {
                     agentIds,
                     topic,
                     type
@@ -223,7 +223,7 @@ const AudioCall = () => {
 
             // Fetch participants (agents)
             try {
-                const agentsResponse = await axios.post('http://localhost:9001/api/research-agents/by-ids', {
+                const agentsResponse = await axios.post('/api/research-agents/by-ids', {
                     agentIds
                 });
                 setParticipants(agentsResponse.data?.agents || []);
@@ -288,11 +288,12 @@ const AudioCall = () => {
                     type: 'user'
                 }]);
 
-                // Send transcript to backend
-                const response = await axios.post('http://localhost:9001/api/call/process-speech', {
+                // Send transcript to backend with UI context if available
+                const response = await axios.post('http://localhost:9000/api/call/process-speech', {
                     callId,
                     type,
-                    transcript: speechTranscript
+                    transcript: speechTranscript,
+                    ui_path: uploadedImagePath // Include uploaded image path
                 });
                 
                 console.log('✅ Backend response:', response.data);
@@ -335,13 +336,14 @@ const AudioCall = () => {
                     type: 'user'
                 }]);
 
-                // Send to backend for processing
+                // Send to backend for processing with UI context if available
                 console.log('🚀 Making request to /api/call/process-speech');
-                const response = await axios.post('http://localhost:9001/api/call/process-speech', {
+                const response = await axios.post('http://localhost:9000/api/call/process-speech', {
                     audio: base64Audio,
                     callId,
                     type,
-                    transcript: speechTranscript || undefined
+                    transcript: speechTranscript || undefined,
+                    ui_path: uploadedImagePath // Include uploaded image path
                 });
                 console.log('✅ Backend response:', response.data);
 
@@ -428,7 +430,7 @@ const AudioCall = () => {
         // Play audio if available; fallback to natural Indian voice TTS if not
         if (audioUrl) {
             console.log('Playing audio:', audioUrl);
-            const audio = new Audio(`http://localhost:9001${audioUrl}`);
+            const audio = new Audio(`http://localhost:9000${audioUrl}`);
             
             audio.onended = () => {
                 console.log('🎵 Audio finished for:', agentName);
@@ -543,7 +545,7 @@ const AudioCall = () => {
 
         // Play audio if available
         if (audioUrl) {
-            const fullAudioUrl = `http://localhost:9001${audioUrl}`;
+            const fullAudioUrl = `http://localhost:9000${audioUrl}`;
             console.log('🎵 Attempting to play audio from:', fullAudioUrl);
             const audio = new Audio(fullAudioUrl);
             audio.play().catch(err => {
@@ -593,7 +595,7 @@ const AudioCall = () => {
     const endCall = async () => {
         try {
             if (callId) {
-                await axios.post(`http://localhost:9001/api/call/${callId}/end`).catch(error => {
+                await axios.post(`http://localhost:9000/api/call/${callId}/end`).catch(error => {
                     console.error('❌ Error calling end call API:', error);
                 });
             }
@@ -754,7 +756,7 @@ const AudioCall = () => {
             formData.append('agentId', agentIds[0] || 'group'); // Use first agent ID or 'group'
             formData.append('callId', callId); // Pass callId to store image path
 
-            const response = await axios.post('http://localhost:9001/api/ai/upload-ui', formData, {
+            const response = await axios.post('http://localhost:9000/api/ai/upload-ui', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
@@ -893,7 +895,7 @@ const AudioCall = () => {
 
         try {
             console.log('🔌 Initializing Socket.IO...');
-            socketRef.current = io('http://localhost:9001');
+            socketRef.current = io('http://localhost:9000');
             
             socketRef.current.on('connect', () => {
                 console.log('🔌 Socket connected');
@@ -1169,7 +1171,7 @@ const AudioCall = () => {
                                         {entry.imagePath && (
                                             <div className="mt-2">
                                                 <img
-                                                    src={`http://localhost:9001${entry.imagePath}`}
+                                                    src={`http://localhost:9000${entry.imagePath}`}
                                                     alt="Uploaded reference"
                                                     className="rounded-lg max-w-xs border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
                                                     onError={(e) => {

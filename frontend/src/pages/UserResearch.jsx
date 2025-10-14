@@ -107,7 +107,7 @@ const UserResearch = () => {
       console.log('Fetching agents for User Research...');
       
       // Use the same central Agent Library endpoint for consistency
-      const response = await axios.get(`http://localhost:9001/api/agents/v5?_t=${Date.now()}`);
+      const response = await axios.get(`/api/agents/v5?_t=${Date.now()}`);
       const agents = response.data || [];
       
       console.log(`✅ Loaded ${agents.length} agents from Central Library (ai_agents table)`);
@@ -125,7 +125,7 @@ const UserResearch = () => {
       if (error.response) {
         setError(`Failed to load agents: ${error.response.data?.error || error.message}`);
       } else if (error.request) {
-        setError('Backend server not responding. Please ensure the backend is running on port 9001.');
+        setError('Backend server not responding. Please ensure the backend is running on port 9000.');
       } else {
         setError('Failed to load agents from Agent Library. Please try again.');
       }
@@ -134,7 +134,7 @@ const UserResearch = () => {
 
   const fetchRecentSessions = async () => {
     try {
-      const response = await axios.get('http://localhost:9001/api/sessions?limit=5');
+      const response = await axios.get('/api/sessions?limit=5');
       setRecentSessions(response.data.sessions || []);
     } catch (error) {
       console.error('Error fetching sessions:', error);
@@ -181,7 +181,7 @@ const UserResearch = () => {
     setSuccess('');
 
     try {
-      const response = await axios.post('http://localhost:9001/api/sessions/create', {
+      const response = await axios.post('/api/sessions/create', {
         type: sessionType,
         agentIds: selectedAgents.map((a) => a.id),
         topic: topic,

@@ -58,7 +58,7 @@ const GenerationStatus = ({ isVisible, onComplete, onClose, generationType = 'sa
           if (stepIndex === steps.length - 1) {
             try {
               if (generationType === 'sample') {
-                await fetch('http://localhost:9001/api/generate/sample', {
+                await fetch('/api/generate/sample', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' }
                 });
@@ -73,7 +73,7 @@ const GenerationStatus = ({ isVisible, onComplete, onClose, generationType = 'sa
                 formData.append('fintechSavviness', config.fintechSavviness);
                 formData.append('demographicDiversity', config.demographicDiversity);
 
-                await fetch('http://localhost:9001/api/generate/from-documents', {
+                await fetch('/api/generate/from-documents', {
                   method: 'POST',
                   body: formData
                 });

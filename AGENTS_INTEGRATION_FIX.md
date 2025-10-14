@@ -107,8 +107,89 @@ curl http://localhost:9001/api/research-agents
 
 ---
 
+## Update: Fixed Sessions Table Type Mismatch (2025-10-14)
+
+### Problem
+Sessions table was using `INTEGER[]` for `agent_ids` but `ai_agents` table uses `UUID` for `id` column, causing type mismatch errors when creating sessions.
+
+### Solution
+1. Updated migration `003_create_sessions_table.sql` to use `UUID[]` instead of `INTEGER[]` for `agent_ids`
+2. Dropped and recreated sessions table with correct UUID[] type
+3. Verified table schema matches agent ID types
+
+### Database Fix
+```sql
+-- Updated schema
+agent_ids UUID[] NOT NULL  -- Changed from INTEGER[]
+```
+
+---
+
+## Update: Fixed Image Upload Response in Audio Calls (2025-10-14)
+
+### Problem
+Image uploads in audio calls were not being included in agent responses. While the image uploaded successfully, the `ui_path` was not being sent with speech requests, so agents couldn't analyze the uploaded images.
+
+### Root Cause
+1. Audio Call uploads image and stores path in `uploadedImagePath` state
+2. But when processing speech via `/api/call/process-speech`, the `ui_path` was NOT included in the request
+3. Backend didn't accept or forward `ui_path` to data-processing service
+4. Group Chat had working implementation that was not replicated in Audio Call
+
+### Solution Implemented
+
+#### Backend Changes (`backend/routes/calls.js`)
+1. Updated `/api/call/process-speech` endpoint to accept `ui_path` parameter
+2. Load `ui_path` from database (stored during upload) as fallback
+3. Pass `ui_path` to data-processing service for both group and 1:1 calls
+4. Updated group overlap endpoint call to include `ui_path`
+5. Updated fallback single response calls to include `ui_path`
+
+```javascript
+// Extract ui_path from request
+const { audio, callId, type, transcript, ui_path } = req.body;
+
+// Get ui_path from database as fallback
+const callRow = await pool.query('SELECT agent_ids, ui_path FROM voice_calls WHERE id = $1', [callId]);
+const effectiveUiPath = ui_path || ui_path_from_call;
+
+// Pass to data-processing
+await axios.post('/process-group-overlap', { 
+  transcript, callId, type, agentIds, 
+  ui_path: effectiveUiPath 
+});
+```
+
+#### Frontend Changes (`frontend/src/pages/AudioCall.jsx`)
+1. Include `uploadedImagePath` in speech processing requests
+2. Updated both transcript-direct and audio-processing paths
+3. Consistent with Group Chat implementation
+
+```javascript
+// Send with ui_path
+await axios.post('/api/call/process-speech', {
+  callId,
+  type,
+  transcript: speechTranscript,
+  ui_path: uploadedImagePath  // Now included!
+});
+```
+
+### How It Works Now
+1. User uploads image → stored in `uploadedImagePath` state + database
+2. User speaks → transcript captured
+3. Frontend sends transcript + `ui_path` to backend
+4. Backend forwards `ui_path` to data-processing service
+5. Agents receive image context and provide relevant feedback
+6. Same flow as working Group Chat implementation
+
+---
+
 **Status**: ✅ FIXED - All 51 agents now loading correctly  
+**Database**: ✅ FIXED - Sessions table type mismatch resolved  
+**Audio Call Images**: ✅ FIXED - Image upload responses now working  
 **Verified**: Backend returning 51 agents from `ai_agents` table  
-**Version**: Sirius 2.06
+**Version**: Sirius 2.07
+
 
 
