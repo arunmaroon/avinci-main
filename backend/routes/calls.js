@@ -493,15 +493,21 @@ router.post('/process-speech', async (req, res) => {
         // If still no response, generate persona-based response directly
         if (!responseText) {
             console.warn('Data processing service unavailable, generating persona response directly');
+            console.log(`🔍 Debug: responseText is empty, callId: ${callId}, transcript: ${transcript}`);
             
             // Get agent data from database to generate persona-based response
             try {
+                console.log(`🔍 Debug: Querying call data for callId: ${callId}`);
                 const callData = await pool.query('SELECT agent_ids FROM voice_calls WHERE id = $1', [callId]);
+                console.log(`🔍 Debug: Call data result:`, callData.rows);
                 const agentIds = callData.rows[0]?.agent_ids || [];
+                console.log(`🔍 Debug: Agent IDs:`, agentIds);
                 
                 if (agentIds.length > 0) {
+                    console.log(`🔍 Debug: Querying agent data for ID: ${agentIds[0]}`);
                     // Get the first agent's data
                     const agentResult = await pool.query('SELECT * FROM ai_agents WHERE id = $1', [agentIds[0]]);
+                    console.log(`🔍 Debug: Agent result:`, agentResult.rows[0] ? 'Found agent' : 'No agent found');
                     const agent = agentResult.rows[0];
                     
                     if (agent) {
@@ -511,6 +517,8 @@ router.post('/process-speech', async (req, res) => {
                         // Generate persona-based response using the agent's master_system_prompt
                         const systemPrompt = agent.master_system_prompt || '';
                         const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
+                        
+                        console.log(`🔍 Debug: Agent ${agentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
                         
                         // Simple persona-based response based on English level
                         const lowerTranscript = transcript.toLowerCase();
@@ -548,15 +556,19 @@ router.post('/process-speech', async (req, res) => {
                         }
                         
                         console.log(`✅ Generated persona response for ${agentName} (${englishLevel}): ${responseText}`);
+                    } else {
+                        console.warn(`❌ No agent found with ID: ${agentIds[0]}`);
                     }
+                } else {
+                    console.warn(`❌ No agent IDs found for call: ${callId}`);
                 }
             } catch (dbError) {
-                console.error('Error generating persona response:', dbError);
+                console.error('❌ Error generating persona response:', dbError);
             }
             
             // If still no response, return empty (no AI Assistant)
             if (!responseText) {
-                console.warn('Could not generate persona response, returning empty');
+                console.warn('❌ Could not generate persona response, returning empty');
                 return res.json({ responseText: '', audioUrl: null, transcript });
             }
         }

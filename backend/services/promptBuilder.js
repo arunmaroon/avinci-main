@@ -298,6 +298,19 @@ RULES:
         const goals = persona.goals || persona.objectives || [];
         const motivations = persona.motivations || [];
         
+        // Parse enriched fields safely
+        const personalityTraits = persona.personality_traits ? persona.personality_traits.split(', ') : [];
+        const culturalBackgroundData = typeof persona.cultural_background === 'string' ? 
+            JSON.parse(persona.cultural_background || '{}') : (persona.cultural_background || {});
+        const keyQuotesData = typeof persona.key_quotes === 'string' ? 
+            JSON.parse(persona.key_quotes || '[]') : (persona.key_quotes || []);
+        const lifeEventsData = typeof persona.life_events === 'string' ? 
+            JSON.parse(persona.life_events || '[]') : (persona.life_events || []);
+        const objectivesData = Array.isArray(persona.objectives) ? persona.objectives : [];
+        const needsData = Array.isArray(persona.needs) ? persona.needs : [];
+        const fearsData = Array.isArray(persona.fears) ? persona.fears : [];
+        const apprehensionsData = Array.isArray(persona.apprehensions) ? persona.apprehensions : [];
+        
         return {
             // Header Section
             id: persona.id,
@@ -330,15 +343,24 @@ RULES:
 
             // Expanded background
             background,
+            background_story: persona.background_story || background,
             personality_profile: Array.isArray(persona.personality) ? persona.personality : persona.traits || ['Analytical', 'Goal-oriented', 'Collaborative'],
-            hobbies,
+            personality_traits: personalityTraits,
+            hobbies: Array.isArray(hobbies) ? hobbies : [],
             fintech_preferences: fintechPrefs,
             pain_points: Array.isArray(painPoints) ? painPoints : [],
             ui_pain_points: Array.isArray(uiPainPoints) ? uiPainPoints : [],
-            key_quotes: Array.isArray(keyQuotes) ? keyQuotes : [],
+            key_quotes: Array.isArray(keyQuotesData) ? keyQuotesData : [],
             goals: Array.isArray(goals) ? goals : [],
             motivations: Array.isArray(motivations) ? motivations : [],
             extrapolation_rules: Array.isArray(extrapolationRules) ? extrapolationRules : [],
+            
+            // Enriched fields
+            life_events: Array.isArray(lifeEventsData) ? lifeEventsData : [],
+            objectives: objectivesData,
+            needs: needsData,
+            fears: fearsData,
+            apprehensions: apprehensionsData,
             
             // Core persona attributes (needed for all services: Chat, Calls, Group Chats)
             english_savvy: persona.english_savvy || demographics.english_proficiency || 'Intermediate',
@@ -354,8 +376,15 @@ RULES:
                 community_values: Array.isArray(socialContext.community_values) ? socialContext.community_values : []
             },
             cultural_background: {
-                heritage: culturalBackground.heritage || demographics.region || location,
-                beliefs: Array.isArray(culturalBackground.beliefs) ? culturalBackground.beliefs : []
+                heritage: culturalBackgroundData.region || culturalBackground.heritage || demographics.region || location,
+                beliefs: Array.isArray(culturalBackgroundData.beliefs) ? culturalBackgroundData.beliefs : 
+                       Array.isArray(culturalBackground.beliefs) ? culturalBackground.beliefs : [],
+                region: culturalBackgroundData.region || demographics.region || location,
+                language: culturalBackgroundData.language || 'Hindi',
+                traditions: culturalBackgroundData.traditions || [],
+                values: culturalBackgroundData.values || [],
+                food_culture: culturalBackgroundData.food_culture || [],
+                festivals: culturalBackgroundData.festivals || []
             },
             daily_routine: Array.isArray(dailyRoutine) ? dailyRoutine : [],
             decision_making: {

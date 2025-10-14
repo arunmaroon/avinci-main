@@ -106,7 +106,7 @@ router.get('/', async (req, res) => {
             const query = 'SELECT * FROM ai_agents WHERE is_active = true ORDER BY created_at DESC';
             const result = await pool.query(query);
             const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
-            const fullAgents = agentsWithAvatars.map(agent => promptBuilder.buildFullProfile(agent));
+            const fullAgents = agentsWithAvatars.map(agent => promptBuilder.buildDetailedPersona(agent));
             res.json(fullAgents);
         }
     } catch (error) {
