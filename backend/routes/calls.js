@@ -86,16 +86,16 @@ if (!fs.existsSync(audioTempDir)) {
     fs.mkdirSync(audioTempDir, { recursive: true });
 }
 
-        // Regional-specific voices from ElevenLabs Voice Library
-        // Authentic Indian voices for different regions and genders
-        const INDIAN_VOICES = {
-            north: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
-            south: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
-            west: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
-            east: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
-            tamil: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
-            default: 'WeK8ylKjTV2trMlayizC' // Male Hindi voice (default)
-        };
+// Regional-specific voices from ElevenLabs Voice Library
+// Authentic Indian voices for different regions and genders
+const INDIAN_VOICES = {
+    north: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+    south: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+    west: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+    east: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+    tamil: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+    default: 'EXAVITQu4vr4xnSDxMaL' // Sarah - Female, supports Hindi
+};
 
         // Gender-specific voice selection with authentic Indian voices
         function getVoiceId(agent, region) {
@@ -104,27 +104,27 @@ if (!fs.existsSync(audioTempDir)) {
             
             // Use different voices for male and female with authentic Indian voices
             if (agent.gender === 'F') {
-                // Female voices - authentic Indian female voices
+                // Female voices - Sarah supports Hindi and sounds natural
                 const femaleVoices = {
-                    north: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice (fallback)
-                    south: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
-                    west: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice (fallback)
-                    east: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice (fallback)
-                    tamil: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
-                    default: 'WeK8ylKjTV2trMlayizC'
+                    north: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+                    south: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+                    west: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+                    east: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+                    tamil: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
+                    default: 'EXAVITQu4vr4xnSDxMaL'
                 };
                 const voiceId = femaleVoices[region] || femaleVoices.default;
                 console.log(`🎙️ Selected female voice: ${voiceId} for region: ${region}`);
                 return voiceId;
             } else {
-                // Male voices - authentic Indian male voices
+                // Male voices - Use Chris for natural male voice
                 const maleVoices = {
-                    north: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
-                    south: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
-                    west: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
-                    east: 'WeK8ylKjTV2trMlayizC', // Male Hindi voice
-                    tamil: 'gJvkwI7wGFW2czmyfJhp', // Tamil voice
-                    default: 'WeK8ylKjTV2trMlayizC'
+                    north: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
+                    south: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
+                    west: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
+                    east: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
+                    tamil: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
+                    default: 'iP95p4xoKVk53GoZ742B'
                 };
                 const voiceId = maleVoices[region] || maleVoices.default;
                 console.log(`🎙️ Selected male voice: ${voiceId} for region: ${region}`);
@@ -589,110 +589,124 @@ router.post('/process-speech', async (req, res) => {
                         console.log(`🔍 Room name:`, roomName);
                         
                         // Generate responses for all agents
-                        for (let i = 0; i < agentIds.length; i++) {
-                            const agentResult = await pool.query('SELECT * FROM ai_agents WHERE id = $1', [agentIds[i]]);
-                            const agent = agentResult.rows[0];
-                            
-                            if (agent) {
-                                const currentAgentName = agent.name;
-                                const currentRegion = getRegion(agent.location);
-                                const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
-                                
-                                console.log(`🔍 Debug: Agent ${currentAgentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
-                                
-                                // Use enhanced response generation (Group Strategy Conversation logic)
-                                let agentResponseText = '';
-                                try {
-                                    agentResponseText = await generateEnhancedVoiceResponse(agent, transcript, callId);
-                                    console.log(`✅ Generated enhanced persona response for ${currentAgentName}: ${agentResponseText}`);
-                                } catch (enhancedError) {
-                                    console.warn(`⚠️ Enhanced response generation failed for ${currentAgentName}, using fallback:`, enhancedError.message);
-                                    
-                                    // Fallback to simple persona response
-                                    const lowerTranscript = transcript.toLowerCase();
-                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                        agentResponseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
-                                    } else {
-                                        agentResponseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
-                                    }
-                                    console.log(`✅ Generated fallback response for ${currentAgentName}: ${agentResponseText}`);
-                                }
-                                
-                                // Generate audio for this agent response
-                                let audioUrl = null;
-                                try {
-                                    const voiceId = getVoiceId(agent, currentRegion);
-                                    const voiceSettings = VOICE_SETTINGS[currentRegion] || VOICE_SETTINGS.default;
-                                    
-                                    console.log(`🎙️ Generating voice for ${currentAgentName} (${currentRegion}): ${voiceId}`);
-                                    
-                                    // Use axios directly to bypass SSL issues
-                                    const response = await axios.post(
-                                        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-                                        {
-                                            text: agentResponseText,
-                                            model_id: 'eleven_multilingual_v2',
-                                            voice_settings: voiceSettings
-                                        },
-                                        {
-                                            headers: {
-                                                'Accept': 'audio/mpeg',
-                                                'Content-Type': 'application/json',
-                                                'xi-api-key': process.env.ELEVENLABS_API_KEY
-                                            },
-                                            responseType: 'arraybuffer',
-                                            httpsAgent: new https.Agent({
-                                                rejectUnauthorized: false
-                                            })
-                                        }
-                                    );
-                                    
-                                    const filename = `call_${callId}_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
-                                    const filepath = path.join(audioTempDir, filename);
-                                    
-                                    fs.writeFileSync(filepath, response.data);
-                                    
-                                    audioUrl = `/uploads/audio/${filename}`;
-                                    console.log(`✅ Audio generated: ${audioUrl}`);
-                                } catch (audioError) {
-                                    console.warn('⚠️ Audio generation failed:', audioError.message);
-                                }
-                                
-                                // Emit agent response with delay
-                                const startDelay = i * baseGap;
-                                console.log(`🔍 Scheduling response for ${currentAgentName} with delay: ${startDelay}ms`);
-                                setTimeout(() => {
-                                    console.log(`🔍 Emitting typing for ${currentAgentName}`);
-                                    ioLocal && ioLocal.to(roomName).emit('agent-typing', {
-                                        callId,
-                                        agentName: currentAgentName,
-                                        isTyping: true
-                                    });
-                                    const speakDelay = 200 + Math.floor(Math.random() * 200);
-                                    setTimeout(() => {
-                                        console.log(`🔍 Emitting response for ${currentAgentName}: ${agentResponseText}`);
-                                        ioLocal && ioLocal.to(roomName).emit('agent-response', {
-                                            callId,
-                                            agentName: currentAgentName,
-                                            responseText: agentResponseText,
-                                            audioUrl: audioUrl,
-                                            timestamp: new Date().toISOString(),
-                                            region: currentRegion
-                                        });
-                                        console.log(`✅ Agent responded: ${currentAgentName}`);
-                                    }, speakDelay);
-                                }, startDelay);
-                                
-                                // Use first agent's response for the main response
-                                if (i === 0) {
-                                    responseText = agentResponseText;
-                                    agentName = currentAgentName;
-                                    region = currentRegion;
-                                }
-                            } else {
-                                console.warn(`❌ No agent found with ID: ${agentIds[i]}`);
+                        console.log(`🎭 Scheduling ${agentIds.length} agents with ${baseGap}ms gap`);
+                
+                for (let i = 0; i < agentIds.length; i++) {
+                    const agentResult = await pool.query('SELECT * FROM ai_agents WHERE id = $1', [agentIds[i]]);
+                    const agent = agentResult.rows[0];
+                    
+                    if (agent) {
+                        const currentAgentName = agent.name;
+                        const currentRegion = getRegion(agent.location);
+                        const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
+                        
+                        console.log(`🔍 Debug: Agent ${currentAgentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
+                        
+                        // Get uploaded image path from call data
+                        let imagePath = null;
+                        try {
+                            const callDataResult = await pool.query('SELECT ui_path FROM calls WHERE id = $1', [callId]);
+                            if (callDataResult.rows.length > 0 && callDataResult.rows[0].ui_path) {
+                                imagePath = callDataResult.rows[0].ui_path;
+                                console.log(`🖼️ Found uploaded image for call: ${imagePath}`);
                             }
+                        } catch (imageError) {
+                            console.warn('⚠️ Could not fetch image path:', imageError.message);
                         }
+                        
+                        // Use enhanced response generation (Group Strategy Conversation logic)
+                        let agentResponseText = '';
+                        try {
+                            agentResponseText = await generateEnhancedVoiceResponse(agent, transcript, callId, imagePath);
+                            console.log(`✅ Generated enhanced persona response for ${currentAgentName}: ${agentResponseText}`);
+                        } catch (enhancedError) {
+                            console.warn(`⚠️ Enhanced response generation failed for ${currentAgentName}, using fallback:`, enhancedError.message);
+                            
+                            // Fallback to simple persona response
+                            const lowerTranscript = transcript.toLowerCase();
+                            if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
+                                agentResponseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
+                            } else {
+                                agentResponseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
+                            }
+                            console.log(`✅ Generated fallback response for ${currentAgentName}: ${agentResponseText}`);
+                        }
+                        
+                        // Generate audio for this agent response
+                        let audioUrl = null;
+                        try {
+                            const voiceId = getVoiceId(agent, currentRegion);
+                            const voiceSettings = VOICE_SETTINGS[currentRegion] || VOICE_SETTINGS.default;
+                            
+                            console.log(`🎙️ Generating voice for ${currentAgentName} (${currentRegion}): ${voiceId}`);
+                            
+                            // Use axios directly to bypass SSL issues
+                            const response = await axios.post(
+                                `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+                                {
+                                    text: agentResponseText,
+                                    model_id: 'eleven_multilingual_v2',
+                                    voice_settings: voiceSettings
+                                },
+                                {
+                                    headers: {
+                                        'Accept': 'audio/mpeg',
+                                        'Content-Type': 'application/json',
+                                        'xi-api-key': process.env.ELEVENLABS_API_KEY
+                                    },
+                                    responseType: 'arraybuffer',
+                                    httpsAgent: new https.Agent({
+                                        rejectUnauthorized: false
+                                    })
+                                }
+                            );
+                            
+                            const filename = `call_${callId}_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+                            const filepath = path.join(audioTempDir, filename);
+                            
+                            fs.writeFileSync(filepath, response.data);
+                            
+                            audioUrl = `/uploads/audio/${filename}`;
+                            console.log(`✅ Audio generated: ${audioUrl}`);
+                        } catch (audioError) {
+                            console.warn('⚠️ Audio generation failed:', audioError.message);
+                        }
+                        
+                        // Emit agent response with delay
+                        const startDelay = i * baseGap;
+                        console.log(`🔍 Scheduling response for ${currentAgentName} with delay: ${startDelay}ms`);
+                        setTimeout(() => {
+                            console.log(`🔍 Emitting typing for ${currentAgentName}`);
+                            ioLocal && ioLocal.to(roomName).emit('agent-typing', {
+                                callId,
+                                agentName: currentAgentName,
+                                isTyping: true
+                            });
+                            const speakDelay = 200 + Math.floor(Math.random() * 200);
+                            setTimeout(() => {
+                                console.log(`🔍 Emitting response for ${currentAgentName}: ${agentResponseText}`);
+                                ioLocal && ioLocal.to(roomName).emit('agent-response', {
+                                    callId,
+                                    agentName: currentAgentName,
+                                    responseText: agentResponseText,
+                                    audioUrl: audioUrl,
+                                    timestamp: new Date().toISOString(),
+                                    region: currentRegion
+                                });
+                                console.log(`✅ Agent responded: ${currentAgentName}`);
+                            }, speakDelay);
+                        }, startDelay);
+                        
+                        // Use first agent's response for the main response
+                        if (i === 0) {
+                            responseText = agentResponseText;
+                            agentName = currentAgentName;
+                            region = currentRegion;
+                        }
+                    } else {
+                        console.warn(`❌ No agent found with ID: ${agentIds[i]}`);
+                    }
+                }
                     } else {
                         // Single call - generate response for first agent only
                         console.log(`🔍 Debug: Querying agent data for ID: ${agentIds[0]}`);
@@ -704,11 +718,23 @@ router.post('/process-speech', async (req, res) => {
                             agentName = agent.name;
                             region = getRegion(agent.location);
                             
-                            // Use enhanced response generation (Group Strategy Conversation logic)
-                            try {
-                                responseText = await generateEnhancedVoiceResponse(agent, transcript, callId);
-                                console.log(`✅ Generated enhanced persona response for ${agentName}: ${responseText}`);
-                            } catch (enhancedError) {
+                    // Get uploaded image path from call data
+                    let imagePath = null;
+                    try {
+                        const callDataResult = await pool.query('SELECT ui_path FROM calls WHERE id = $1', [callId]);
+                        if (callDataResult.rows.length > 0 && callDataResult.rows[0].ui_path) {
+                            imagePath = callDataResult.rows[0].ui_path;
+                            console.log(`🖼️ Found uploaded image for call: ${imagePath}`);
+                        }
+                    } catch (imageError) {
+                        console.warn('⚠️ Could not fetch image path:', imageError.message);
+                    }
+                    
+                    // Use enhanced response generation (Group Strategy Conversation logic)
+                    try {
+                        responseText = await generateEnhancedVoiceResponse(agent, transcript, callId, imagePath);
+                        console.log(`✅ Generated enhanced persona response for ${agentName}: ${responseText}`);
+                    } catch (enhancedError) {
                                 console.warn(`⚠️ Enhanced response generation failed, using fallback:`, enhancedError.message);
                                 
                                 // Fallback to simple response
@@ -915,184 +941,17 @@ router.post('/:id/end', async (req, res) => {
     }
 });
 
-// Enhanced response generation using Group Strategy Conversation logic
-async function generateEnhancedVoiceResponse(agent, transcript, callId) {
+// Use the exact same response generation as GroupChat
+async function generateEnhancedVoiceResponse(agent, transcript, callId, imagePath = null) {
     try {
-        const { 
-            demographics, 
-            master_system_prompt, 
-            name, 
-            occupation, 
-            location,
-            traits,
-            behaviors,
-            emotional_profile,
-            apprehensions,
-            speech_patterns,
-            vocabulary_profile,
-            cultural_background,
-            social_context,
-            tech_savviness,
-            communication_style
-        } = agent;
+        // Import the same functions from aiChat.js
+        const { buildEnhancedContext, generateEnhancedResponse } = require('./aiChat');
         
-        const agentName = name || 'AI Agent';
-        const agentOccupation = occupation || 'Professional';
-        const agentLocation = location || 'Unknown';
+        // Use the same logic as GroupChat, but pass the image path
+        const context = buildEnhancedContext(agent, [], transcript, imagePath);
+        const response = await generateEnhancedResponse(context, transcript, imagePath);
         
-        // Use the master system prompt as the base (it contains comprehensive persona data)
-        let context = `${master_system_prompt || 'You are a helpful AI assistant.'}\n\n`;
-        
-        // Add voice-specific context for natural conversation
-        context += `\n🎯 VOICE CONVERSATION MODE - You are ${agentName} in a voice call:\n\n`;
-        
-        // Personal context for voice conversation
-        context += `PERSONAL CONTEXT:\n`;
-        context += `- I'm ${agentName}, a ${agentOccupation} from ${agentLocation}\n`;
-        context += `- Age: ${demographics?.age || 'Unknown'}, Gender: ${demographics?.gender || 'Unknown'}\n`;
-        context += `- Education: ${demographics?.education || 'Unknown'}\n`;
-        context += `- Background: ${demographics?.background || 'Professional'}\n`;
-        context += `- Income: ${demographics?.income_range || 'Unknown'}\n`;
-        context += `- Family: ${demographics?.family_status || 'Unknown'}\n\n`;
-        
-        // My personality traits affecting conversation
-        if (traits && traits.personality) {
-            context += `MY PERSONALITY (${traits.personality.join(', ')}):\n`;
-            if (traits.personality.includes('compassionate')) {
-                context += `- I care about how this affects people's wellbeing\n`;
-            }
-            if (traits.personality.includes('analytical')) {
-                context += `- I'll examine the logic and details carefully\n`;
-            }
-            if (traits.personality.includes('patient')) {
-                context += `- I understand learning curves but expect clarity\n`;
-            }
-            if (traits.personality.includes('dedicated')) {
-                context += `- I'll invest time to understand if it's worth it\n`;
-            }
-            if (traits.personality.includes('ethical')) {
-                context += `- I'm concerned about fairness and transparency\n`;
-            }
-            context += `\n`;
-        }
-        
-        // My tech comfort level
-        if (tech_savviness) {
-            context += `MY TECH COMFORT: ${tech_savviness}\n`;
-            if (tech_savviness === 'low') {
-                context += `- I need clear explanations and simple concepts\n`;
-                context += `- Complex features overwhelm me\n`;
-                context += `- I prefer step-by-step guidance\n`;
-            } else if (tech_savviness === 'medium') {
-                context += `- I can handle moderate complexity\n`;
-                context += `- I like some advanced features but need good explanations\n`;
-                context += `- I can learn but don't want to struggle\n`;
-            } else if (tech_savviness === 'high') {
-                context += `- I appreciate powerful features and efficiency\n`;
-                context += `- I can handle complex concepts if well-explained\n`;
-                context += `- I want detailed information and advanced options\n`;
-            }
-            context += `\n`;
-        }
-        
-        // My communication style
-        if (communication_style && communication_style.tone) {
-            context += `MY COMMUNICATION STYLE: ${communication_style.tone}\n`;
-            if (communication_style.tone === 'professional') {
-                context += `- I speak formally and use proper language\n`;
-                context += `- I prefer structured, clear communication\n`;
-            } else if (communication_style.tone === 'casual') {
-                context += `- I speak informally and use everyday language\n`;
-                context += `- I prefer relaxed, friendly communication\n`;
-            } else if (communication_style.tone === 'friendly') {
-                context += `- I speak warmly and use encouraging language\n`;
-                context += `- I prefer supportive, positive communication\n`;
-            }
-            context += `\n`;
-        }
-        
-        // My cultural background
-        if (cultural_background && cultural_background.heritage) {
-            context += `MY CULTURAL BACKGROUND: ${cultural_background.heritage}\n`;
-            if (cultural_background.heritage === 'North Indian') {
-                context += `- I'm from North India with Hindi as my primary language\n`;
-                context += `- I value family, tradition, and community\n`;
-            } else if (cultural_background.heritage === 'South Indian') {
-                context += `- I'm from South India with regional languages as my primary\n`;
-                context += `- I value education, innovation, and cultural heritage\n`;
-            } else if (cultural_background.heritage === 'West Indian') {
-                context += `- I'm from West India with Marathi/Gujarati as my primary language\n`;
-                context += `- I value business, entrepreneurship, and community\n`;
-            } else if (cultural_background.heritage === 'East Indian') {
-                context += `- I'm from East India with Bengali/Odia as my primary language\n`;
-                context += `- I value arts, culture, and intellectual pursuits\n`;
-            }
-            context += `\n`;
-        }
-        
-        // My specific concerns and pain points
-        if (apprehensions && apprehensions.length > 0) {
-            context += `MY CONCERNS (what I worry about):\n`;
-            apprehensions.forEach(point => {
-                context += `- ${point}\n`;
-            });
-            context += `\n`;
-        }
-        
-        // My goals and motivations
-        if (agent.goals && agent.goals.length > 0) {
-            context += `MY GOALS:\n`;
-            agent.goals.forEach(goal => {
-                context += `- ${goal}\n`;
-            });
-            context += `\n`;
-        }
-        
-        // My values
-        if (traits && traits.values) {
-            context += `MY VALUES:\n`;
-            traits.values.forEach(value => {
-                context += `- ${value}\n`;
-            });
-            context += `\n`;
-        }
-        
-        // Voice conversation instructions
-        context += `VOICE CONVERSATION INSTRUCTIONS:\n`;
-        context += `1. Respond naturally as ${agentName} would in a voice conversation\n`;
-        context += `2. Be authentic to your background and experiences\n`;
-        context += `3. Reference your goals, values, and concerns naturally\n`;
-        context += `4. Use your communication style and personality traits\n`;
-        context += `5. Stay in character throughout the conversation\n`;
-        context += `6. Respond as if you're talking to someone in person\n`;
-        context += `7. Be conversational and engaging, not robotic\n`;
-        context += `8. If asked about something outside your knowledge, respond as ${agentName} would: "I'm not sure about that, but I'd be interested to learn more."\n\n`;
-        
-        context += `Remember: You are ${agentName}, not an AI assistant. Respond as this person would in a voice conversation.`;
-        
-        // Initialize OpenAI client
-        const openai = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
-        });
-        
-        // Generate response using OpenAI
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                {
-                    role: "system",
-                    content: context
-                },
-                {
-                    role: "user",
-                    content: `User just said: "${transcript}"\n\nRespond naturally as ${agentName} in this voice conversation:`
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 200
-        });
-        
-        return response.choices[0].message.content.trim();
+        return response;
         
     } catch (error) {
         console.error('Enhanced voice response generation failed:', error);

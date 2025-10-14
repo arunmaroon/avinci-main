@@ -137,10 +137,10 @@ router.post('/upload-ui', upload.single('image'), async (req, res) => {
     console.log('Request file:', req.file);
     console.log('Request files:', req.files);
     try {
-        const { agentId } = req.body;
+        const { agentId, callId } = req.body;
         const image = req.file;
         
-        console.log('Upload request received:', { agentId, image: image ? image.filename : 'no file' });
+        console.log('Upload request received:', { agentId, callId, image: image ? image.filename : 'no file' });
         
         if (!agentId || !image) {
             return res.status(400).json({ 
@@ -168,10 +168,26 @@ router.post('/upload-ui', upload.single('image'), async (req, res) => {
         
         console.log('File saved successfully to:', ui_path);
         
+        // If callId is provided, store the image path in the calls table
+        if (callId) {
+            try {
+                const { pool } = require('../models/database');
+                await pool.query(
+                    'UPDATE calls SET ui_path = $1 WHERE id = $2',
+                    [ui_path, callId]
+                );
+                console.log(`✅ Stored image path in calls table: ${ui_path} for call ${callId}`);
+            } catch (dbError) {
+                console.warn('⚠️ Failed to store image path in calls table:', dbError.message);
+                // Don't fail the upload if database update fails
+            }
+        }
+        
         res.json({
             success: true,
             ui_path: ui_path,
             agentId: agentId,
+            callId: callId,
             timestamp: new Date().toISOString()
         });
         
@@ -632,3 +648,5 @@ async function storeConversation(agentId, userMessage, agentResponse) {
 }
 
 module.exports = router;
+module.exports.buildEnhancedContext = buildEnhancedContext;
+module.exports.generateEnhancedResponse = generateEnhancedResponse;

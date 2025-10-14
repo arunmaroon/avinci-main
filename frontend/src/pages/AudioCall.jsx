@@ -7,7 +7,8 @@ import {
     FaMicrophoneSlash as MicOff, 
     FaMicrophone as Mic, 
     FaPhoneSlash as PhoneOff, 
-    FaCommentDots as MessageSquare 
+    FaCommentDots as MessageSquare,
+    FaImage as PhotoIcon
 } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -35,6 +36,11 @@ const AudioCall = () => {
     const [showTranscript, setShowTranscript] = useState(true);
     const [recognitionTranscript, setRecognitionTranscript] = useState('');
     const [selectedVoice, setSelectedVoice] = useState(null);
+    const [isSpeechRecognitionActive, setIsSpeechRecognitionActive] = useState(false);
+    const [uploadedImagePath, setUploadedImagePath] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [audioQueue, setAudioQueue] = useState([]);
+    const [isPlayingAudio, setIsPlayingAudio] = useState(false);
     
     // ===== REFS =====
     const deviceRef = useRef(null);
@@ -44,6 +50,7 @@ const AudioCall = () => {
     const streamRef = useRef(null);
     const recognitionRef = useRef(null);
     const currentTranscriptRef = useRef(''); // Store current transcript directly
+    const fileInputRef = useRef(null);
 
     // ===== FUNCTION DEFINITIONS (BEFORE USE EFFECTS) =====
     const formatDuration = (seconds) => {
@@ -67,6 +74,8 @@ const AudioCall = () => {
             if (isRecording) {
                 stopRecording();
             }
+            // Stop speech recognition
+            stopSpeechRecognition();
         } catch (error) {
             console.error('Error during cleanup:', error);
         }
@@ -86,6 +95,7 @@ const AudioCall = () => {
             
             recognition.onstart = () => {
                 console.log('🗣️ Speech recognition started');
+                setIsSpeechRecognitionActive(true);
             };
             
             recognition.onresult = (event) => {
@@ -125,9 +135,7 @@ const AudioCall = () => {
             
             recognition.onend = () => {
                 console.log('🗣️ Speech recognition ended');
-                if (recognitionRef.current) {
-                    recognitionRef.current.running = false;
-                }
+                setIsSpeechRecognitionActive(false);
             };
             
             recognitionRef.current = recognition;
@@ -141,14 +149,15 @@ const AudioCall = () => {
     };
 
     const startSpeechRecognition = () => {
-        if (recognitionRef.current && !recognitionRef.current.running) {
+        if (recognitionRef.current && !isSpeechRecognitionActive) {
             try {
                 recognitionRef.current.start();
-                recognitionRef.current.running = true;
+                setIsSpeechRecognitionActive(true);
                 console.log('🗣️ Started speech recognition');
                 setRecognitionTranscript('');
             } catch (error) {
                 console.error('Failed to start speech recognition:', error);
+                setIsSpeechRecognitionActive(false);
             }
         } else {
             console.log('Speech recognition already running or not available');
@@ -156,13 +165,14 @@ const AudioCall = () => {
     };
 
     const stopSpeechRecognition = () => {
-        if (recognitionRef.current && recognitionRef.current.running) {
+        if (recognitionRef.current && isSpeechRecognitionActive) {
             try {
                 recognitionRef.current.stop();
-                recognitionRef.current.running = false;
+                setIsSpeechRecognitionActive(false);
                 console.log('🗣️ Stopped speech recognition');
             } catch (error) {
                 console.error('Error stopping speech recognition:', error);
+                setIsSpeechRecognitionActive(false);
             }
         }
     };
@@ -388,11 +398,55 @@ const AudioCall = () => {
             return newTranscript;
         });
 
+        // Queue audio for sequential playback
+        const audioData = {
+            audioUrl,
+            responseText,
+            agentName,
+            region,
+            timestamp: timestamp || new Date().toISOString()
+        };
+        
+        setAudioQueue(prev => [...prev, audioData]);
+        console.log('🎵 Queued audio for:', agentName);
+    };
+
+    // Process audio queue sequentially
+    useEffect(() => {
+        if (audioQueue.length > 0 && !isPlayingAudio) {
+            const nextAudio = audioQueue[0];
+            playQueuedAudio(nextAudio);
+        }
+    }, [audioQueue, isPlayingAudio]);
+
+    const playQueuedAudio = (audioData) => {
+        const { audioUrl, responseText, agentName, region } = audioData;
+        setIsPlayingAudio(true);
+        
+        console.log('🎵 Playing queued audio for:', agentName);
+        
         // Play audio if available; fallback to natural Indian voice TTS if not
         if (audioUrl) {
             console.log('Playing audio:', audioUrl);
             const audio = new Audio(`http://localhost:9001${audioUrl}`);
-            audio.play().catch(console.error);
+            
+            audio.onended = () => {
+                console.log('🎵 Audio finished for:', agentName);
+                setIsPlayingAudio(false);
+                setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
+            };
+            
+            audio.onerror = () => {
+                console.error('❌ Audio error for:', agentName);
+                setIsPlayingAudio(false);
+                setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
+            };
+            
+            audio.play().catch(err => {
+                console.error('❌ Error playing audio:', err);
+                setIsPlayingAudio(false);
+                setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
+            });
         } else if (window.speechSynthesis && responseText) {
             try {
                 // Try to find a natural Indian voice based on region
@@ -460,12 +514,16 @@ const AudioCall = () => {
                 
                 utterance.onend = () => {
                     console.log(`🗣️ ${region} speech synthesis completed`);
+                    setIsPlayingAudio(false);
+                    setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
                 };
                 
                 speechSynthesis.speak(utterance);
                 console.log(`🗣️ Using natural browser TTS for ${region} region`);
             } catch (e) {
                 console.warn('Browser TTS failed:', e);
+                setIsPlayingAudio(false);
+                setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
             }
         }
     };
@@ -663,6 +721,61 @@ const AudioCall = () => {
             toast.error('Microphone access denied: ' + error.message);
             stopSpeechRecognition();
             setIsRecording(false);
+        }
+    };
+
+    // ===== IMAGE UPLOAD FUNCTIONS =====
+    const handleUpload = () => {
+        if (callState !== 'connected') {
+            toast.error('Please connect to the call first.');
+            return;
+        }
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type and size
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file (PNG, JPG, etc.)');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image size must be less than 5MB');
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('agentId', agentIds[0] || 'group'); // Use first agent ID or 'group'
+            formData.append('callId', callId); // Pass callId to store image path
+
+            const response = await axios.post('http://localhost:9001/api/ai/upload-ui', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            const imagePath = response.data.ui_path;
+            setUploadedImagePath(imagePath);
+
+            // Add image to transcript
+            setTranscript(prev => [...prev, {
+                id: Date.now(),
+                type: 'system',
+                content: `Uploaded reference: ${file.name}`,
+                imagePath: imagePath,
+                timestamp: new Date().toISOString(),
+            }]);
+
+            toast.success('Image uploaded successfully');
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            toast.error('Failed to upload image. Please try again.');
+        } finally {
+            setIsUploading(false);
         }
     };
 
@@ -896,6 +1009,13 @@ const AudioCall = () => {
         }
     }, [callState]);
 
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            cleanup();
+        };
+    }, []);
+
     // ===== RENDER =====
     // Show error state if audio services not available
     if (error && error.includes('Audio services')) {
@@ -1046,6 +1166,19 @@ const AudioCall = () => {
                                         }`}>
                                             {entry.text}
                                         </div>
+                                        {entry.imagePath && (
+                                            <div className="mt-2">
+                                                <img
+                                                    src={`http://localhost:9001${entry.imagePath}`}
+                                                    alt="Uploaded reference"
+                                                    className="rounded-lg max-w-xs border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                                                    onError={(e) => {
+                                                        console.error('Failed to load image:', entry.imagePath);
+                                                        e.target.style.display = 'none';
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             )}
@@ -1077,6 +1210,26 @@ const AudioCall = () => {
 
                     {/* Main Controls */}
                     <div className="flex items-center space-x-3">
+                        {/* Image Upload Button */}
+                        <div className="flex items-center space-x-2">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
+                            <button
+                                onClick={handleUpload}
+                                disabled={callState !== 'connected' || isUploading}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Upload image for agents to analyze"
+                            >
+                                <PhotoIcon className="h-4 w-4" />
+                                <span>{isUploading ? 'Uploading...' : uploadedImagePath ? '✓ Image loaded' : 'Add image'}</span>
+                            </button>
+                        </div>
+
                         {/* Press to Speak Button - Large and prominent */}
                         <button
                             onClick={isRecording ? stopRecording : startRecording}
