@@ -35,7 +35,6 @@ const AudioCall = () => {
     const [callDuration, setCallDuration] = useState(0);
     const [showTranscript, setShowTranscript] = useState(true);
     const [recognitionTranscript, setRecognitionTranscript] = useState('');
-    const [selectedVoice, setSelectedVoice] = useState(null);
     const [isSpeechRecognitionActive, setIsSpeechRecognitionActive] = useState(false);
     const [uploadedImagePath, setUploadedImagePath] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -51,6 +50,7 @@ const AudioCall = () => {
     const recognitionRef = useRef(null);
     const currentTranscriptRef = useRef(''); // Store current transcript directly
     const fileInputRef = useRef(null);
+    const processedResponsesRef = useRef(new Set());
 
     // ===== FUNCTION DEFINITIONS (BEFORE USE EFFECTS) =====
     const formatDuration = (seconds) => {
@@ -76,6 +76,7 @@ const AudioCall = () => {
             }
             // Stop speech recognition
             stopSpeechRecognition();
+            processedResponsesRef.current.clear();
         } catch (error) {
             console.error('Error during cleanup:', error);
         }
@@ -384,17 +385,46 @@ const AudioCall = () => {
     };
 
     const handleAgentResponse = (data) => {
-        console.log('handleAgentResponse called with:', data);
-        const { responseText, agentName, timestamp, audioUrl, region = 'north' } = data;
+        if (!data) return;
+        const { responseText, agentName } = data;
+        if (!responseText || !agentName) {
+            console.log('handleAgentResponse skipped - missing responseText or agentName', data);
+            return;
+        }
+
+        const responseRegion = data.region || 'north';
+        const responseTimestamp = data.timestamp || new Date().toISOString();
+        const candidateKeys = [];
+
+        if (agentName && responseTimestamp) {
+            candidateKeys.push(`${agentName}|${responseTimestamp}`);
+        }
+        if (agentName && responseText) {
+            candidateKeys.push(`${agentName}|${responseText}`);
+        }
+
+        const seenSet = processedResponsesRef.current;
+        if (seenSet.size > 200) {
+            seenSet.clear();
+        }
+        const isDuplicate = candidateKeys.some(key => seenSet.has(key));
+
+        if (isDuplicate) {
+            console.log('handleAgentResponse skipped duplicate:', { agentName, responseTimestamp });
+            return;
+        }
+
+        candidateKeys.forEach(key => seenSet.add(key));
+        console.log('handleAgentResponse processing:', { ...data, region: responseRegion, timestamp: responseTimestamp });
         
         // Add to transcript
         setTranscript(prev => {
             const newTranscript = [...prev, {
                 speaker: agentName,
                 text: responseText,
-                timestamp: timestamp || new Date().toISOString(),
+                timestamp: responseTimestamp,
                 type: 'agent',
-                region
+                region: responseRegion
             }];
             console.log('Updated transcript:', newTranscript);
             return newTranscript;
@@ -402,11 +432,11 @@ const AudioCall = () => {
 
         // Queue audio for sequential playback
         const audioData = {
-            audioUrl,
+            audioUrl: data.audioUrl,
             responseText,
             agentName,
-            region,
-            timestamp: timestamp || new Date().toISOString()
+            region: responseRegion,
+            timestamp: responseTimestamp
         };
         
         setAudioQueue(prev => [...prev, audioData]);
@@ -440,129 +470,46 @@ const AudioCall = () => {
             
             audio.onerror = () => {
                 console.error('❌ Audio error for:', agentName);
+                toast.error(`Failed to play ElevenLabs audio for ${agentName}.`);
                 setIsPlayingAudio(false);
                 setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
             };
             
             audio.play().catch(err => {
                 console.error('❌ Error playing audio:', err);
+                toast.error(`Playback error for ${agentName}'s ElevenLabs audio.`);
                 setIsPlayingAudio(false);
                 setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
             });
-        } else if (window.speechSynthesis && responseText) {
-            try {
-                // Try to find a natural Indian voice based on region
-                const voices = speechSynthesis.getVoices();
-                console.log(`🌏 Region: ${region} | Available voices: ${voices.length}`);
-                
-                let selectedVoice;
-                
-                // Tamil region: Look for Tamil-specific voices
-                if (region === 'tamil') {
-                    selectedVoice = voices.find(voice => 
-                        voice.lang.includes('ta') || 
-                        voice.lang.includes('en-IN') ||
-                        voice.name.toLowerCase().includes('tamil') ||
-                        voice.name.toLowerCase().includes('indian')
-                    );
-                    console.log('🎯 Looking for Tamil voice...');
-                } else {
-                    // Other regions: Look for general Indian English voices
-                    selectedVoice = voices.find(voice => 
-                        voice.lang.includes('en-IN') || 
-                        voice.name.toLowerCase().includes('indian') ||
-                        voice.name.toLowerCase().includes('india')
-                    );
-                }
-                
-                // Fallback to any English voice if no Indian voice found
-                if (!selectedVoice) {
-                    selectedVoice = voices.find(voice => 
-                        voice.lang.startsWith('en') && 
-                        !voice.name.toLowerCase().includes('google')
-                    );
-                }
-                
-                // Use system default if no good voice found
-                if (!selectedVoice) {
-                    selectedVoice = voices.find(voice => voice.default);
-                }
-                
-                const utterance = new SpeechSynthesisUtterance(responseText);
-                if (selectedVoice) {
-                    utterance.voice = selectedVoice;
-                    console.log(`🗣️ Using ${region} voice:`, selectedVoice.name, selectedVoice.lang);
-                }
-                
-                // Optimized speech parameters for faster, natural speech
-                // Tamil voices get slightly different parameters for better pronunciation
-                utterance.rate = region === 'tamil' ? 1.05 : 1.1;  // Slightly slower for Tamil
-                utterance.pitch = region === 'tamil' ? 1.05 : 1.0; // Slightly higher pitch for Tamil
-                utterance.volume = 0.9; // High volume for clarity
-                
-                // Add minimal pauses for faster, natural speech
-                utterance.onboundary = (event) => {
-                    if (event.name === 'word') {
-                        // Minimal random variation for faster speech
-                        const randomDelay = Math.random() * 20; // 0-20ms random delay
-                        setTimeout(() => {}, randomDelay);
-                    }
-                };
-                
-                // Add natural speech interruptions and variations
-                utterance.onstart = () => {
-                    console.log(`🗣️ Starting ${region} speech synthesis`);
-                };
-                
-                utterance.onend = () => {
-                    console.log(`🗣️ ${region} speech synthesis completed`);
-                    setIsPlayingAudio(false);
-                    setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
-                };
-                
-                speechSynthesis.speak(utterance);
-                console.log(`🗣️ Using natural browser TTS for ${region} region`);
-            } catch (e) {
-                console.warn('Browser TTS failed:', e);
-                setIsPlayingAudio(false);
-                setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
-            }
+        } else {
+            console.error('❌ Missing ElevenLabs audio; skipping playback for agent response.', { agentName, region });
+            toast.error(`Audio for ${agentName} is unavailable. Please check ElevenLabs configuration.`);
+            setIsPlayingAudio(false);
+            setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
         }
     };
 
     const playAgentAudio = (data) => {
-        const { audioUrl, responseText, agentName, timestamp } = data;
-        
-        console.log('🎵 playAgentAudio called:', { audioUrl, responseText, agentName });
-        
-        // Add to transcript
-        setTranscript(prev => [...prev, {
-            speaker: agentName,
-            text: responseText,
-            timestamp,
-            type: 'agent'
-        }]);
+        if (!data) return;
+        const { audioUrl, responseText, agentName } = data;
+        const safeTimestamp = data.timestamp || new Date().toISOString();
+        const region = data.region || 'north';
 
-        // Play audio if available
-        if (audioUrl) {
-            const fullAudioUrl = `http://localhost:9000${audioUrl}`;
-            console.log('🎵 Attempting to play audio from:', fullAudioUrl);
-            const audio = new Audio(fullAudioUrl);
-            audio.play().catch(err => {
-                console.error('❌ Error playing audio:', err);
-                console.error('❌ Audio URL was:', fullAudioUrl);
-            });
+        if (!audioUrl) {
+            console.error('❌ Expected ElevenLabs audio but none provided.', { agentName, safeTimestamp });
+            toast.error(`Missing ElevenLabs audio for ${agentName}.`);
         } else {
-            console.warn('⚠️ No audioUrl provided, using browser TTS fallback');
-            // Fallback to browser TTS
-            if (window.speechSynthesis && responseText) {
-                const utterance = new SpeechSynthesisUtterance(responseText);
-                utterance.rate = 1.1;
-                utterance.pitch = 1.0;
-                utterance.volume = 0.9;
-                speechSynthesis.speak(utterance);
-            }
+            console.log('🎵 playAgentAudio received audio stream:', { audioUrl, agentName });
         }
+
+        handleAgentResponse({
+            ...data,
+            region,
+            timestamp: safeTimestamp,
+            responseText,
+            agentName,
+            audioUrl
+        });
     };
 
     const toggleMute = async () => {
@@ -805,65 +752,10 @@ const AudioCall = () => {
         };
     }, []);
 
-    // Initialize speech recognition and load voices
+    // Initialize speech recognition
     useEffect(() => {
         try {
             initSpeechRecognition();
-            
-            // Load voices for TTS
-            const loadVoices = () => {
-                const voices = speechSynthesis.getVoices();
-                console.log('🔊 Loaded voices:', voices.length);
-                
-                // Find the best Indian voice with enhanced regional detection
-                let bestIndianVoice = voices.find(voice => 
-                    voice.lang.includes('en-IN') || 
-                    voice.name.toLowerCase().includes('indian') ||
-                    voice.name.toLowerCase().includes('india') ||
-                    voice.name.toLowerCase().includes('hindi') ||
-                    voice.name.toLowerCase().includes('tamil') ||
-                    voice.name.toLowerCase().includes('bengali') ||
-                    voice.name.toLowerCase().includes('telugu') ||
-                    voice.name.toLowerCase().includes('kannada') ||
-                    voice.name.toLowerCase().includes('malayalam') ||
-                    voice.name.toLowerCase().includes('gujarati') ||
-                    voice.name.toLowerCase().includes('marathi') ||
-                    voice.name.toLowerCase().includes('punjabi') ||
-                    voice.name.toLowerCase().includes('rishi') ||
-                    voice.name.toLowerCase().includes('priya') ||
-                    voice.name.toLowerCase().includes('arjun') ||
-                    voice.name.toLowerCase().includes('kavya')
-                );
-                
-                // Fallback to any English voice if no Indian voice found
-                if (!bestIndianVoice) {
-                    bestIndianVoice = voices.find(voice => 
-                        voice.lang.startsWith('en') && 
-                        !voice.name.toLowerCase().includes('google') &&
-                        !voice.name.toLowerCase().includes('microsoft')
-                    );
-                }
-                
-                // Set the best voice as selected
-                if (bestIndianVoice) {
-                    setSelectedVoice(bestIndianVoice);
-                    console.log('🎯 Selected best voice:', bestIndianVoice.name, bestIndianVoice.lang);
-                }
-                
-                voices.forEach(voice => {
-                    if (voice.lang.includes('en') || voice.name.toLowerCase().includes('indian')) {
-                        console.log('  -', voice.name, voice.lang, voice.default ? '(default)' : '', voice === bestIndianVoice ? '← SELECTED' : '');
-                    }
-                });
-            };
-            
-            // Load voices immediately and when they become available
-            loadVoices();
-            speechSynthesis.addEventListener('voiceschanged', loadVoices);
-            
-            return () => {
-                speechSynthesis.removeEventListener('voiceschanged', loadVoices);
-            };
         } catch (error) {
             console.error('Error initializing speech recognition:', error);
         }
