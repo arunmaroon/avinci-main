@@ -339,6 +339,11 @@ RULES:
             goals: Array.isArray(goals) ? goals : [],
             motivations: Array.isArray(motivations) ? motivations : [],
             extrapolation_rules: Array.isArray(extrapolationRules) ? extrapolationRules : [],
+            
+            // Core persona attributes (needed for all services: Chat, Calls, Group Chats)
+            english_savvy: persona.english_savvy || demographics.english_proficiency || 'Intermediate',
+            tech_savviness: persona.tech_savviness || 'Intermediate',
+            voice_id: persona.voice_id,
             emotional_profile_extended: {
                 triggers: Array.isArray(emotionalProfile.triggers) ? emotionalProfile.triggers : [],
                 responses: Array.isArray(emotionalProfile.responses) ? emotionalProfile.responses : []
