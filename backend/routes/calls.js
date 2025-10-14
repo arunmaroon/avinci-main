@@ -363,23 +363,13 @@ const INDIAN_VOICES = {
             // Select voice based on gender and English proficiency
             let voiceId;
             if (agent.gender === 'F') {
-                // Female voices - using new working voice IDs
-                if (isIntermediateOrAbove) {
-                    voiceId = 'Ukfq9vQ0QNLZ4MGK0Uxc'; // Female | English Intermediate and above - NEW
-                    console.log(`🎙️ Selected female voice (Intermediate+): ${voiceId}`);
-                } else {
-                    voiceId = 'wGnf3uthTBwNQDmywjXE'; // Female | English Below Intermediate - NEW
-                    console.log(`🎙️ Selected female voice (Below Intermediate): ${voiceId}`);
-                }
+                // Female voices - using WORKING voice IDs only
+                voiceId = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - Female, works for all levels
+                console.log(`🎙️ Selected female voice: ${voiceId}`);
             } else {
-                // Male voices - using working voice IDs
-                if (isIntermediateOrAbove) {
-                    voiceId = 'rgltZvTfiMmgWweZhh7n'; // Male | English Intermediate and above - WORKING
-                    console.log(`🎙️ Selected male voice (Intermediate+): ${voiceId}`);
-                } else {
-                    voiceId = 'JNaMjd7t4u3EhgkVknn3'; // Male | English Below Intermediate - NEW
-                    console.log(`🎙️ Selected male voice (Below Intermediate): ${voiceId}`);
-                }
+                // Male voices - using WORKING voice IDs only
+                voiceId = 'rgltZvTfiMmgWweZhh7n'; // Kumaran - Male, South Indian, works for all levels
+                console.log(`🎙️ Selected male voice: ${voiceId}`);
             }
             
             return voiceId;
