@@ -9,6 +9,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const OpenAI = require('openai');
 
 // Helper function to determine region from location
 function getRegion(location) {
@@ -599,43 +600,23 @@ router.post('/process-speech', async (req, res) => {
                                 
                                 console.log(`🔍 Debug: Agent ${currentAgentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
                                 
-                                // Generate persona-based response based on English level
-                                const lowerTranscript = transcript.toLowerCase();
+                                // Use enhanced response generation (Group Strategy Conversation logic)
                                 let agentResponseText = '';
-                                
-                                if (englishLevel === 'Beginner') {
-                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                        agentResponseText = `Namaste! Main ${agent.name} hun. Aap kaise hain? Main yahan research ke liye hun.`;
-                                    } else {
-                                        agentResponseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya kehna chahte hain?`;
-                                    }
-                                } else if (englishLevel === 'Elementary') {
-                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                        agentResponseText = `Hello! Main ${agent.name} hun. Aap kaise hain? Main yahan research discussion ke liye hun.`;
-                                    } else {
-                                        agentResponseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya discuss karna chahte hain?`;
-                                    }
-                                } else if (englishLevel === 'Intermediate') {
-                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                        agentResponseText = `Hello! I'm ${agent.name}. How are you? I'm here for the research discussion.`;
-                                    } else {
-                                        agentResponseText = `I understand. I'm ${agent.name}. What would you like to discuss?`;
-                                    }
-                                } else if (englishLevel === 'Advanced') {
-                                    if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                        agentResponseText = `Hello! I'm ${agent.name}. It's great to be part of this research discussion. How are you doing?`;
-                                    } else {
-                                        agentResponseText = `I see. I'm ${agent.name}. I'd be happy to share my perspective on this topic. What specifically would you like to know?`;
-                                    }
-                                } else { // Expert
+                                try {
+                                    agentResponseText = await generateEnhancedVoiceResponse(agent, transcript, callId);
+                                    console.log(`✅ Generated enhanced persona response for ${currentAgentName}: ${agentResponseText}`);
+                                } catch (enhancedError) {
+                                    console.warn(`⚠️ Enhanced response generation failed for ${currentAgentName}, using fallback:`, enhancedError.message);
+                                    
+                                    // Fallback to simple persona response
+                                    const lowerTranscript = transcript.toLowerCase();
                                     if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
                                         agentResponseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
                                     } else {
                                         agentResponseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
                                     }
+                                    console.log(`✅ Generated fallback response for ${currentAgentName}: ${agentResponseText}`);
                                 }
-                                
-                                console.log(`✅ Generated persona response for ${currentAgentName} (${englishLevel}): ${agentResponseText}`);
                                 
                                 // Generate audio for this agent response
                                 let audioUrl = null;
@@ -723,48 +704,22 @@ router.post('/process-speech', async (req, res) => {
                             agentName = agent.name;
                             region = getRegion(agent.location);
                             
-                            // Generate persona-based response using the agent's master_system_prompt
-                            const systemPrompt = agent.master_system_prompt || '';
-                            const englishLevel = agent.speech_patterns?.english_level || agent.english_savvy || 'Intermediate';
-                            
-                            console.log(`🔍 Debug: Agent ${agentName}, English Level: ${englishLevel}, Location: ${agent.location}`);
-                            
-                            // Simple persona-based response based on English level
-                            const lowerTranscript = transcript.toLowerCase();
-                            
-                            if (englishLevel === 'Beginner') {
-                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                    responseText = `Namaste! Main ${agent.name} hun. Aap kaise hain? Main yahan research ke liye hun.`;
-                                } else {
-                                    responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya kehna chahte hain?`;
-                                }
-                            } else if (englishLevel === 'Elementary') {
-                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                    responseText = `Hello! Main ${agent.name} hun. Aap kaise hain? Main yahan research discussion ke liye hun.`;
-                                } else {
-                                    responseText = `Haan, main samajh gaya. Main ${agent.name} hun. Aap kya discuss karna chahte hain?`;
-                                }
-                            } else if (englishLevel === 'Intermediate') {
-                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                    responseText = `Hello! I'm ${agent.name}. How are you? I'm here for the research discussion.`;
-                                } else {
-                                    responseText = `I understand. I'm ${agent.name}. What would you like to discuss?`;
-                                }
-                            } else if (englishLevel === 'Advanced') {
-                                if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
-                                    responseText = `Hello! I'm ${agent.name}. It's great to be part of this research discussion. How are you doing?`;
-                                } else {
-                                    responseText = `I see. I'm ${agent.name}. I'd be happy to share my perspective on this topic. What specifically would you like to know?`;
-                                }
-                            } else { // Expert
+                            // Use enhanced response generation (Group Strategy Conversation logic)
+                            try {
+                                responseText = await generateEnhancedVoiceResponse(agent, transcript, callId);
+                                console.log(`✅ Generated enhanced persona response for ${agentName}: ${responseText}`);
+                            } catch (enhancedError) {
+                                console.warn(`⚠️ Enhanced response generation failed, using fallback:`, enhancedError.message);
+                                
+                                // Fallback to simple response
+                                const lowerTranscript = transcript.toLowerCase();
                                 if (lowerTranscript.includes('hello') || lowerTranscript.includes('hi')) {
                                     responseText = `Hello! I'm ${agent.name}. It's wonderful to be participating in this research discussion. How are you today?`;
                                 } else {
                                     responseText = `That's an interesting point. I'm ${agent.name}, and I'd be delighted to share my insights on this topic. What aspects would you like to explore further?`;
                                 }
+                                console.log(`✅ Generated fallback response for ${agentName}: ${responseText}`);
                             }
-                            
-                            console.log(`✅ Generated persona response for ${agentName} (${englishLevel}): ${responseText}`);
                         } else {
                             console.warn(`❌ No agent found with ID: ${agentIds[0]}`);
                         }
@@ -959,6 +914,191 @@ router.post('/:id/end', async (req, res) => {
         res.status(500).json({ error: 'Failed to end call', details: error.message });
     }
 });
+
+// Enhanced response generation using Group Strategy Conversation logic
+async function generateEnhancedVoiceResponse(agent, transcript, callId) {
+    try {
+        const { 
+            demographics, 
+            master_system_prompt, 
+            name, 
+            occupation, 
+            location,
+            traits,
+            behaviors,
+            emotional_profile,
+            apprehensions,
+            speech_patterns,
+            vocabulary_profile,
+            cultural_background,
+            social_context,
+            tech_savviness,
+            communication_style
+        } = agent;
+        
+        const agentName = name || 'AI Agent';
+        const agentOccupation = occupation || 'Professional';
+        const agentLocation = location || 'Unknown';
+        
+        // Use the master system prompt as the base (it contains comprehensive persona data)
+        let context = `${master_system_prompt || 'You are a helpful AI assistant.'}\n\n`;
+        
+        // Add voice-specific context for natural conversation
+        context += `\n🎯 VOICE CONVERSATION MODE - You are ${agentName} in a voice call:\n\n`;
+        
+        // Personal context for voice conversation
+        context += `PERSONAL CONTEXT:\n`;
+        context += `- I'm ${agentName}, a ${agentOccupation} from ${agentLocation}\n`;
+        context += `- Age: ${demographics?.age || 'Unknown'}, Gender: ${demographics?.gender || 'Unknown'}\n`;
+        context += `- Education: ${demographics?.education || 'Unknown'}\n`;
+        context += `- Background: ${demographics?.background || 'Professional'}\n`;
+        context += `- Income: ${demographics?.income_range || 'Unknown'}\n`;
+        context += `- Family: ${demographics?.family_status || 'Unknown'}\n\n`;
+        
+        // My personality traits affecting conversation
+        if (traits && traits.personality) {
+            context += `MY PERSONALITY (${traits.personality.join(', ')}):\n`;
+            if (traits.personality.includes('compassionate')) {
+                context += `- I care about how this affects people's wellbeing\n`;
+            }
+            if (traits.personality.includes('analytical')) {
+                context += `- I'll examine the logic and details carefully\n`;
+            }
+            if (traits.personality.includes('patient')) {
+                context += `- I understand learning curves but expect clarity\n`;
+            }
+            if (traits.personality.includes('dedicated')) {
+                context += `- I'll invest time to understand if it's worth it\n`;
+            }
+            if (traits.personality.includes('ethical')) {
+                context += `- I'm concerned about fairness and transparency\n`;
+            }
+            context += `\n`;
+        }
+        
+        // My tech comfort level
+        if (tech_savviness) {
+            context += `MY TECH COMFORT: ${tech_savviness}\n`;
+            if (tech_savviness === 'low') {
+                context += `- I need clear explanations and simple concepts\n`;
+                context += `- Complex features overwhelm me\n`;
+                context += `- I prefer step-by-step guidance\n`;
+            } else if (tech_savviness === 'medium') {
+                context += `- I can handle moderate complexity\n`;
+                context += `- I like some advanced features but need good explanations\n`;
+                context += `- I can learn but don't want to struggle\n`;
+            } else if (tech_savviness === 'high') {
+                context += `- I appreciate powerful features and efficiency\n`;
+                context += `- I can handle complex concepts if well-explained\n`;
+                context += `- I want detailed information and advanced options\n`;
+            }
+            context += `\n`;
+        }
+        
+        // My communication style
+        if (communication_style && communication_style.tone) {
+            context += `MY COMMUNICATION STYLE: ${communication_style.tone}\n`;
+            if (communication_style.tone === 'professional') {
+                context += `- I speak formally and use proper language\n`;
+                context += `- I prefer structured, clear communication\n`;
+            } else if (communication_style.tone === 'casual') {
+                context += `- I speak informally and use everyday language\n`;
+                context += `- I prefer relaxed, friendly communication\n`;
+            } else if (communication_style.tone === 'friendly') {
+                context += `- I speak warmly and use encouraging language\n`;
+                context += `- I prefer supportive, positive communication\n`;
+            }
+            context += `\n`;
+        }
+        
+        // My cultural background
+        if (cultural_background && cultural_background.heritage) {
+            context += `MY CULTURAL BACKGROUND: ${cultural_background.heritage}\n`;
+            if (cultural_background.heritage === 'North Indian') {
+                context += `- I'm from North India with Hindi as my primary language\n`;
+                context += `- I value family, tradition, and community\n`;
+            } else if (cultural_background.heritage === 'South Indian') {
+                context += `- I'm from South India with regional languages as my primary\n`;
+                context += `- I value education, innovation, and cultural heritage\n`;
+            } else if (cultural_background.heritage === 'West Indian') {
+                context += `- I'm from West India with Marathi/Gujarati as my primary language\n`;
+                context += `- I value business, entrepreneurship, and community\n`;
+            } else if (cultural_background.heritage === 'East Indian') {
+                context += `- I'm from East India with Bengali/Odia as my primary language\n`;
+                context += `- I value arts, culture, and intellectual pursuits\n`;
+            }
+            context += `\n`;
+        }
+        
+        // My specific concerns and pain points
+        if (apprehensions && apprehensions.length > 0) {
+            context += `MY CONCERNS (what I worry about):\n`;
+            apprehensions.forEach(point => {
+                context += `- ${point}\n`;
+            });
+            context += `\n`;
+        }
+        
+        // My goals and motivations
+        if (agent.goals && agent.goals.length > 0) {
+            context += `MY GOALS:\n`;
+            agent.goals.forEach(goal => {
+                context += `- ${goal}\n`;
+            });
+            context += `\n`;
+        }
+        
+        // My values
+        if (traits && traits.values) {
+            context += `MY VALUES:\n`;
+            traits.values.forEach(value => {
+                context += `- ${value}\n`;
+            });
+            context += `\n`;
+        }
+        
+        // Voice conversation instructions
+        context += `VOICE CONVERSATION INSTRUCTIONS:\n`;
+        context += `1. Respond naturally as ${agentName} would in a voice conversation\n`;
+        context += `2. Be authentic to your background and experiences\n`;
+        context += `3. Reference your goals, values, and concerns naturally\n`;
+        context += `4. Use your communication style and personality traits\n`;
+        context += `5. Stay in character throughout the conversation\n`;
+        context += `6. Respond as if you're talking to someone in person\n`;
+        context += `7. Be conversational and engaging, not robotic\n`;
+        context += `8. If asked about something outside your knowledge, respond as ${agentName} would: "I'm not sure about that, but I'd be interested to learn more."\n\n`;
+        
+        context += `Remember: You are ${agentName}, not an AI assistant. Respond as this person would in a voice conversation.`;
+        
+        // Initialize OpenAI client
+        const openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+        
+        // Generate response using OpenAI
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: context
+                },
+                {
+                    role: "user",
+                    content: `User just said: "${transcript}"\n\nRespond naturally as ${agentName} in this voice conversation:`
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 200
+        });
+        
+        return response.choices[0].message.content.trim();
+        
+    } catch (error) {
+        console.error('Enhanced voice response generation failed:', error);
+        throw error;
+    }
+}
 
 module.exports = router;
 
