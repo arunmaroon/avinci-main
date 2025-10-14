@@ -60,66 +60,63 @@ const UserResearch = () => {
   // Agent selection dialog state
   const [agentDialogOpen, setAgentDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterTab, setFilterTab] = useState(0);
   const [filteredAgents, setFilteredAgents] = useState([]);
-  const [selectedState, setSelectedState] = useState('All');
+  
+  // Advanced filters (same as Group Chat)
+  const [filterOccupation, setFilterOccupation] = useState('');
+  const [filterTechSavvy, setFilterTechSavvy] = useState('');
+  const [filterEnglishSavvy, setFilterEnglishSavvy] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
 
   useEffect(() => {
     fetchAgents();
     fetchRecentSessions();
   }, []);
 
-  // Filter agents based on search and category
+  // Helper functions (same as Group Chat)
+  const getTechSavvyLevel = (agent) => agent.tech_savviness || 'Unknown';
+  const getDomainSavvyLevel = (agent) => agent.domain_savvy || 'Medium';
+  const getEnglishSavvyLevel = (agent) => {
+    // Check multiple possible locations for English proficiency (prioritize speech_patterns)
+    if (agent.speech_patterns?.english_level) return agent.speech_patterns.english_level;
+    if (agent.english_savvy) return agent.english_savvy;
+    if (agent.communication_style?.english_proficiency) return agent.communication_style.english_proficiency;
+    if (agent.communication_style?.english_level) return agent.communication_style.english_level;
+    return 'Intermediate'; // Default fallback (new scale)
+  };
+
+  // Filter agents based on search and advanced filters (same as Group Chat)
   useEffect(() => {
-    let filtered = availableAgents;
-    
-    // Apply search filter
-    if (searchQuery) {
-      filtered = filtered.filter(agent => 
+    const filtered = availableAgents.filter((agent) => {
+      const matchesSearch =
         agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        agent.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        agent.location?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    // Apply category filter
-    if (filterTab === 1) { // Recent
-      filtered = filtered.slice(0, 10);
-    } else if (filterTab === 2) { // Popular
-      filtered = filtered.filter(agent => 
-        agent.role?.toLowerCase().includes('manager') ||
-        agent.role?.toLowerCase().includes('director') ||
-        agent.role?.toLowerCase().includes('senior')
-      );
-    } else if (filterTab === 3) { // By Role
-      const roles = [...new Set(availableAgents.map(a => a.role))];
-      filtered = filtered.filter(agent => 
-        roles.includes(agent.role)
-      );
-    }
+        agent.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.occupation?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesOccupation = !filterOccupation || agent.occupation === filterOccupation;
+      const matchesTechSavvy = !filterTechSavvy || getTechSavvyLevel(agent) === filterTechSavvy;
+      const matchesEnglishSavvy = !filterEnglishSavvy || getEnglishSavvyLevel(agent) === filterEnglishSavvy;
+      const matchesLocation = !filterLocation || agent.location === filterLocation;
+      return matchesSearch && matchesOccupation && matchesTechSavvy && matchesEnglishSavvy && matchesLocation;
+    });
     
     setFilteredAgents(filtered);
-  }, [availableAgents, searchQuery, filterTab]);
+  }, [availableAgents, searchQuery, filterOccupation, filterTechSavvy, filterEnglishSavvy, filterLocation]);
 
   const fetchAgents = async () => {
     try {
       console.log('Fetching agents for User Research...');
       
-      // Use the dedicated research-agents endpoint
-      const response = await axios.get('http://localhost:9001/api/research-agents');
+      // Use the same central Agent Library endpoint for consistency
+      const response = await axios.get(`http://localhost:9001/api/agents/v5?_t=${Date.now()}`);
+      const agents = response.data || [];
       
-      if (response.data.success && response.data.agents) {
-        const agents = response.data.agents;
-        console.log(`✅ Loaded ${agents.length} agents from Agent Library (ai_agents table)`);
-        
-        setAvailableAgents(agents);
+      console.log(`✅ Loaded ${agents.length} agents from Central Library (ai_agents table)`);
+      console.log('📊 English levels:', agents.map(a => `${a.name}: ${a.speech_patterns?.english_level || a.english_savvy || '?'}`));
+      
+      setAvailableAgents(agents);
 
-        if (agents.length === 0) {
-          setError('No agents found in Agent Library. Please generate some agents first from the "Generate Agents" page.');
-        }
-      } else {
-        console.warn('No agents returned from API');
-        setError('No agents available. Please generate some agents first.');
+      if (agents.length === 0) {
+        setError('No agents found in Agent Library. Please generate some agents first from the "Generate Agents" page.');
       }
     } catch (error) {
       console.error('Error fetching agents:', error);
@@ -529,11 +526,11 @@ const UserResearch = () => {
         </DialogTitle>
         
         <DialogContent sx={{ p: 0 }}>
-          {/* Search and Filter */}
+          {/* Search and Advanced Filters */}
           <Box sx={{ p: 3, borderBottom: '1px solid #E2E8F0' }}>
             <TextField
               fullWidth
-              placeholder="Search agents by name, role, or location..."
+              placeholder="Search agents by name, occupation, or location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               InputProps={{
@@ -543,19 +540,81 @@ const UserResearch = () => {
                   </InputAdornment>
                 ),
               }}
-              sx={{ mb: 2 }}
+              sx={{ mb: 3 }}
             />
             
-            <Tabs 
-              value={filterTab} 
-              onChange={(e, newValue) => setFilterTab(newValue)}
-              sx={{ minHeight: 'auto' }}
-            >
-              <Tab label="All" />
-              <Tab label="Recent" />
-              <Tab label="Popular" />
-              <Tab label="By Role" />
-            </Tabs>
+            {/* Advanced Filters Row */}
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>Occupation</InputLabel>
+                <Select
+                  value={filterOccupation}
+                  onChange={(e) => setFilterOccupation(e.target.value)}
+                  label="Occupation"
+                >
+                  <MenuItem value="">All Occupations</MenuItem>
+                  {[...new Set(availableAgents.map(agent => agent.occupation))].map(occupation => (
+                    <MenuItem key={occupation} value={occupation}>{occupation}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>Tech Level</InputLabel>
+                <Select
+                  value={filterTechSavvy}
+                  onChange={(e) => setFilterTechSavvy(e.target.value)}
+                  label="Tech Level"
+                >
+                  <MenuItem value="">All Tech Levels</MenuItem>
+                  {['Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'].map(level => (
+                    <MenuItem key={level} value={level}>{level}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <InputLabel>English Level</InputLabel>
+                <Select
+                  value={filterEnglishSavvy}
+                  onChange={(e) => setFilterEnglishSavvy(e.target.value)}
+                  label="English Level"
+                >
+                  <MenuItem value="">All English Levels</MenuItem>
+                  {['Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'].map(level => (
+                    <MenuItem key={level} value={level}>{level}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Location</InputLabel>
+                <Select
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  label="Location"
+                >
+                  <MenuItem value="">All Locations</MenuItem>
+                  {[...new Set(availableAgents.map(agent => agent.location))].map(location => (
+                    <MenuItem key={location} value={location}>{location}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Button
+                size="small"
+                onClick={() => {
+                  setSearchQuery('');
+                  setFilterOccupation('');
+                  setFilterTechSavvy('');
+                  setFilterEnglishSavvy('');
+                  setFilterLocation('');
+                }}
+                sx={{ textTransform: 'none' }}
+              >
+                Clear Filters
+              </Button>
+            </Box>
           </Box>
 
           {/* Agent Grid */}
@@ -651,25 +710,45 @@ const UserResearch = () => {
                               lineHeight: 1.2
                             }}
                           >
-                            {agent.role}
+                            {agent.occupation || agent.role}
                           </Typography>
                           
-                          {/* Location */}
-                          {agent.location && (
-                            <Typography 
-                              variant="caption" 
-                              color="text.secondary"
+                          {/* Demographics */}
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ 
+                              mb: 1,
+                              fontSize: '0.75rem',
+                              display: 'block'
+                            }}
+                          >
+                            {agent.age || 'Unknown'} years old • {agent.location}
+                          </Typography>
+
+                          {/* Skill Badges */}
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, justifyContent: 'center', mb: 1 }}>
+                            <Chip
+                              label={`Tech: ${getTechSavvyLevel(agent)}`}
+                              size="small"
                               sx={{ 
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 0.5,
-                                fontSize: '0.75rem'
+                                fontSize: '0.7rem', 
+                                height: 20,
+                                backgroundColor: '#FEF3C7',
+                                color: '#92400E'
                               }}
-                            >
-                              📍 {agent.location}
-                            </Typography>
-                          )}
+                            />
+                            <Chip
+                              label={`English: ${getEnglishSavvyLevel(agent)}`}
+                              size="small"
+                              sx={{ 
+                                fontSize: '0.7rem', 
+                                height: 20,
+                                backgroundColor: '#FEE2E2',
+                                color: '#991B1B'
+                              }}
+                            />
+                          </Box>
                         </CardContent>
                       </Card>
                     </Grid>

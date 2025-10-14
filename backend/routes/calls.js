@@ -328,12 +328,52 @@ router.post('/process-speech', async (req, res) => {
                                 isTyping: true
                             });
                             const speakDelay = 200 + Math.floor(Math.random() * 200); // 200-400ms
-                            setTimeout(() => {
+                            setTimeout(async () => {
+                                // Generate audio for this agent response
+                                let audioUrl = null;
+                                try {
+                                    // Get agent data to find voice_id
+                                    const agentResult = await pool.query(
+                                        'SELECT voice_id, location FROM ai_agents WHERE name = $1',
+                                        [resp.agentName]
+                                    );
+                                    
+                                    if (agentResult.rows.length > 0) {
+                                        const agent = agentResult.rows[0];
+                                        const region = resp.region || getRegion(agent.location);
+                                        const voiceId = agent.voice_id || INDIAN_VOICES[region] || INDIAN_VOICES.default;
+                                        const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
+                                        
+                                        console.log(`🎙️ Generating voice for ${resp.agentName} (${region}): ${voiceId}`);
+                                        
+                                        const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
+                                            text: resp.responseText,
+                                            model_id: 'eleven_multilingual_v2',
+                                            voice_settings: voiceSettings
+                                        });
+                                        
+                                        const filename = `call_${callId}_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+                                        const filepath = path.join(audioTempDir, filename);
+                                        
+                                        const chunks = [];
+                                        for await (const chunk of audioStream) {
+                                            chunks.push(chunk);
+                                        }
+                                        const audioBuffer = Buffer.concat(chunks);
+                                        fs.writeFileSync(filepath, audioBuffer);
+                                        
+                                        audioUrl = `/uploads/audio/${filename}`;
+                                        console.log(`✅ Audio generated: ${audioUrl}`);
+                                    }
+                                } catch (audioError) {
+                                    console.warn('⚠️ Audio generation failed:', audioError.message);
+                                }
+                                
                                 ioLocal && ioLocal.to(roomName).emit('agent-response', {
                                     callId,
                                     agentName: resp.agentName,
                                     responseText: resp.responseText,
-                                    audioUrl: null,
+                                    audioUrl: audioUrl,
                                     timestamp: new Date().toISOString(),
                                     region: resp.region || 'north'
                                 });
