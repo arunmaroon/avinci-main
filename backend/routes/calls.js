@@ -600,7 +600,7 @@ router.post('/process-speech', async (req, res) => {
         console.log(`Transcript: ${transcript}`);
 
         // Step 2: Get AI response using direct OpenAI vision (like Group Chat)
-        let responseText = '', agentName = '', region = 'north';
+        let responseText = '', agentName = '', region = 'north', responses = [];
         
         // For group calls, use direct OpenAI vision analysis
         if (type === 'group') {
@@ -616,7 +616,7 @@ router.post('/process-speech', async (req, res) => {
                 
                 // Use direct OpenAI vision analysis like Group Chat
                 console.log('🔍 About to call generateGroupResponsesWithVision with agentIds:', agentIds);
-                const responses = await generateGroupResponsesWithVision(agentIds, transcript, ui_path, callId);
+                responses = await generateGroupResponsesWithVision(agentIds, transcript, ui_path, callId);
                 console.log('🔍 generateGroupResponsesWithVision returned:', responses.length, 'responses');
                 
                 if (responses && responses.length > 0) {
@@ -1124,15 +1124,21 @@ router.post('/process-speech', async (req, res) => {
         }
 
         // For group calls, we already emitted Socket.IO events and the frontend does TTS.
-        // Return immediately to reduce latency.
+        // Return the first response for compatibility.
         if (type === 'group') {
-            // For group calls, return empty response since agents respond via Socket.IO
+            console.log('🔍 Debug: Returning group response. Responses length:', responses?.length || 0);
+            console.log('🔍 Debug: First response:', responses?.[0]);
+            const firstResponse = responses && responses.length > 0 ? responses[0] : null;
+            const responseText = firstResponse?.responseText || '';
+            const agentName = firstResponse?.agentName || '';
+            console.log('🔍 Debug: Final responseText:', responseText);
+            console.log('🔍 Debug: Final agentName:', agentName);
             return res.json({ 
-                responseText: '',
-                audioUrl: null,
+                responseText, 
+                audioUrl: null, 
                 transcript,
-                agentName: '',
-                region: 'north'
+                agentName,
+                region: firstResponse?.region || 'north'
             });
         }
 
