@@ -61,9 +61,21 @@ router.get('/', async (req, res) => {
             // Return short view for card rendering
             const query = `
                 SELECT 
-                    id, name, avatar_url, occupation as role_title, employment_type as company, location, quote,
-                    objectives, fears, apprehensions, tech_savviness, 
-                    domain_literacy, communication_style, is_active as status, demographics,
+                    id,
+                    name,
+                    avatar_url,
+                    occupation AS role_title,
+                    employment_type AS company,
+                    location,
+                    sample_quote AS quote,
+                    objectives,
+                    fears,
+                    apprehensions,
+                    tech_savviness,
+                    domain_literacy,
+                    communication_style,
+                    is_active AS status,
+                    demographics,
                     created_at
                 FROM ai_agents 
                 WHERE is_active = true

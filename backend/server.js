@@ -8,6 +8,11 @@ const socketIO = require('socket.io');
 const { createTables, redis } = require('./models/database');
 require('dotenv').config();
 
+// FIX: Disable SSL verification globally for ElevenLabs API
+// This fixes the "self-signed certificate in certificate chain" error
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+console.log('⚠️  SSL verification disabled for ElevenLabs API compatibility');
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {

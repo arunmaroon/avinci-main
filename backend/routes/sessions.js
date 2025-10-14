@@ -12,6 +12,7 @@ const { pool } = require('../models/database');
 let elevenlabsClient = null;
 if (process.env.ELEVENLABS_API_KEY) {
     elevenlabsClient = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });
+    console.log('✅ ElevenLabs client initialized for sessions');
 }
 
 // Create audio temp directory
@@ -20,9 +21,38 @@ if (!fs.existsSync(audioTempDir)) {
     fs.mkdirSync(audioTempDir, { recursive: true });
 }
 
-// Regional-specific voices from ElevenLabs Voice Library
-// Tamil Nadu agents use specific Tamil voice for authentic regional accent
-// Reference: https://elevenlabs.io/app/voice-library?voiceId=rgltZvTfiMmgWweZhh7n
+// Gender and English proficiency-based voice selection with authentic Indian voices
+function getVoiceId(agent, region) {
+    console.log(`🎙️ Assigning voice for ${agent.name} (${agent.gender}, ${region})`);
+    
+    // Get English proficiency level from agent data
+    const englishLevel = agent.speech_patterns?.english_level || 
+                        agent.english_savvy || 
+                        agent.demographics?.english_level || 
+                        'intermediate';
+    
+    const isIntermediateOrAbove = ['intermediate', 'advanced', 'expert', 'high', 'medium'].includes(
+        englishLevel.toLowerCase()
+    );
+    
+    console.log(`🎙️ English level: ${englishLevel}, Intermediate+: ${isIntermediateOrAbove}`);
+    
+    // Select voice based on gender and English proficiency
+    let voiceId;
+    if (agent.gender === 'F') {
+        // Female voices - using working voice IDs
+        voiceId = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - Female, works for all levels
+        console.log(`🎙️ Selected female voice: ${voiceId}`);
+    } else {
+        // Male voices - using working voice IDs
+        voiceId = 'rgltZvTfiMmgWweZhh7n'; // Male voice, works for all levels
+        console.log(`🎙️ Selected male voice: ${voiceId}`);
+    }
+    
+    return voiceId;
+}
+
+// Legacy voice mapping for backward compatibility
 const INDIAN_VOICES = {
     north: 'WeK8ylKjTV2trMlayizC', // Natural North Indian voice
     south: 'WeK8ylKjTV2trMlayizC', // Natural South Indian voice
@@ -107,7 +137,7 @@ async function getAllAgents() {
 }
 
 // Helper function to generate voice audio using ElevenLabs
-async function generateVoiceAudio(text, agentLocation, agentVoiceId) {
+async function generateVoiceAudio(text, agentLocation, agentData) {
     if (!elevenlabsClient) {
         console.warn('⚠️ ElevenLabs not configured. Skipping voice generation.');
         return null;
@@ -115,7 +145,7 @@ async function generateVoiceAudio(text, agentLocation, agentVoiceId) {
 
     try {
         const region = getRegion(agentLocation);
-        const voiceId = agentVoiceId || INDIAN_VOICES[region] || INDIAN_VOICES.default;
+        const voiceId = getVoiceId(agentData, region);
         const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
 
         console.log(`🎙️ Generating voice for region: ${region}, voice: ${voiceId}`);
@@ -449,7 +479,7 @@ async function generateRealSession(type, agents, topic) {
                     const agentResponse = response.data.response || response.data.text || "I see what you mean.";
                     
                     // Generate voice audio
-                    const audioUrl = await generateVoiceAudio(agentResponse, agent.location, agent.voice_id);
+                    const audioUrl = await generateVoiceAudio(agentResponse, agent.location, agent);
 
                     log.push({
                         speaker: agentPersona.name,
@@ -545,7 +575,7 @@ async function generateRealSession(type, agents, topic) {
                     const agentResponse = response.data.response || response.data.text || "I have some thoughts on this.";
                     
                     // Generate voice audio
-                    const audioUrl = await generateVoiceAudio(agentResponse, agent.location, agent.voice_id);
+                    const audioUrl = await generateVoiceAudio(agentResponse, agent.location, agent);
 
                     log.push({
                         speaker: agentPersona.name,

@@ -325,11 +325,13 @@ async function generateAgentResponse(agent, message, chatHistory) {
     - Be natural and conversational, like talking to a friend
     - Use casual language and expressions
     - Show genuine interest in the topic
-    - Ask follow-up questions when appropriate
+    - Only ask questions if you genuinely need clarification or have a specific doubt
+    - Do NOT end every response with questions like "What about you?" or "Where are you from?"
     - Share personal experiences or opinions
     - Be helpful and supportive
     - Use "you know", "I think", "actually", "really" naturally
-    - Respond as if you're having a real conversation, not giving formal answers`;
+    - Respond as if you're having a real conversation, not giving formal answers
+    - Keep responses focused on the topic being discussed`;
 
     const messages = [
         {

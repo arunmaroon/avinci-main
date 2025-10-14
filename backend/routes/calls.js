@@ -29,6 +29,134 @@ function getRegion(location) {
     }
 }
 
+// Initialize OpenAI for vision analysis
+let openai = null;
+const getOpenAI = () => {
+    if (!openai) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error('OPENAI_API_KEY environment variable is required');
+        }
+        openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+        });
+    }
+    return openai;
+};
+
+// Generate group responses with vision analysis (like Group Chat)
+async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, callId) {
+    try {
+        const responses = [];
+        
+        for (const agentId of agentIds) {
+            try {
+                // Get agent data
+                const agentResult = await pool.query(
+                    'SELECT * FROM ai_agents WHERE id = $1',
+                    [agentId]
+                );
+                
+                if (agentResult.rows.length === 0) continue;
+                
+                const agent = agentResult.rows[0];
+                const region = getRegion(agent.location);
+                
+                // Build context for the agent
+                const context = `You are ${agent.name}, a ${agent.occupation} from ${agent.location}. 
+                You are participating in a group discussion about: "${transcript}".
+                ${ui_path ? 'The user has shared an image for you to analyze and provide feedback on.' : ''}
+                
+                Your personality: ${JSON.stringify(agent.personality || {})}
+                Your background: ${agent.background_story || 'No specific background provided'}
+                Your goals: ${JSON.stringify(agent.goals || [])}
+                Your pain points: ${JSON.stringify(agent.pain_points || [])}
+                
+                IMPORTANT CONVERSATION RULES:
+                - Respond naturally as this person would, considering your background and personality
+                - Share your thoughts, experiences, and opinions on the topic
+                - Only ask questions if you genuinely need clarification or have a specific doubt
+                - Do NOT end every response with questions like "What about you?" or "Where are you from?"
+                - Keep responses conversational but focused on the topic
+                - Use natural Indian expressions and speaking patterns
+                ${ui_path ? 'Analyze the uploaded image and provide specific feedback about what you see.' : ''}`;
+                
+                // Prepare messages for OpenAI
+                const messages = [
+                    {
+                        role: "system",
+                        content: context
+                    }
+                ];
+                
+                // Add image analysis if ui_path is provided
+                if (ui_path) {
+                    try {
+                        const imagePath = `.${ui_path}`;
+                        const imageBuffer = fs.readFileSync(imagePath);
+                        const base64Image = imageBuffer.toString('base64');
+                        
+                        const mimeType = ui_path.endsWith('.png') ? 'image/png' : 
+                                        ui_path.endsWith('.jpg') || ui_path.endsWith('.jpeg') ? 'image/jpeg' : 
+                                        'image/png';
+                        
+                        messages.push({
+                            role: "user",
+                            content: [
+                                {
+                                    type: "text",
+                                    text: transcript
+                                },
+                                {
+                                    type: "image_url",
+                                    image_url: {
+                                        url: `data:${mimeType};base64,${base64Image}`,
+                                        detail: "high"
+                                    }
+                                }
+                            ]
+                        });
+                    } catch (error) {
+                        console.error('Error reading image file:', error);
+                        messages.push({
+                            role: "user",
+                            content: transcript
+                        });
+                    }
+                } else {
+                    messages.push({
+                        role: "user",
+                        content: transcript
+                    });
+                }
+                
+                // Generate response using OpenAI
+                const response = await getOpenAI().chat.completions.create({
+                    model: "gpt-4o",
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 500
+                });
+                
+                const responseText = response.choices[0].message.content;
+                
+                responses.push({
+                    agentName: agent.name,
+                    responseText: responseText,
+                    region: region
+                });
+                
+            } catch (error) {
+                console.error(`Error generating response for agent ${agentId}:`, error);
+            }
+        }
+        
+        return responses;
+    } catch (error) {
+        console.error('Error in generateGroupResponsesWithVision:', error);
+        return [];
+    }
+}
+
 // Initialize services lazily (only when audio features are used)
 let twilioClient = null;
 let deepgramClient = null;
@@ -58,12 +186,9 @@ function initializeAudioServices() {
         }
     if (!elevenlabsClient && process.env.ELEVENLABS_API_KEY) {
         elevenlabsClient = new ElevenLabsClient({ 
-            apiKey: process.env.ELEVENLABS_API_KEY,
-            // Disable SSL verification for development (not recommended for production)
-            httpsAgent: new https.Agent({
-                rejectUnauthorized: false
-            })
+            apiKey: process.env.ELEVENLABS_API_KEY
         });
+        console.log('✅ ElevenLabs client initialized');
     }
     
     // Check if all required services are available
@@ -97,39 +222,35 @@ const INDIAN_VOICES = {
     default: 'EXAVITQu4vr4xnSDxMaL' // Sarah - Female, supports Hindi
 };
 
-        // Gender-specific voice selection with authentic Indian voices
+        // Gender and English proficiency-based voice selection with authentic Indian voices
         function getVoiceId(agent, region) {
-            // Always use regional voices instead of database voice_id for consistency
             console.log(`🎙️ Assigning voice for ${agent.name} (${agent.gender}, ${region})`);
             
-            // Use different voices for male and female with authentic Indian voices
+            // Get English proficiency level from agent data
+            const englishLevel = agent.speech_patterns?.english_level || 
+                                agent.english_savvy || 
+                                agent.demographics?.english_level || 
+                                'intermediate';
+            
+            const isIntermediateOrAbove = ['intermediate', 'advanced', 'expert', 'high', 'medium'].includes(
+                englishLevel.toLowerCase()
+            );
+            
+            console.log(`🎙️ English level: ${englishLevel}, Intermediate+: ${isIntermediateOrAbove}`);
+            
+            // Select voice based on gender and English proficiency
+            let voiceId;
             if (agent.gender === 'F') {
-                // Female voices - Sarah supports Hindi and sounds natural
-                const femaleVoices = {
-                    north: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
-                    south: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
-                    west: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
-                    east: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
-                    tamil: 'EXAVITQu4vr4xnSDxMaL', // Sarah - Female, supports Hindi
-                    default: 'EXAVITQu4vr4xnSDxMaL'
-                };
-                const voiceId = femaleVoices[region] || femaleVoices.default;
-                console.log(`🎙️ Selected female voice: ${voiceId} for region: ${region}`);
-                return voiceId;
+                // Female voices - using working voice IDs
+                voiceId = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - Female, works for all levels
+                console.log(`🎙️ Selected female voice: ${voiceId}`);
             } else {
-                // Male voices - Use Chris for natural male voice
-                const maleVoices = {
-                    north: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
-                    south: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
-                    west: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
-                    east: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
-                    tamil: 'iP95p4xoKVk53GoZ742B', // Chris - Male, natural voice
-                    default: 'iP95p4xoKVk53GoZ742B'
-                };
-                const voiceId = maleVoices[region] || maleVoices.default;
-                console.log(`🎙️ Selected male voice: ${voiceId} for region: ${region}`);
-                return voiceId;
+                // Male voices - using working voice IDs
+                voiceId = 'rgltZvTfiMmgWweZhh7n'; // Male voice, works for all levels
+                console.log(`🎙️ Selected male voice: ${voiceId}`);
             }
+            
+            return voiceId;
         }
         
         // Optimized voice settings per region
@@ -276,8 +397,8 @@ router.post('/process-speech', async (req, res) => {
             });
         }
         
-        const { audio, callId, type = 'group', transcript: providedTranscript } = req.body;
-        console.log('Request params:', { callId, type, audioLength: audio?.length, hasTranscript: !!providedTranscript });
+        const { audio, callId, type = 'group', transcript: providedTranscript, ui_path } = req.body;
+        console.log('Request params:', { callId, type, audioLength: audio?.length, hasTranscript: !!providedTranscript, ui_path });
         console.log('🔍 DEBUG: Full request body:', JSON.stringify(req.body, null, 2));
 
         if (!callId) {
@@ -356,38 +477,27 @@ router.post('/process-speech', async (req, res) => {
 
         console.log(`Transcript: ${transcript}`);
 
-        // Step 2: Get AI response from data-processing service or use fallback
+        // Step 2: Get AI response using direct OpenAI vision (like Group Chat)
         let responseText = '', agentName = '', region = 'north';
         
-        // For group calls, prioritize group response
+        // For group calls, use direct OpenAI vision analysis
         if (type === 'group') {
             try {
-                console.log('🎭 Processing group call with multiple agents...');
-                // Load agent_ids for the call so DP can choose unique agents
+                console.log('🎭 Processing group call with image analysis...');
+                // Load agent_ids for the call
                 const callRow = await pool.query('SELECT agent_ids FROM voice_calls WHERE id = $1', [callId]);
                 const agentIds = (callRow.rows[0]?.agent_ids || []).filter(Boolean);
-                const groupResponse = await axios.post(
-                    `${process.env.DATA_PROCESSING_URL || 'http://localhost:8000'}/process-group-overlap`,
-                    { transcript, callId, type, agentIds },
-                    { timeout: 6000 }
-                );
                 
-                if (groupResponse.data && Array.isArray(groupResponse.data) && groupResponse.data.length > 0) {
-                    console.log(`🎭 Group call: Generated ${groupResponse.data.length} raw agent responses`);
-                    // Ensure unique agents and sequence them with short staggered delays
-                    const seen = new Set();
-                    const deduped = groupResponse.data.filter(r => {
-                        const k = (r.agentName || '').trim().toLowerCase();
-                        if (!k || seen.has(k)) return false;
-                        seen.add(k);
-                        return true;
-                    });
-                    const emitList = deduped.slice(0, Math.max(2, Math.min(4, agentIds.length || 3)));
+                // Use direct OpenAI vision analysis like Group Chat
+                const responses = await generateGroupResponsesWithVision(agentIds, transcript, ui_path, callId);
+                
+                if (responses && responses.length > 0) {
+                    console.log(`🎭 Group call: Generated ${responses.length} responses with vision`);
                     const ioLocal = req.app.get('io');
                     const roomName = `call-${callId}`;
-                    const baseGap = 400 + Math.floor(Math.random() * 300); // 400-700ms between speakers
-                    console.log(`🎭 Emitting ${emitList.length} unique agents sequentially (gap ~${baseGap}ms)`);
-                    emitList.forEach((resp, index) => {
+                    const baseGap = 400 + Math.floor(Math.random() * 300);
+                    
+                    responses.forEach((resp, index) => {
                         const startDelay = index * baseGap;
                         setTimeout(() => {
                             ioLocal && ioLocal.to(roomName).emit('agent-typing', {
@@ -395,24 +505,21 @@ router.post('/process-speech', async (req, res) => {
                                 agentName: resp.agentName,
                                 isTyping: true
                             });
-                            const speakDelay = 200 + Math.floor(Math.random() * 200); // 200-400ms
+                            const speakDelay = 200 + Math.floor(Math.random() * 200);
                             setTimeout(async () => {
                                 // Generate audio for this agent response
                                 let audioUrl = null;
                                 try {
-                                    // Get agent data to find voice_id
                                     const agentResult = await pool.query(
-                                        'SELECT voice_id, location FROM ai_agents WHERE name = $1',
+                                        'SELECT voice_id, location, gender, speech_patterns, english_savvy, demographics FROM ai_agents WHERE name = $1',
                                         [resp.agentName]
                                     );
                                     
                                     if (agentResult.rows.length > 0) {
                                         const agent = agentResult.rows[0];
                                         const region = resp.region || getRegion(agent.location);
-                                        const voiceId = agent.voice_id || INDIAN_VOICES[region] || INDIAN_VOICES.default;
+                                        const voiceId = getVoiceId(agent, region);
                                         const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
-                                        
-                                        console.log(`🎙️ Generating voice for ${resp.agentName} (${region}): ${voiceId}`);
                                         
                                         const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
                                             text: resp.responseText,
@@ -431,7 +538,6 @@ router.post('/process-speech', async (req, res) => {
                                         fs.writeFileSync(filepath, audioBuffer);
                                         
                                         audioUrl = `/uploads/audio/${filename}`;
-                                        console.log(`✅ Audio generated: ${audioUrl}`);
                                     }
                                 } catch (audioError) {
                                     console.warn('⚠️ Audio generation failed:', audioError.message);
@@ -445,91 +551,199 @@ router.post('/process-speech', async (req, res) => {
                                     timestamp: new Date().toISOString(),
                                     region: resp.region || 'north'
                                 });
-                                console.log(`✅ Agent responded: ${resp.agentName}`);
                             }, speakDelay);
                         }, startDelay);
                     });
                     
                     // Return the first response for the main response
-                    ({ responseText, agentName, region = 'north' } = groupResponse.data[0]);
+                    ({ responseText, agentName, region = 'north' } = responses[0]);
                 } else {
-                    console.warn('Group overlap service returned empty response, falling back to persona generation');
-                    // Don't fall through to single response logic for group calls
-                    // The persona generation logic below will handle group calls
+                    console.warn('No responses generated, falling back to persona generation');
+                    // Fall through to persona generation below
                 }
-            } catch (groupError) {
-                console.warn('Group overlap service unavailable, falling back to multiple single responses:', groupError.message);
+            } catch (error) {
+                console.error('Group call with vision failed:', error);
+                // Fall through to persona generation
+            }
+        }
+        
+        // Fallback to persona generation if group call failed
+        if (!responseText) {
+            try {
+                console.log('🎭 Fallback: Using persona generation...');
+                const callRow = await pool.query('SELECT agent_ids FROM voice_calls WHERE id = $1', [callId]);
+                const agentIds = (callRow.rows[0]?.agent_ids || []).filter(Boolean);
                 
-                // Fallback: Generate multiple responses by calling single response multiple times
+                // Try data-processing service first
                 try {
-                    const fallbackResponses = [];
-                    // Fetch call data to get agent_ids
-                    const callDataResponse = await pool.query('SELECT agent_ids FROM voice_calls WHERE id = $1', [callId]);
-                    const callData = callDataResponse.rows[0] || {};
-                    const agentIds = callData.agent_ids || [];
-                    
-                    // Get 2-3 agents to respond
-                    const numResponders = Math.min(2, agentIds.length);
-                    const respondingAgents = agentIds.slice(0, numResponders);
-                    
-                    console.log(`🎭 Fallback: Generating ${respondingAgents.length} single responses`);
-                    
-                    // Generate responses from multiple agents
-                    for (let i = 0; i < respondingAgents.length; i++) {
-                        try {
-                            const singleResponse = await axios.post(
-                                `${process.env.DATA_PROCESSING_URL || 'http://localhost:8000'}/process-input`,
-                                { transcript, callId, type: '1on1' },
-                                { timeout: 5000 }
-                            );
-                            
-                            if (singleResponse.data && singleResponse.data.responseText) {
-                                fallbackResponses.push({
-                                    agentName: singleResponse.data.agentName || `Agent ${i + 1}`,
-                                    responseText: singleResponse.data.responseText,
-                                    region: singleResponse.data.region || 'north'
-                                });
-                            }
-                        } catch (singleError) {
-                            console.warn(`Single response ${i + 1} failed:`, singleError.message);
-                        }
-                    }
-                    
-                    if (fallbackResponses.length > 0) {
-                        console.log(`🎭 Fallback: Generated ${fallbackResponses.length} responses`);
+                    const groupResponse = await axios.post(
+                        `${process.env.DATA_PROCESSING_URL || 'http://localhost:8000'}/process-group-overlap`,
+                        { transcript, callId, type, agentIds, ui_path: ui_path },
+                        { timeout: 6000 }
+                    );
+                
+                    if (groupResponse.data && Array.isArray(groupResponse.data) && groupResponse.data.length > 0) {
+                        console.log(`🎭 Group call: Generated ${groupResponse.data.length} raw agent responses`);
+                        // Ensure unique agents and sequence them with short staggered delays
+                        const seen = new Set();
+                        const deduped = groupResponse.data.filter(r => {
+                            const k = (r.agentName || '').trim().toLowerCase();
+                            if (!k || seen.has(k)) return false;
+                            seen.add(k);
+                            return true;
+                        });
+                        const emitList = deduped.slice(0, Math.max(2, Math.min(4, agentIds.length || 3)));
                         const ioLocal = req.app.get('io');
                         const roomName = `call-${callId}`;
-                        const baseGap = 400 + Math.floor(Math.random() * 300);
-                        fallbackResponses.forEach((response, index) => {
+                        const baseGap = 400 + Math.floor(Math.random() * 300); // 400-700ms between speakers
+                        console.log(`🎭 Emitting ${emitList.length} unique agents sequentially (gap ~${baseGap}ms)`);
+                        emitList.forEach((resp, index) => {
                             const startDelay = index * baseGap;
                             setTimeout(() => {
                                 ioLocal && ioLocal.to(roomName).emit('agent-typing', {
                                     callId,
-                                    agentName: response.agentName,
+                                    agentName: resp.agentName,
                                     isTyping: true
                                 });
-                                const speakDelay = 200 + Math.floor(Math.random() * 200);
-                                setTimeout(() => {
+                                const speakDelay = 200 + Math.floor(Math.random() * 200); // 200-400ms
+                                setTimeout(async () => {
+                                    // Generate audio for this agent response
+                                    let audioUrl = null;
+                                    try {
+                                        // Get agent data to find voice_id
+                                        const agentResult = await pool.query(
+                                            'SELECT voice_id, location, gender, speech_patterns, english_savvy, demographics FROM ai_agents WHERE name = $1',
+                                            [resp.agentName]
+                                        );
+                                        
+                                        if (agentResult.rows.length > 0) {
+                                            const agent = agentResult.rows[0];
+                                            const region = resp.region || getRegion(agent.location);
+                                            const voiceId = getVoiceId(agent, region);
+                                            const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
+                                            
+                                            console.log(`🎙️ Generating voice for ${resp.agentName} (${region}): ${voiceId}`);
+                                            
+                                            const audioStream = await elevenlabsClient.textToSpeech.convert(voiceId, {
+                                                text: resp.responseText,
+                                                model_id: 'eleven_multilingual_v2',
+                                                voice_settings: voiceSettings
+                                            });
+                                            
+                                            const filename = `call_${callId}_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+                                            const filepath = path.join(audioTempDir, filename);
+                                            
+                                            const chunks = [];
+                                            for await (const chunk of audioStream) {
+                                                chunks.push(chunk);
+                                            }
+                                            const audioBuffer = Buffer.concat(chunks);
+                                            fs.writeFileSync(filepath, audioBuffer);
+                                            
+                                            audioUrl = `/uploads/audio/${filename}`;
+                                            console.log(`✅ Audio generated: ${audioUrl}`);
+                                        }
+                                    } catch (audioError) {
+                                        console.warn('⚠️ Audio generation failed:', audioError.message);
+                                    }
+                                    
                                     ioLocal && ioLocal.to(roomName).emit('agent-response', {
                                         callId,
-                                        agentName: response.agentName,
-                                        responseText: response.responseText,
-                                        audioUrl: null,
+                                        agentName: resp.agentName,
+                                        responseText: resp.responseText,
+                                        audioUrl: audioUrl,
                                         timestamp: new Date().toISOString(),
-                                        region: response.region || 'north'
+                                        region: resp.region || 'north'
                                     });
-                                    console.log(`✅ Fallback response sent:`, response.agentName);
+                                    console.log(`✅ Agent responded: ${resp.agentName}`);
                                 }, speakDelay);
                             }, startDelay);
                         });
                         
-                        // Use first response for main response
-                        ({ responseText, agentName, region = 'north' } = fallbackResponses[0]);
+                        // Return the first response for the main response
+                        ({ responseText, agentName, region = 'north' } = groupResponse.data[0]);
+                    } else {
+                        console.warn('Group overlap service returned empty response, falling back to persona generation');
+                        // Don't fall through to single response logic for group calls
+                        // The persona generation logic below will handle group calls
                     }
-                } catch (fallbackError) {
-                    console.warn('Fallback multiple responses failed:', fallbackError.message);
-                    // Fall through to single response logic
+                } catch (groupError) {
+                    console.warn('Group overlap service unavailable, falling back to multiple single responses:', groupError.message);
+                    
+                    // Fallback: Generate multiple responses by calling single response multiple times
+                    try {
+                        const fallbackResponses = [];
+                        // Fetch call data to get agent_ids
+                        const callDataResponse = await pool.query('SELECT agent_ids FROM voice_calls WHERE id = $1', [callId]);
+                        const callData = callDataResponse.rows[0] || {};
+                        const agentIds = callData.agent_ids || [];
+                        
+                        // Get 2-3 agents to respond
+                        const numResponders = Math.min(2, agentIds.length);
+                        const respondingAgents = agentIds.slice(0, numResponders);
+                        
+                        console.log(`🎭 Fallback: Generating ${respondingAgents.length} single responses`);
+                        
+                        // Generate responses from multiple agents
+                        for (let i = 0; i < respondingAgents.length; i++) {
+                            try {
+                                const singleResponse = await axios.post(
+                                    `${process.env.DATA_PROCESSING_URL || 'http://localhost:8000'}/process-input`,
+                                    { transcript, callId, type: '1on1', ui_path: ui_path },
+                                    { timeout: 5000 }
+                                );
+                                
+                                if (singleResponse.data && singleResponse.data.responseText) {
+                                    fallbackResponses.push({
+                                        agentName: singleResponse.data.agentName || `Agent ${i + 1}`,
+                                        responseText: singleResponse.data.responseText,
+                                        region: singleResponse.data.region || 'north'
+                                    });
+                                }
+                            } catch (singleError) {
+                                console.warn(`Single response ${i + 1} failed:`, singleError.message);
+                            }
+                        }
+                        
+                        if (fallbackResponses.length > 0) {
+                            console.log(`🎭 Fallback: Generated ${fallbackResponses.length} responses`);
+                            const ioLocal = req.app.get('io');
+                            const roomName = `call-${callId}`;
+                            const baseGap = 400 + Math.floor(Math.random() * 300);
+                            fallbackResponses.forEach((response, index) => {
+                                const startDelay = index * baseGap;
+                                setTimeout(() => {
+                                    ioLocal && ioLocal.to(roomName).emit('agent-typing', {
+                                        callId,
+                                        agentName: response.agentName,
+                                        isTyping: true
+                                    });
+                                    const speakDelay = 200 + Math.floor(Math.random() * 200);
+                                    setTimeout(() => {
+                                        ioLocal && ioLocal.to(roomName).emit('agent-response', {
+                                            callId,
+                                            agentName: response.agentName,
+                                            responseText: response.responseText,
+                                            audioUrl: null,
+                                            timestamp: new Date().toISOString(),
+                                            region: response.region || 'north'
+                                        });
+                                        console.log(`✅ Fallback response sent:`, response.agentName);
+                                    }, speakDelay);
+                                }, startDelay);
+                            });
+                            
+                            // Use first response for main response
+                            ({ responseText, agentName, region = 'north' } = fallbackResponses[0]);
+                        }
+                    } catch (fallbackError) {
+                        console.warn('Fallback multiple responses failed:', fallbackError.message);
+                        // Fall through to single response logic
+                    }
                 }
+            } catch (error) {
+                console.error('Persona generation failed:', error);
+                // Fall through to single response logic
             }
         }
         

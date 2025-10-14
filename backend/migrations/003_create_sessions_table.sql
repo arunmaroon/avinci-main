@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS sessions (
   id SERIAL PRIMARY KEY,
   type VARCHAR(20) NOT NULL CHECK (type IN ('group', '1on1')),
-  agent_ids INTEGER[] NOT NULL,
+  agent_ids UUID[] NOT NULL,
   topic TEXT NOT NULL,
   log_json JSONB NOT NULL DEFAULT '[]'::jsonb,
   status VARCHAR(20) DEFAULT 'completed',
@@ -26,5 +26,6 @@ COMMENT ON COLUMN sessions.type IS 'Session type: group (multi-agent discussion)
 COMMENT ON COLUMN sessions.agent_ids IS 'Array of agent IDs participating in the session';
 COMMENT ON COLUMN sessions.log_json IS 'JSON array of conversation log: [{speaker, text, action, timestamp}]';
 COMMENT ON COLUMN sessions.insights IS 'Extracted insights from the session';
+
 
 
