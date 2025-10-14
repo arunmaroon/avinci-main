@@ -26,11 +26,18 @@ const complexityToEnglishLevel = (complexity) => {
 };
 
 const deriveEnglishLevel = (agent) => {
+    // Use same logic as Group Chat for consistency
+    if (agent.speech_patterns?.english_level) return agent.speech_patterns.english_level;
+    if (agent.english_savvy) return agent.english_savvy;
+    if (agent.communication_style?.english_proficiency) return agent.communication_style.english_proficiency;
+    if (agent.communication_style?.english_level) return agent.communication_style.english_level;
+    
+    // Fallback to old logic if new fields are empty
     if (agent?.vocabulary_profile?.complexity) {
         return complexityToEnglishLevel(agent.vocabulary_profile.complexity);
     }
     const gauge = agent?.gauges?.english_literacy;
-    if (!gauge) return 'Unknown';
+    if (!gauge) return 'Intermediate'; // Default fallback (new scale)
     const normalized = gauge.toLowerCase();
     switch (normalized) {
         case 'high':
@@ -38,7 +45,7 @@ const deriveEnglishLevel = (agent) => {
         case 'medium':
             return 'Intermediate';
         case 'low':
-            return 'Basic';
+            return 'Elementary';
         case 'basic':
             return 'Beginner';
         default:
