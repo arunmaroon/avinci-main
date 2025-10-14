@@ -68,8 +68,12 @@ const GroupChatPage = () => {
         try {
             setLoading(true);
             // Use the same central Agent Library endpoint for consistency
-            const response = await api.get('/agents/v5');
-            setAllAgents(response.data || []);
+            // Add cache buster to ensure fresh data
+            const response = await api.get(`/agents/v5?_t=${Date.now()}`);
+            const agents = response.data || [];
+            console.log('✅ Loaded agents from Central Library:', agents.length);
+            console.log('📊 English levels:', agents.map(a => `${a.name}: ${a.speech_patterns?.english_level || a.english_savvy || '?'}`));
+            setAllAgents(agents);
         } catch (err) {
             console.error('Error fetching agents:', err);
         } finally {
