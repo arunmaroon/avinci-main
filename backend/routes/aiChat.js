@@ -518,7 +518,16 @@ function buildEnhancedContext(agent, chatHistory, query, ui_path) {
         context += `2. Reference your specific pain points and preferences\n`;
         context += `3. Use your natural speech patterns and vocabulary\n`;
         context += `4. Provide specific, actionable feedback that reflects your background\n`;
-        context += `5. Stay in character throughout your response\n\n`;
+        context += `5. Stay in character throughout your response\n`;
+        context += `6. Be conversational and engaging but do NOT end responses with questions\n`;
+        context += `7. Show genuine interest in the conversation and provide thoughtful responses\n\n`;
+    } else {
+        context += `CONVERSATION GUIDELINES:\n`;
+        context += `- Be conversational and engaging but do NOT end responses with questions\n`;
+        context += `- Show genuine interest in the conversation and the person you're talking to\n`;
+        context += `- Provide thoughtful responses without asking follow-up questions\n`;
+        context += `- Be warm, friendly, and genuinely interested in the conversation\n`;
+        context += `- Keep responses conversational but focused on sharing your perspective\n\n`;
     }
     
     return context;
@@ -646,6 +655,89 @@ async function storeConversation(agentId, userMessage, agentResponse) {
         // Don't throw error to avoid breaking the chat flow
     }
 }
+
+/**
+ * POST /api/ai/generate-summary - Generate summary of chat history
+ * Body: { chatHistory, chatPurpose, agents }
+ */
+router.post('/generate-summary', async (req, res) => {
+    try {
+        const { chatHistory, chatPurpose, agents } = req.body;
+        
+        if (!chatHistory || !Array.isArray(chatHistory)) {
+            return res.status(400).json({ 
+                error: 'Chat history is required and must be an array' 
+            });
+        }
+
+        if (chatHistory.length === 0) {
+            return res.json({
+                success: true,
+                summary: 'No conversation to summarize.',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Build context for summary generation
+        const agentNames = agents ? agents.map(a => a.name).join(', ') : 'Multiple agents';
+        const purpose = chatPurpose || 'General discussion';
+        
+        const conversationText = chatHistory
+            .map(msg => `${msg.role === 'user' ? 'User' : msg.agentName || 'Agent'}: ${msg.content}`)
+            .join('\n');
+
+        const summaryPrompt = `Please provide a comprehensive summary of the following conversation between a user and ${agentNames}.
+
+Purpose of the conversation: ${purpose}
+
+Conversation:
+${conversationText}
+
+Please provide a summary that includes:
+1. Key topics discussed
+2. Main insights and findings
+3. Important decisions or conclusions
+4. Any action items or next steps
+5. Overall sentiment and tone
+
+Keep the summary concise but comprehensive, focusing on the most important points.`;
+
+        const messages = [
+            {
+                role: "system",
+                content: "You are an expert at summarizing conversations and extracting key insights. Provide clear, structured summaries that capture the essence of the discussion."
+            },
+            {
+                role: "user",
+                content: summaryPrompt
+            }
+        ];
+
+        const response = await getOpenAI().chat.completions.create({
+            model: "gpt-4o",
+            messages: messages,
+            temperature: 0.3,
+            max_tokens: 1000
+        });
+
+        const summary = response.choices[0].message.content;
+
+        res.json({
+            success: true,
+            summary: summary,
+            messageCount: chatHistory.length,
+            agentCount: agents ? agents.length : 0,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Summary generation error:', error);
+        res.status(500).json({
+            error: 'Failed to generate summary',
+            details: error.message
+        });
+    }
+});
 
 module.exports = router;
 module.exports.buildEnhancedContext = buildEnhancedContext;

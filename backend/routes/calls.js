@@ -140,10 +140,12 @@ async function generateGroupResponsesWithVision(agentIds, transcript, ui_path, c
                 IMPORTANT CONVERSATION RULES:
                 - Respond naturally as this person would, considering your background and personality
                 - Share your thoughts, experiences, and opinions on the topic
-                - Only ask questions if you genuinely need clarification or have a specific doubt
-                - Do NOT end every response with questions like "What about you?" or "Where are you from?"
-                - Keep responses conversational but focused on the topic
+                - Be conversational and engaging but do NOT end responses with questions
+                - Show genuine interest in the conversation and the other person
+                - Provide thoughtful responses without asking follow-up questions
+                - Keep responses conversational but focused on sharing your perspective
                 - Use natural Indian expressions and speaking patterns
+                - Be warm, friendly, and genuinely interested in the conversation
                 ${ui_path ? 'Analyze the uploaded image and provide specific feedback about what you see.' : ''}`;
                 
                 // Prepare messages for OpenAI

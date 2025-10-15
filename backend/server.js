@@ -17,7 +17,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:9000',
+        origin: process.env.FRONTEND_URL || 'http://localhost:4000',
         methods: ['GET', 'POST']
     }
 });
@@ -66,7 +66,10 @@ const upload = multer({
     }
 });
 
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:4000',
+    credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static('uploads'));
