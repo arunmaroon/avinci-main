@@ -9,7 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import EnhancedAgentCreator from '../components/EnhancedAgentCreator';
-import AgentGrid from '../components/AgentGrid';
+import EnhancedAgentGrid from '../components/EnhancedAgentGrid';
 
 const formatTitleCase = (value = '') => {
     if (!value) return '';
@@ -393,11 +393,15 @@ const AgentLibrary = () => {
                         </div>
                     </div>
                 ) : (
-                    <AgentGrid
+                    <EnhancedAgentGrid
                         agents={filteredAgents}
                         onSelectAgent={handleStartChat}
                         onDeleteAgent={handleDeleteAgent}
                         onAgentStatusChange={handleAgentStatusChange}
+                        onStartAudioCall={(agent) => {
+                            // Navigate to audio call with selected agent
+                            window.location.href = `/audio-call?agentId=${agent.id}`;
+                        }}
                     />
                 )}
             </div>

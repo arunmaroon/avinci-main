@@ -22,7 +22,7 @@ import UserInterview from './pages/UserInterview';
 import AudioCall from './pages/AudioCall';
 import SocketTest from './pages/SocketTest';
 import TestRoute from './pages/TestRoute';
-import m3Theme from './theme/m3Theme';
+import modernTheme from './theme/modernTheme';
 import './index.css';
 
 function App() {
@@ -50,7 +50,7 @@ function App() {
 
   if (isLoading) {
     return (
-      <ThemeProvider theme={m3Theme}>
+      <ThemeProvider theme={modernTheme}>
         <CssBaseline />
         <Box
           sx={{
@@ -80,7 +80,7 @@ function App() {
   }
 
   return (
-    <ThemeProvider theme={m3Theme}>
+    <ThemeProvider theme={modernTheme}>
       <CssBaseline />
       <Router>
         <M3Layout user={user} onLogout={handleLogout}>
