@@ -11,7 +11,7 @@ import Projects from './pages/Projects';
 import ProjectsDashboard from './pages/ProjectsDashboard';
 import ProjectWorkflow from './pages/ProjectWorkflow';
 import AIAgents from './pages/AIAgents';
-import AgentLibrary from './pages/AgentLibrary';
+import ModernAgentLibrary from './pages/ModernAgentLibrary';
 import AgentChatPage from './pages/AgentChatPage';
 import EnhancedChatPage from './pages/EnhancedChatPage';
 import GroupChatPage from './pages/GroupChatPage';
@@ -87,7 +87,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/generate" element={<AIAgents />} />
-            <Route path="/agents" element={<AgentLibrary />} />
+            <Route path="/agents" element={<ModernAgentLibrary />} />
             <Route path="/group-chat" element={<GroupChatPage />} />
             <Route path="/design-feedback" element={<DesignFeedback />} />
             <Route path="/user-research" element={<UserResearch />} />

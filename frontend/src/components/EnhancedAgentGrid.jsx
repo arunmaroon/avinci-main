@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import EnhancedAgentCard from './EnhancedAgentCard';
+import UltraModernAgentCard from './UltraModernAgentCard';
 import EnhancedDetailedPersonaCard from './EnhancedDetailedPersonaCard';
 import PasswordConfirmation from './PasswordConfirmation';
 import api from '../utils/api';
@@ -93,7 +93,7 @@ const EnhancedAgentGrid = ({
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         <AnimatePresence>
           {agents.map((agent, index) => (
-            <EnhancedAgentCard
+            <UltraModernAgentCard
               key={agent.id}
               agent={agent}
               index={index}

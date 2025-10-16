@@ -8,6 +8,9 @@
 /* Import Design System */
 @import './styles/design-system.css';
 
+/* Import Modern UI Styles */
+@import './styles/modern-ui.css';
+
 @layer base {
   * {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
