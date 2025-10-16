@@ -11,6 +11,9 @@
 /* Import Modern UI Styles */
 @import './styles/modern-ui.css';
 
+/* Import Airbnb Design System */
+@import './styles/airbnb-design-system.css';
+
 @layer base {
   * {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
