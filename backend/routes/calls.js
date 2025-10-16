@@ -279,6 +279,84 @@ function ensureElevenLabsClient() {
     return elevenlabsClient;
 }
 
+// Generate voice audio for agent response
+async function generateVoiceAudio(responseText, agentName, callId) {
+    try {
+        console.log(`🎙️ [generateVoiceAudio] Starting audio generation for ${agentName}...`);
+        console.log(`🎙️ [generateVoiceAudio] Response text: "${responseText.substring(0, 50)}..."`);
+        console.log(`🎙️ [generateVoiceAudio] Call ID: ${callId}`);
+        
+        // Get agent data
+        const agentResult = await pool.query(
+            'SELECT voice_id, location, gender, speech_patterns, english_savvy, demographics FROM ai_agents WHERE name = $1',
+            [agentName]
+        );
+        
+        if (agentResult.rows.length === 0) {
+            console.warn(`⚠️ [generateVoiceAudio] Agent ${agentName} not found in database`);
+            return null;
+        }
+        
+        const agent = agentResult.rows[0];
+        console.log(`🎙️ [generateVoiceAudio] Agent data:`, {
+            name: agentName,
+            gender: agent.gender,
+            location: agent.location,
+            voice_id: agent.voice_id
+        });
+        
+        const region = getRegion(agent.location);
+        const voiceId = getVoiceId(agent, region);
+        const voiceSettings = VOICE_SETTINGS[region] || VOICE_SETTINGS.default;
+        
+        console.log(`🎙️ [generateVoiceAudio] Voice settings:`, {
+            region,
+            voiceId,
+            voiceSettings
+        });
+        
+        // Ensure ElevenLabs client is available
+        const client = ensureElevenLabsClient();
+        if (!client) {
+            console.error(`❌ [generateVoiceAudio] ElevenLabs client not available`);
+            throw new Error('ElevenLabs client not available');
+        }
+        
+        console.log(`🎙️ [generateVoiceAudio] Calling ElevenLabs API...`);
+        
+        // Generate audio
+        const audioStream = await client.textToSpeech.convert(voiceId, {
+            text: responseText,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: voiceSettings
+        });
+        
+        console.log(`🎙️ [generateVoiceAudio] ElevenLabs API call successful, processing stream...`);
+        
+        // Save audio file
+        const filename = `call_${callId}_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+        const filepath = path.join(audioTempDir, filename);
+        
+        console.log(`🎙️ [generateVoiceAudio] Saving to: ${filepath}`);
+        
+        const chunks = [];
+        for await (const chunk of audioStream) {
+            chunks.push(chunk);
+        }
+        const audioBuffer = Buffer.concat(chunks);
+        fs.writeFileSync(filepath, audioBuffer);
+        
+        console.log(`✅ [generateVoiceAudio] Audio generated successfully: ${filepath}`);
+        console.log(`✅ [generateVoiceAudio] File size: ${audioBuffer.length} bytes`);
+        return filepath;
+        
+    } catch (error) {
+        console.error(`❌ [generateVoiceAudio] Audio generation failed for ${agentName}:`, error.message);
+        console.error(`❌ [generateVoiceAudio] Full error:`, error);
+        return null;
+    }
+}
+
 function initializeAudioServices() {
     if (!twilioClient && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
         // Check if we have an API Key (starts with SK) or Account SID (starts with AC)
@@ -653,14 +731,20 @@ router.post('/process-speech', async (req, res) => {
                                         // Ensure ElevenLabs client is available
                                         const client = ensureElevenLabsClient();
                                         if (!client) {
+                                            console.error('❌ ElevenLabs client not available for audio generation');
                                             throw new Error('ElevenLabs client not available');
                                         }
+                                        
+                                        console.log(`🎙️ Generating audio for ${resp.agentName} with voice ${voiceId}`);
+                                        console.log(`🎙️ Text: "${resp.responseText.substring(0, 50)}..."`);
                                         
                                         const audioStream = await client.textToSpeech.convert(voiceId, {
                                             text: resp.responseText,
                                             model_id: 'eleven_multilingual_v2',
                                             voice_settings: voiceSettings
                                         });
+                                        
+                                        console.log(`✅ Audio stream generated for ${resp.agentName}`);
                                         
                                         const filename = `call_${callId}_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
                                         const filepath = path.join(audioTempDir, filename);
@@ -678,11 +762,27 @@ router.post('/process-speech', async (req, res) => {
                                     console.warn('⚠️ Audio generation failed:', audioError.message);
                                 }
                                 
+                                if (!audioUrl) {
+                                    try {
+                                        console.log(`🎙️ Attempting fallback audio generation for ${resp.agentName}...`);
+                                        const generatedPath = await generateVoiceAudio(resp.responseText, resp.agentName, callId);
+                                        if (generatedPath) {
+                                            audioUrl = `/uploads/audio/${path.basename(generatedPath)}`;
+                                            console.log(`✅ Fallback ElevenLabs audio generated via helper: ${audioUrl}`);
+                                        } else {
+                                            console.warn(`⚠️ Fallback audio generation returned null for ${resp.agentName}`);
+                                        }
+                                    } catch (fallbackError) {
+                                        console.warn('⚠️ Fallback audio generation failed:', fallbackError.message);
+                                        console.error('Fallback error details:', fallbackError);
+                                    }
+                                }
+                                
                                 ioLocal && ioLocal.to(roomName).emit('agent-response', {
                                     callId,
                                     agentName: resp.agentName,
                                     responseText: resp.responseText,
-                                    audioUrl: audioUrl,
+                                    audioUrl,
                                     timestamp: new Date().toISOString(),
                                     region: resp.region || 'north'
                                 });
@@ -788,13 +888,25 @@ router.post('/process-speech', async (req, res) => {
                                         console.warn('⚠️ Audio generation failed:', audioError.message);
                                     }
                                     
+                                    if (!audioUrl) {
+                                        try {
+                                            const generatedPath = await generateVoiceAudio(resp.responseText, resp.agentName, callId);
+                                            if (generatedPath) {
+                                                audioUrl = `/uploads/audio/${path.basename(generatedPath)}`;
+                                                console.log(`✅ Fallback ElevenLabs audio generated via helper: ${audioUrl}`);
+                                            }
+                                        } catch (fallbackError) {
+                                            console.warn('⚠️ Fallback audio generation failed:', fallbackError.message);
+                                        }
+                                    }
+                                    
                                     ioLocal && ioLocal.to(roomName).emit('agent-response', {
                                         callId,
                                         agentName: resp.agentName,
                                         responseText: resp.responseText,
-                                        audioUrl: audioUrl,
+                                        audioUrl,
                                         timestamp: new Date().toISOString(),
-                                        region: resp.region || 'north'
+                                        region: resp.region || region
                                     });
                                     console.log(`✅ Agent responded: ${resp.agentName}`);
                                 }, speakDelay);
@@ -860,12 +972,23 @@ router.post('/process-speech', async (req, res) => {
                                         isTyping: true
                                     });
                                     const speakDelay = 200 + Math.floor(Math.random() * 200);
-                                    setTimeout(() => {
+                                    setTimeout(async () => {
+                                        let emittedAudioUrl = null;
+                                        try {
+                                            const generatedPath = await generateVoiceAudio(response.responseText, response.agentName, callId);
+                                            if (generatedPath) {
+                                                emittedAudioUrl = `/uploads/audio/${path.basename(generatedPath)}`;
+                                                console.log(`✅ Fallback ElevenLabs audio generated via helper: ${emittedAudioUrl}`);
+                                            }
+                                        } catch (fallbackError) {
+                                            console.warn('⚠️ Fallback audio generation failed:', fallbackError.message);
+                                        }
+                                        
                                         ioLocal && ioLocal.to(roomName).emit('agent-response', {
                                             callId,
                                             agentName: response.agentName,
                                             responseText: response.responseText,
-                                            audioUrl: null,
+                                            audioUrl: emittedAudioUrl,
                                             timestamp: new Date().toISOString(),
                                             region: response.region || 'north'
                                         });
@@ -1030,7 +1153,7 @@ router.post('/process-speech', async (req, res) => {
                         // Emit agent response with delay
                         const startDelay = i * baseGap;
                         console.log(`🔍 Scheduling response for ${currentAgentName} with delay: ${startDelay}ms`);
-                        setTimeout(() => {
+                        setTimeout(async () => {
                             console.log(`🔍 Emitting typing for ${currentAgentName}`);
                             ioLocal && ioLocal.to(roomName).emit('agent-typing', {
                                 callId,
@@ -1038,13 +1161,25 @@ router.post('/process-speech', async (req, res) => {
                                 isTyping: true
                             });
                             const speakDelay = 200 + Math.floor(Math.random() * 200);
-                            setTimeout(() => {
+                            setTimeout(async () => {
+                                if (!audioUrl) {
+                                    try {
+                                        const generatedPath = await generateVoiceAudio(agentResponseText, currentAgentName, callId);
+                                        if (generatedPath) {
+                                            audioUrl = `/uploads/audio/${path.basename(generatedPath)}`;
+                                            console.log(`✅ Fallback ElevenLabs audio generated via helper: ${audioUrl}`);
+                                        }
+                                    } catch (fallbackError) {
+                                        console.warn('⚠️ Fallback audio generation failed:', fallbackError.message);
+                                    }
+                                }
+                                
                                 console.log(`🔍 Emitting response for ${currentAgentName}: ${agentResponseText}`);
                                 ioLocal && ioLocal.to(roomName).emit('agent-response', {
                                     callId,
                                     agentName: currentAgentName,
                                     responseText: agentResponseText,
-                                    audioUrl: audioUrl,
+                                    audioUrl,
                                     timestamp: new Date().toISOString(),
                                     region: currentRegion
                                 });
@@ -1207,22 +1342,43 @@ router.post('/process-speech', async (req, res) => {
             });
             console.log(`⌨️ Sent agent-typing to room ${roomName}`);
             
-            // Add some human-like delay (1-3 seconds)
-            const delay = Math.random() * 2000 + 1000;
+            // Generate audio first, then emit response
+            const generateAudioAndEmit = async () => {
+                let finalAudioUrl = audioUrl; // Start with the provided audioUrl
+                
+                // If no audioUrl provided, generate one
+                if (!finalAudioUrl) {
+                    try {
+                        console.log(`🎙️ Generating audio for ${agentName}...`);
+                        const ttsAudioPath = await generateVoiceAudio(responseText, agentName, callId);
+                        if (ttsAudioPath) {
+                            finalAudioUrl = `/uploads/audio/${path.basename(ttsAudioPath)}`;
+                            console.log(`✅ Audio generated: ${finalAudioUrl}`);
+                        }
+                    } catch (audioError) {
+                        console.warn('⚠️ Audio generation failed:', audioError.message);
+                    }
+                }
+                
+                // Add some human-like delay (1-3 seconds)
+                const delay = Math.random() * 2000 + 1000;
+                
+                setTimeout(() => {
+                    console.log(`🤖 Sending agent response to room ${roomName}: "${responseText.substring(0, 50)}..."`);
+                    io.to(roomName).emit('agent-response', {
+                        callId,
+                        agentName,
+                        responseText,
+                        audioUrl: finalAudioUrl,
+                        timestamp: new Date().toISOString(),
+                        isTyping: false,
+                        isSpeaking: true
+                    });
+                    console.log(`✅ Agent response sent to room ${roomName}`);
+                }, delay);
+            };
             
-            setTimeout(() => {
-                console.log(`🤖 Sending agent response to room ${roomName}: "${responseText.substring(0, 50)}..."`);
-                io.to(roomName).emit('agent-response', {
-                    callId,
-                    agentName,
-                    responseText,
-                    audioUrl,
-                    timestamp: new Date().toISOString(),
-                    isTyping: false,
-                    isSpeaking: true
-                });
-                console.log(`✅ Agent response sent to room ${roomName}`);
-            }, delay);
+            generateAudioAndEmit();
         } else {
             console.warn('❌ Socket.IO not available, cannot emit agent response');
         }
@@ -1327,6 +1483,3 @@ async function generateEnhancedVoiceResponse(agent, transcript, callId, imagePat
 }
 
 module.exports = router;
-
-
-
