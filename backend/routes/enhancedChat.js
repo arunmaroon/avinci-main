@@ -321,33 +321,79 @@ router.patch('/sessions/:session_id/close', async (req, res) => {
 
 /**
  * GET /enhanced-chat/personas
- * Get available personas for enhanced chat
+ * Get available personas for enhanced chat with rich data
  */
 router.get('/personas', async (req, res) => {
   try {
-    const query = `
-      SELECT id, name, occupation, location, quote, communication_style, 
-             emotional_profile, tech_savviness, demographics, avatar_url
-      FROM ai_agents 
-      WHERE is_active = true
-      ORDER BY created_at DESC
-    `;
-    
-    const result = await pool.query(query);
+    // Query from agents table to get rich persona data (same as /agents/v5)
+    const query = 'SELECT * FROM agents WHERE status = $1 ORDER BY created_at DESC';
+    const result = await pool.query(query, ['active']);
     const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
     
-    const personas = agentsWithAvatars.map(agent => ({
-      id: agent.id,
-      name: agent.name,
-      occupation: agent.occupation,
-      location: agent.location,
-      quote: agent.quote,
-      avatar_url: agent.avatar_url,
-      communication_style: agent.communication_style,
-      emotional_profile: agent.emotional_profile,
-      tech_savviness: agent.tech_savviness,
-      demographics: agent.demographics
-    }));
+    // Flatten the persona data for frontend compatibility (same logic as /agents/v5)
+    const personas = agentsWithAvatars.map(agent => {
+      const persona = agent.persona || {};
+      
+      return {
+        id: agent.id,
+        name: agent.name,
+        avatar_url: agent.avatar_url,
+        
+        // Basic Info
+        occupation: persona.occupation || 'Professional',
+        title: persona.occupation || 'Professional',
+        location: persona.location || 'Unknown Location',
+        company: persona.employment_type || 'Unknown Company',
+        
+        // Demographics
+        age: persona.demographics?.age || 'Unknown',
+        gender: persona.demographics?.gender || 'Unknown',
+        education: persona.demographics?.education || 'Unknown',
+        
+        // Quote - Extract from key_quotes or use quote directly
+        quote: (Array.isArray(persona.key_quotes) && persona.key_quotes.length > 0) ? 
+          persona.key_quotes[0].replace(/"/g, '') : 
+          (persona.quote || ''),
+        
+        // Goals & Motivations
+        goals: persona.objectives || [],
+        motivations: persona.motivations || [],
+        
+        // Personality - Extract from nested structure properly
+        traits: persona.personality_traits?.adjectives || persona.personality_traits?.personality || persona.traits || [],
+        values: persona.personality_traits?.values || persona.values || ['Honesty', 'Efficiency', 'Quality', 'Innovation', 'Customer focus'],
+        
+        // Background - Build from life events and other data
+        background: (Array.isArray(persona.life_events) && persona.life_events.length > 0) ? 
+          persona.life_events.map(event => event.event || event).join(', ') : 
+          (persona.cultural_background || persona.background || 'No background information available yet.'),
+        
+        // Hobbies & Interests
+        hobbies: persona.hobbies || persona.interests || [],
+        
+        // Life Events
+        life_events: Array.isArray(persona.life_events) ? persona.life_events : [],
+        
+        // Pain Points
+        pain_points: persona.pain_points || [],
+        frustrations: persona.frustrations || [],
+        
+        // Communication
+        communication_style: persona.communication_style || {},
+        voice: persona.voice || {},
+        
+        // Tech & Domain
+        tech_savviness: persona.tech_savviness || 'Medium',
+        domain_literacy: persona.domain_literacy || {},
+        
+        // Cultural & Social
+        cultural_background: persona.cultural_background || {},
+        social_context: persona.social_context || {},
+        
+        // Raw persona data for debugging
+        raw_persona: persona
+      };
+    });
     
     res.json({
       success: true,

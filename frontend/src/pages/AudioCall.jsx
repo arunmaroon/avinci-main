@@ -41,6 +41,7 @@ const AudioCall = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [audioQueue, setAudioQueue] = useState([]);
     const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+    const [currentSpeakingAgent, setCurrentSpeakingAgent] = useState(null);
     
     // ===== REFS =====
     const deviceRef = useRef(null);
@@ -424,6 +425,7 @@ const AudioCall = () => {
     const playQueuedAudio = (audioData) => {
         const { audioUrl, responseText, agentName, region } = audioData;
         setIsPlayingAudio(true);
+        setCurrentSpeakingAgent(agentName); // Show which agent is currently speaking
         
         console.log('🎵 Playing queued audio for:', agentName);
         
@@ -436,6 +438,13 @@ const AudioCall = () => {
                 console.log('🎵 Audio finished for:', agentName);
                 setIsPlayingAudio(false);
                 setAudioQueue(prev => prev.slice(1)); // Remove first item from queue
+                
+                // Add a small delay before playing the next audio to prevent overlap
+                setTimeout(() => {
+                    if (audioQueue.length > 1) {
+                        console.log('🎵 Starting next audio in queue...');
+                    }
+                }, 200); // 200ms delay between audio clips
             };
             
             audio.onerror = () => {

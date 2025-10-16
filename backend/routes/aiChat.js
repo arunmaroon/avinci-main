@@ -647,6 +647,110 @@ async function storeConversation(agentId, userMessage, agentResponse) {
     }
 }
 
+/**
+ * Generate summary of group chat session
+ */
+router.post('/generate-summary', async (req, res) => {
+    try {
+        const { chatHistory, chatPurpose, agents } = req.body;
+        
+        console.log('Generating summary for:', {
+            historyLength: chatHistory?.length || 0,
+            purpose: chatPurpose,
+            agentCount: agents?.length || 0
+        });
+
+        if (!chatHistory || chatHistory.length === 0) {
+            return res.status(400).json({ 
+                error: 'No chat history provided',
+                summary: 'No conversation to summarize'
+            });
+        }
+
+        // Build context for summary generation
+        const agentNames = agents?.map(a => a.name).join(', ') || 'Multiple agents';
+        const agentOccupations = agents?.map(a => a.occupation).join(', ') || 'Various professions';
+        
+        const summaryPrompt = `You are an AI assistant tasked with creating a comprehensive summary of a group chat session.
+
+CHAT PURPOSE: ${chatPurpose || 'General discussion'}
+
+PARTICIPANTS: ${agentNames} (${agentOccupations})
+
+CHAT HISTORY:
+${chatHistory.map((msg, index) => `${index + 1}. ${msg.role}: ${msg.content}`).join('\n')}
+
+Please create a detailed summary that includes:
+1. Key topics discussed
+2. Main insights and conclusions
+3. Important decisions or agreements reached
+4. Action items or next steps mentioned
+5. Overall sentiment and tone of the conversation
+
+Format the summary in a clear, professional manner that would be useful for future reference.`;
+
+        const response = await getOpenAI().chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: summaryPrompt
+                }
+            ],
+            temperature: 0.3,
+            max_tokens: 1000
+        });
+
+        const summary = response.choices[0].message.content;
+        
+        console.log('Generated summary successfully');
+        
+        res.json({ 
+            summary,
+            metadata: {
+                historyLength: chatHistory.length,
+                agentCount: agents?.length || 0,
+                purpose: chatPurpose,
+                generatedAt: new Date().toISOString()
+            }
+        });
+
+    } catch (error) {
+        console.error('Error generating summary:', error);
+        
+        // Handle quota exceeded errors with fallback response
+        if (error.status === 429 || error.code === 'insufficient_quota' || error.message.includes('quota')) {
+            console.warn('OpenAI quota exceeded, using fallback summary');
+            
+            const fallbackSummary = `Group Chat Summary
+            
+Purpose: ${req.body.chatPurpose || 'General discussion'}
+Participants: ${req.body.agents?.map(a => a.name).join(', ') || 'Multiple agents'}
+Duration: ${req.body.chatHistory?.length || 0} messages
+
+This was a productive group discussion involving multiple AI agents sharing their perspectives and insights on the topic. The conversation covered various aspects and provided valuable input from different professional viewpoints.
+
+Note: This is a basic summary due to API limitations. For a more detailed analysis, please try again later.`;
+            
+            return res.json({ 
+                summary: fallbackSummary,
+                metadata: {
+                    historyLength: req.body.chatHistory?.length || 0,
+                    agentCount: req.body.agents?.length || 0,
+                    purpose: req.body.chatPurpose,
+                    generatedAt: new Date().toISOString(),
+                    fallback: true
+                }
+            });
+        }
+        
+        res.status(500).json({ 
+            error: 'Failed to generate summary',
+            summary: 'Unable to generate summary at this time. Please try again later.'
+        });
+    }
+});
+
 module.exports = router;
 module.exports.buildEnhancedContext = buildEnhancedContext;
 module.exports.generateEnhancedResponse = generateEnhancedResponse;

@@ -88,6 +88,7 @@ router.get('/', async (req, res) => {
                 const goals = agent.objectives || [];
                 const challenges = [...(agent.fears || []), ...(agent.apprehensions || [])];
                 const demographics = agent.demographics || {};
+                const communicationStyle = agent.communication_style || {};
                 
                 return {
                     id: agent.id,
@@ -104,9 +105,11 @@ router.get('/', async (req, res) => {
                     gauges: {
                         tech: agent.tech_savviness || 'medium',
                         domain: agent.domain_literacy?.level || 'medium',
-                        comms: agent.communication_style?.sentence_length || 'medium',
-                        english_literacy: calculateEnglishLiteracy(agent)
+                        comms: communicationStyle.sentence_length || 'medium',
+                        english_literacy: communicationStyle.english_proficiency || calculateEnglishLiteracy(agent)
                     },
+                    // Add communication_style for frontend to extract english_proficiency
+                    communication_style: communicationStyle,
                     status: agent.status,
                     created_at: agent.created_at
                 };
@@ -114,11 +117,97 @@ router.get('/', async (req, res) => {
             
             res.json(shortAgents);
         } else {
-            // Return full view (default)
-            const query = 'SELECT * FROM ai_agents WHERE is_active = true ORDER BY created_at DESC';
-            const result = await pool.query(query);
+            // Return full view (default) - query from agents table with proper persona data
+            const query = 'SELECT * FROM agents WHERE status = $1 ORDER BY created_at DESC';
+            const result = await pool.query(query, ['active']);
             const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
-            const fullAgents = agentsWithAvatars.map(agent => promptBuilder.buildDetailedPersona(agent));
+            
+            // Flatten the persona data for frontend compatibility
+            const fullAgents = agentsWithAvatars.map(agent => {
+                const persona = agent.persona || {};
+                const demographics = agent.demographics || {};
+                
+                return {
+                    id: agent.id,
+                    name: agent.name,
+                    avatar_url: agent.avatar_url,
+                    
+                    // Flatten persona data for frontend
+                    occupation: persona.occupation || 'Professional',
+                    title: persona.occupation || 'Professional',
+                    location: persona.location || 'Unknown',
+                    company: persona.employment_type || 'Unknown Company',
+                    
+                    // Demographics
+                    age: demographics.age || null,
+                    gender: demographics.gender || null,
+                    education: demographics.education || null,
+                    
+                    // English Proficiency
+                    english_proficiency: persona.communication_style?.english_proficiency || 'Unknown',
+                    
+        // Quote - Extract from key_quotes or use quote directly
+        quote: (Array.isArray(persona.key_quotes) && persona.key_quotes.length > 0) ? 
+          persona.key_quotes[0].replace(/"/g, '') : 
+          (persona.quote || ''),
+        
+        // Goals & Motivations
+        goals: persona.objectives || [],
+        motivations: persona.motivations || [],
+        
+        // Pain Points
+        pain_points: persona.fears || [],
+        frustrations: persona.frustrations || [],
+        
+        // Personality - Extract from nested structure properly
+        traits: persona.personality_traits?.adjectives || persona.personality_traits?.personality || persona.traits || [],
+        values: persona.personality_traits?.values || persona.values || ['Honesty', 'Efficiency', 'Quality', 'Innovation', 'Customer focus'],
+        
+        // Background - Create rich background from available data
+        background: (Array.isArray(persona.life_events) && persona.life_events.length > 0) ? 
+          persona.life_events.map(event => event.event || event).join(', ') : 
+          (persona.cultural_background || persona.background || 'No background information available yet.'),
+        
+        // Hobbies & Interests
+        hobbies: persona.hobbies || persona.interests || [],
+        
+        // Life Events
+        life_events: Array.isArray(persona.life_events) ? persona.life_events : [],
+                    
+                    // Voice & Communication
+                    voice: {
+                        speaking_style: persona.speech_patterns?.sentence_length || 'medium',
+                        common_phrases: persona.speech_patterns?.common_phrases || [],
+                        tone: persona.communication_style?.tone || 'professional'
+                    },
+                    
+                    // Technology
+                    technology: {
+                        devices: persona.technology?.devices || ['Smartphone', 'Laptop', 'Tablet'],
+                        apps: persona.technology?.apps || ['WhatsApp', 'Gmail', 'Google Chrome', 'Microsoft Office']
+                    },
+                    
+                    // Daily Life
+                    daily_routine: persona.daily_routine || [],
+                    behaviors: persona.behaviors || {},
+                    
+                    // Cultural Background
+                    cultural_background: persona.cultural_background || {},
+                    
+                    // Decision Making
+                    decision_making: persona.decision_making || { style: 'Pragmatic' },
+                    
+                    // Status
+                    status: agent.status,
+                    created_at: agent.created_at,
+                    updated_at: agent.updated_at,
+                    
+                    // Raw data for advanced features
+                    raw_persona: persona,
+                    demographics: demographics
+                };
+            });
+            
             res.json(fullAgents);
         }
     } catch (error) {

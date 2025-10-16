@@ -730,7 +730,7 @@ router.post('/process-speech', async (req, res) => {
                         const emitList = deduped.slice(0, Math.max(2, Math.min(4, agentIds.length || 3)));
                         const ioLocal = req.app.get('io');
                         const roomName = `call-${callId}`;
-                        const baseGap = 400 + Math.floor(Math.random() * 300); // 400-700ms between speakers
+                        const baseGap = 2000 + Math.floor(Math.random() * 1000); // 2000-3000ms between speakers
                         console.log(`🎭 Emitting ${emitList.length} unique agents sequentially (gap ~${baseGap}ms)`);
                         emitList.forEach((resp, index) => {
                             const startDelay = index * baseGap;
@@ -740,7 +740,7 @@ router.post('/process-speech', async (req, res) => {
                                     agentName: resp.agentName,
                                     isTyping: true
                                 });
-                                const speakDelay = 200 + Math.floor(Math.random() * 200); // 200-400ms
+                                const speakDelay = 500 + Math.floor(Math.random() * 500); // 500-1000ms
                                 setTimeout(async () => {
                                     // Generate audio for this agent response
                                     let audioUrl = null;

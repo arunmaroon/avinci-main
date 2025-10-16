@@ -298,14 +298,36 @@ RULES:
         const goals = persona.goals || persona.objectives || [];
         const motivations = persona.motivations || [];
         
-        // Parse enriched fields safely
+        // Parse enriched fields safely with error handling
         const personalityTraits = persona.personality_traits ? persona.personality_traits.split(', ') : [];
-        const culturalBackgroundData = typeof persona.cultural_background === 'string' ? 
-            JSON.parse(persona.cultural_background || '{}') : (persona.cultural_background || {});
-        const keyQuotesData = typeof persona.key_quotes === 'string' ? 
-            JSON.parse(persona.key_quotes || '[]') : (persona.key_quotes || []);
-        const lifeEventsData = typeof persona.life_events === 'string' ? 
-            JSON.parse(persona.life_events || '[]') : (persona.life_events || []);
+        
+        let culturalBackgroundData = {};
+        try {
+            culturalBackgroundData = typeof persona.cultural_background === 'string' ? 
+                JSON.parse(persona.cultural_background || '{}') : (persona.cultural_background || {});
+        } catch (error) {
+            console.warn('Failed to parse cultural_background for agent', persona.name, ':', error.message);
+            culturalBackgroundData = {};
+        }
+        
+        let keyQuotesData = [];
+        try {
+            keyQuotesData = typeof persona.key_quotes === 'string' ? 
+                JSON.parse(persona.key_quotes || '[]') : (persona.key_quotes || []);
+        } catch (error) {
+            console.warn('Failed to parse key_quotes for agent', persona.name, ':', error.message);
+            keyQuotesData = [];
+        }
+        
+        let lifeEventsData = [];
+        try {
+            lifeEventsData = typeof persona.life_events === 'string' ? 
+                JSON.parse(persona.life_events || '[]') : (persona.life_events || []);
+        } catch (error) {
+            console.warn('Failed to parse life_events for agent', persona.name, ':', error.message);
+            lifeEventsData = [];
+        }
+        
         const objectivesData = Array.isArray(persona.objectives) ? persona.objectives : [];
         const needsData = Array.isArray(persona.needs) ? persona.needs : [];
         const fearsData = Array.isArray(persona.fears) ? persona.fears : [];
