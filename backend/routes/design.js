@@ -107,7 +107,7 @@ async function validatePrototypeWithAI(ast, imageBase64) {
 
 router.post('/admin/import', limiter, requireAdmin, async (req, res) => {
   try {
-    const { fileUrl, fileKey: rawKey, accessToken, image } = req.body || {};
+    const { fileUrl, fileKey: rawKey, accessToken, image, productId } = req.body || {};
     let fileKey = rawKey;
     
     // Extract fileKey from URL if provided
@@ -156,9 +156,9 @@ router.post('/admin/import', limiter, requireAdmin, async (req, res) => {
 
     // Store in database
     const insert = await pool.query(
-      `INSERT INTO design_prototypes (file_key, name, ast, version, imported_by, validation, created_at)
-       VALUES ($1, $2, $3, 1, $4, $5, NOW()) RETURNING id`,
-      [fileKey, figma.name || 'Prototype', JSON.stringify(ast), req.user.id, JSON.stringify(aiInsights)]
+      `INSERT INTO design_prototypes (file_key, name, ast, version, imported_by, validation, product_id, created_at)
+       VALUES ($1, $2, $3, 1, $4, $5, $6, NOW()) RETURNING id`,
+      [fileKey, figma.name || 'Prototype', JSON.stringify(ast), req.user.id, JSON.stringify(aiInsights), productId || null]
     );
 
     const prototypeId = insert.rows[0].id;
@@ -280,9 +280,11 @@ router.get('/admin/prototypes', requireAdmin, async (req, res) => {
     const { limit = 20, offset = 0 } = req.query;
     
     const result = await pool.query(`
-      SELECT id, file_key, name, version, validation, created_at, imported_by
-      FROM design_prototypes 
-      ORDER BY created_at DESC 
+      SELECT dp.id, dp.file_key, dp.name, dp.version, dp.validation, dp.created_at, dp.imported_by, dp.product_id,
+             p.name as product_name, p.category as product_category
+      FROM design_prototypes dp
+      LEFT JOIN products p ON dp.product_id = p.id
+      ORDER BY dp.created_at DESC 
       LIMIT $1 OFFSET $2
     `, [parseInt(limit), parseInt(offset)]);
 
@@ -293,7 +295,10 @@ router.get('/admin/prototypes', requireAdmin, async (req, res) => {
       version: row.version,
       validation: typeof row.validation === 'string' ? JSON.parse(row.validation) : row.validation,
       createdAt: row.created_at,
-      importedBy: row.imported_by
+      importedBy: row.imported_by,
+      productId: row.product_id,
+      productName: row.product_name,
+      productCategory: row.product_category
     }));
 
     res.json({
