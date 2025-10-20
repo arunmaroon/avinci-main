@@ -13,7 +13,8 @@ import {
   CogIcon,
   UserIcon,
   DocumentTextIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  CloudArrowUpIcon
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeSolid,
@@ -22,7 +23,8 @@ import {
   CogIcon as CogSolid,
   UserIcon as UserSolid,
   DocumentTextIcon as DocumentTextSolid,
-  ShieldCheckIcon as ShieldCheckSolid
+  ShieldCheckIcon as ShieldCheckSolid,
+  CloudArrowUpIcon as CloudArrowUpSolid
 } from '@heroicons/react/24/solid';
 import usePermissions from '../hooks/usePermissions';
 import useAuthStore from '../stores/authStore';
@@ -62,14 +64,23 @@ const AirbnbSidebar = ({ isCollapsed = false, onToggle }) => {
       iconSolid: DocumentTextSolid,
       badge: '12'
     },
-    // Admin Panel - only show if user has admin access
-    ...(canAccessAdmin() ? [{
-      name: 'Admin Panel',
-      href: '/admin/roles',
-      icon: ShieldCheckIcon,
-      iconSolid: ShieldCheckSolid,
-      badge: null
-    }] : [])
+            // Admin Panel - only show if user has admin access
+            ...(canAccessAdmin() ? [
+              {
+                name: 'Admin Panel',
+                href: '/admin/roles',
+                icon: ShieldCheckIcon,
+                iconSolid: ShieldCheckSolid,
+                badge: null
+              },
+              {
+                name: 'Design Import',
+                href: '/admin/design-import',
+                icon: CloudArrowUpIcon,
+                iconSolid: CloudArrowUpSolid,
+                badge: null
+              }
+            ] : [])
   ];
 
   const bottomItems = [

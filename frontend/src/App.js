@@ -17,6 +17,8 @@ import AudioCall from './pages/AudioCall';
 import SocketTest from './pages/SocketTest';
 import TestRoute from './pages/TestRoute';
 import AdminRoles from './pages/AdminRoles';
+import DesignImport from './pages/DesignImport';
+import FigmaCallback from './components/FigmaCallback';
 import LoginPage from './pages/LoginPage';
 import useAuthStore from './stores/authStore';
 import usePermissions from './hooks/usePermissions';
@@ -84,8 +86,12 @@ function App() {
               {canAccessAdmin() && (
                 <>
                   <Route path="/admin/roles" element={<AdminRoles />} />
+                  <Route path="/admin/design-import" element={<DesignImport />} />
                 </>
               )}
+              
+              {/* OAuth Callback - No auth required */}
+              <Route path="/admin/figma-callback" element={<FigmaCallback />} />
               
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
