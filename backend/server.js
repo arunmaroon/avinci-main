@@ -295,6 +295,9 @@ app.use('/api/sessions', require('./routes/sessions')); // User research session
 // ✅ Admin Panel & RBAC
 app.use('/api/admin/roles', require('./routes/adminRoles')); // Admin roles management
 
+// Moneyview OAuth routes
+app.use('/api/moneyview', require('./routes/moneyviewAuth')); // Moneyview OAuth authentication
+
 // ✅ Design & Figma Imports
 app.use('/api/design', require('./routes/design'));
 

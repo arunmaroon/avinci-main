@@ -68,16 +68,9 @@ const AirbnbSidebar = ({ isCollapsed = false, onToggle }) => {
             ...(canAccessAdmin() ? [
               {
                 name: 'Admin Panel',
-                href: '/admin/roles',
+                href: '/admin',
                 icon: ShieldCheckIcon,
                 iconSolid: ShieldCheckSolid,
-                badge: null
-              },
-              {
-                name: 'Design Import',
-                href: '/admin/design-import',
-                icon: CloudArrowUpIcon,
-                iconSolid: CloudArrowUpSolid,
                 badge: null
               }
             ] : [])
