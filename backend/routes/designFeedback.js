@@ -8,7 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const DesignFeedbackService = require('../services/designFeedback');
 const DesignArtifactsService = require('../services/designArtifacts');
-const { authenticateToken } = require('../middleware/auth');
+const { auth: authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { authenticateToken } = require('../middleware/auth');
+const { auth: authenticateToken } = require('../middleware/auth');
 const { pool } = require('../models/database');
 const DocumentProcessor = require('../services/documentProcessor');
 const AgentGenerator = require('../services/agentGenerator');

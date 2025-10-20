@@ -113,18 +113,24 @@ const AirbnbAgentCard = ({
       className="group relative"
     >
       <div 
-        className="airbnb-card airbnb-hover-lift cursor-pointer"
+        className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer"
         onClick={handleCardClick}
       >
-        {/* Image Section */}
+        {/* Image Section - Reduced Height */}
         <div className="relative">
-          <div className="aspect-square overflow-hidden rounded-t-2xl">
+          <div className="overflow-hidden rounded-t-2xl" style={{ height: '120px' }}>
             <img
               src={getAvatarSrc(agent.avatar_url, agent.name, { size: 300 })}
               alt={agent.name}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               onError={(e) => handleAvatarError(e, agent.name, { size: 300 })}
             />
+            {/* Attribution */}
+            {agent.avatar_url && (
+              <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/40 backdrop-blur text-[10px] text-white">
+                {agent.avatar_url.includes('images.pexels.com') ? 'Via Pexels' : 'Via Unsplash'}
+              </div>
+            )}
           </div>
           
           {/* Like Button */}
@@ -145,83 +151,120 @@ const AirbnbAgentCard = ({
           </div>
         </div>
 
-        {/* Content Section */}
-        <div className="p-4">
+        {/* Content Section - Compact */}
+        <div className="p-3">
           {/* Header */}
-          <div className="flex items-start justify-between mb-2">
+          <div className="flex items-start justify-between mb-1">
             <div className="flex-1 min-w-0">
-              <h3 className="airbnb-text-lg font-semibold text-gray-900 truncate">
+              <h3 className="text-base font-semibold text-gray-900 truncate">
                 {agent.name || 'Unnamed Agent'}
               </h3>
-              <p className="airbnb-text-sm text-gray-600 truncate">
+              <p className="text-xs text-gray-600 truncate">
                 {agent.occupation || agent.role_title || 'AI Persona'}
               </p>
             </div>
-            <div className="flex items-center gap-1 ml-2">
-              <StarSolid className="w-4 h-4 text-yellow-400" />
-              <span className="airbnb-text-sm font-medium text-gray-900">4.8</span>
+            <div className="flex items-center gap-0.5 ml-2">
+              <StarSolid className="w-3 h-3 text-yellow-400" />
+              <span className="text-xs font-medium text-gray-900">4.8</span>
             </div>
           </div>
 
           {/* Location */}
-          <div className="flex items-center gap-1 mb-3">
-            <MapPinIcon className="w-4 h-4 text-gray-500" />
-            <span className="airbnb-text-sm text-gray-600 truncate">{location}</span>
+          <div className="flex items-center gap-1 mb-2">
+            <MapPinIcon className="w-3 h-3 text-gray-500" />
+            <span className="text-xs text-gray-600 truncate">{location}</span>
             {age && (
               <>
-                <span className="text-gray-300 mx-1">•</span>
-                <span className="airbnb-text-sm text-gray-600">{age} yrs</span>
+                <span className="text-gray-300 mx-0.5">•</span>
+                <span className="text-xs text-gray-600">{age} yrs</span>
               </>
             )}
           </div>
 
-          {/* Skills Badges */}
-          <div className="flex flex-wrap gap-1 mb-4">
-            <span className={`airbnb-badge airbnb-badge-secondary text-xs px-2 py-1 ${getLevelColor(techLabel)}`}>
+          {/* Skills Badges - Improved Contrast */}
+          <div className="flex flex-wrap gap-1 mb-2">
+            <span className={`text-xs px-2 py-1 rounded-full border font-semibold ${getLevelColor(techLabel)}`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
               Tech: {techLabel}
             </span>
-            <span className={`airbnb-badge airbnb-badge-secondary text-xs px-2 py-1 ${getLevelColor(domainLabel)}`}>
+            <span className={`text-xs px-2 py-1 rounded-full border font-semibold ${getLevelColor(domainLabel)}`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
               Domain: {domainLabel}
             </span>
-            <span className={`airbnb-badge airbnb-badge-secondary text-xs px-2 py-1 ${getLevelColor(englishLabel)}`}>
+            <span className={`text-xs px-2 py-1 rounded-full border font-semibold ${getLevelColor(englishLabel)}`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
               English: {englishLabel}
             </span>
           </div>
 
-          {/* Quote */}
-          {agent.quote && (
-            <div className="mb-4">
-              <p className="airbnb-text-sm text-gray-700 line-clamp-2 italic">
-                "{agent.quote}"
-              </p>
-            </div>
-          )}
+          {/* Persona Chips (Airbnb style) */}
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {(() => {
+              // Extract tone from communication_style or raw_persona
+              const tone = agent.communication_style?.tone || 
+                          agent.raw_persona?.communication_style?.tone || 
+                          agent.tone || '';
+              
+              // Extract decision style from decision_making or raw_persona
+              const decision = agent.decision_making?.style || 
+                             agent.raw_persona?.decision_making?.style || '';
+              
+              // Extract first personality trait
+              let trait = '';
+              if (agent.personality_traits?.personality?.[0]) {
+                trait = agent.personality_traits.personality[0];
+              } else if (agent.personality_traits?.values?.[0]) {
+                trait = agent.personality_traits.values[0];
+              } else if (typeof agent.personality_traits === 'string') {
+                trait = agent.personality_traits.split(',')[0]?.trim();
+              } else if (agent.traits?.[0]) {
+                trait = agent.traits[0];
+              }
+              
+              return (
+                <>
+                  {tone && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-gray-200 text-gray-700 bg-gray-50">
+                      Tone: {tone}
+                    </span>
+                  )}
+                  {decision && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-gray-200 text-gray-700 bg-gray-50">
+                      Decision: {decision}
+                    </span>
+                  )}
+                  {trait && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full border border-gray-200 text-gray-700 bg-gray-50">
+                      Trait: {trait}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
+          </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - Compact */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 onClick={handleCardClick}
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
                 title="View details"
               >
-                <UserIcon className="w-4 h-4" />
+                <UserIcon className="w-3.5 h-3.5" />
               </button>
               
               <button
                 onClick={handleChatClick}
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
                 title="Start chat"
               >
-                <ChatBubbleLeftIcon className="w-4 h-4" />
+                <ChatBubbleLeftIcon className="w-3.5 h-3.5" />
               </button>
 
               <button
                 onClick={handleAudioClick}
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
                 title="Start audio call"
               >
-                <MicrophoneIcon className="w-4 h-4" />
+                <MicrophoneIcon className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -229,14 +272,14 @@ const AirbnbAgentCard = ({
             <div className="relative">
               <button
                 onClick={handleMenuToggle}
-                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
+                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 transition-colors duration-200"
                 title="More actions"
               >
-                <EllipsisVerticalIcon className="w-4 h-4" />
+                <EllipsisVerticalIcon className="w-3.5 h-3.5" />
               </button>
 
               {showMenu && (
-                <div className="absolute right-0 top-10 w-48 rounded-xl border border-gray-200 bg-white py-2 shadow-lg z-50">
+                <div className="absolute right-0 bottom-12 w-48 rounded-xl border border-gray-200 bg-white py-2 shadow-lg z-50">
                   <button
                     onClick={() => {
                       setShowMenu(false);
@@ -252,8 +295,10 @@ const AirbnbAgentCard = ({
                       <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                       </svg>
-                      {agent.status === 'sleeping' ? 'Wake Agent' : 'Sleep Agent'}
                     </div>
+                    <span className="whitespace-nowrap">
+                      {agent.status === 'sleeping' ? 'Wake Agent' : 'Sleep Agent'}
+                    </span>
                   </button>
                   <button
                     onClick={() => {
@@ -269,7 +314,7 @@ const AirbnbAgentCard = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </div>
-                    Delete Agent
+                    <span className="whitespace-nowrap">Delete Agent</span>
                   </button>
                 </div>
               )}

@@ -103,6 +103,11 @@ const EnhancedAgentGrid = ({
               onViewDetails={handleViewDetails}
               onStartChat={handleChat}
               onStartAudioCall={onStartAudioCall}
+              onRequestProtectedAction={(action, selectedAgent) => {
+                setPendingAction(action);
+                setPendingAgent(selectedAgent);
+                setShowPasswordConfirm(true);
+              }}
             />
           ))}
         </AnimatePresence>

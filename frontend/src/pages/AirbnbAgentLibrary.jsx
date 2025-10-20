@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  SparklesIcon, 
+  PlusIcon, 
+  XMarkIcon 
+} from '@heroicons/react/24/outline';
 import AirbnbHeader from '../components/AirbnbHeader';
 import AirbnbFilters from '../components/AirbnbFilters';
 import AirbnbAgentCard from '../components/AirbnbAgentCard';

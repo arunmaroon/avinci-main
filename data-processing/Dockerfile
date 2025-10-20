@@ -15,25 +15,24 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download NLTK data
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
-
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
 
-# Copy source code
+# Download NLTK data
+RUN python -c "import nltk; nltk.download('punkt'); nltk.download('vader_lexicon'); nltk.download('averaged_perceptron_tagger'); nltk.download('maxent_ne_chunker'); nltk.download('words')"
+
+# Copy application code
 COPY . .
 
-# Create logs directory
-RUN mkdir -p logs
+# Create necessary directories
+RUN mkdir -p /app/data /app/logs
 
-# Create non-root user
-RUN adduser --disabled-password --gecos '' appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
 
-# Expose port
+# Expose port (if needed for API)
 EXPOSE 8000
 
-# Start the application
-CMD ["python", "main.py"]
+# Default command
+CMD ["python", "persona_extractor.py"]

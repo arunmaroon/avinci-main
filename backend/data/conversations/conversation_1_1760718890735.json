@@ -1,0 +1,450 @@
+{
+  "id": 1,
+  "conversationId": 1760718879664,
+  "messages": [
+    {
+      "id": 1760718883502,
+      "text": "hi",
+      "sender": "You",
+      "timestamp": "10:04 PM",
+      "isUser": true,
+      "attachments": []
+    },
+    {
+      "id": 1760718885964,
+      "text": "📞 Audio call started with Ravi Kumar + 1 more",
+      "sender": "System",
+      "timestamp": "10:04 PM",
+      "isSystem": true
+    }
+  ],
+  "callDuration": 4,
+  "callType": "audio",
+  "startTime": "2025-10-17T16:34:45.963Z",
+  "endTime": "2025-10-17T16:34:50.703Z",
+  "participants": [
+    {
+      "id": "0be70650-071f-4b88-b1c5-d000afc82960",
+      "name": "Ravi Kumar",
+      "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Ravi+Kumar&backgroundColor=87ceeb&skinColor=fdbcb4&hairColor=000000&eyeColor=000000&mouthType=smile&eyebrowType=default&accessoriesType=blank&clotheType=blazerShirt&clotheColor=262e38&facialHairType=beardMedium&facialHairColor=000000&size=200",
+      "occupation": "Operations Manager",
+      "title": "Operations Manager",
+      "location": "Pune, Maharashtra",
+      "company": "Full-time",
+      "age": 33,
+      "gender": "Male",
+      "education": "Diploma/Certificate",
+      "english_proficiency": "Intermediate",
+      "quote": "I want something that works well for me and my family, kani without too much hassle.",
+      "goals": [
+        "Job stability",
+        "Family welfare",
+        "Basic savings"
+      ],
+      "motivations": [
+        "Career growth",
+        "Family welfare"
+      ],
+      "pain_points": [
+        "Missing opportunities",
+        "Poor ROI",
+        "Lack of transparency"
+      ],
+      "frustrations": [
+        "Financial stress",
+        "Job insecurity"
+      ],
+      "traits": [
+        "focused",
+        "practical"
+      ],
+      "values": [
+        "Honesty",
+        "Efficiency",
+        "Quality",
+        "Innovation",
+        "Customer focus"
+      ],
+      "background": "No background information available yet.",
+      "hobbies": [],
+      "life_events": [],
+      "voice": {
+        "speaking_style": "medium",
+        "common_phrases": [
+          "Can you explain this?",
+          "I'm not sure about this",
+          "Koncham confusing ga undi",
+          "Let me check once",
+          "Ante, I need more details",
+          "This is good, kani I have questions"
+        ],
+        "tone": "professional"
+      },
+      "technology": {
+        "devices": [
+          "Smartphone",
+          "Laptop",
+          "Tablet"
+        ],
+        "apps": [
+          "WhatsApp",
+          "Gmail",
+          "Google Chrome",
+          "Microsoft Office"
+        ]
+      },
+      "daily_routine": [],
+      "behaviors": {},
+      "cultural_background": {},
+      "decision_making": {
+        "style": "Pragmatic"
+      },
+      "status": "active",
+      "created_at": "2025-10-15T08:59:27.743Z",
+      "updated_at": "2025-10-16T12:26:36.188Z",
+      "raw_persona": {
+        "fears": [
+          "Missing opportunities",
+          "Poor ROI",
+          "Lack of transparency"
+        ],
+        "needs": [
+          "Easy-to-use apps",
+          "Clear instructions",
+          "Good support"
+        ],
+        "quote": "I want something that works well for me and my family, kani without too much hassle.",
+        "location": "Pune, Maharashtra",
+        "key_quotes": null,
+        "objectives": [
+          "Job stability",
+          "Family welfare",
+          "Basic savings"
+        ],
+        "occupation": "Operations Manager",
+        "life_events": null,
+        "motivations": [
+          "Career growth",
+          "Family welfare"
+        ],
+        "demographics": {
+          "age": 33,
+          "gender": "Male",
+          "education": "Diploma/Certificate",
+          "family_size": 2,
+          "income_bracket": "₹4-8 LPA",
+          "marital_status": "Married"
+        },
+        "frustrations": [
+          "Financial stress",
+          "Job insecurity"
+        ],
+        "apprehensions": [
+          "Learning new systems",
+          "Data privacy",
+          "Hidden charges"
+        ],
+        "tech_savviness": "Medium",
+        "domain_literacy": {
+          "level": "Medium",
+          "primary_domain": "Business"
+        },
+        "employment_type": "Full-time",
+        "speech_patterns": {
+          "filler_words": [
+            "Um",
+            "Like",
+            "You know",
+            "Ante"
+          ],
+          "common_phrases": [
+            "Can you explain this?",
+            "I'm not sure about this",
+            "Koncham confusing ga undi",
+            "Let me check once",
+            "Ante, I need more details",
+            "This is good, kani I have questions"
+          ],
+          "vocabulary_mixing": "moderate"
+        },
+        "knowledge_bounds": {
+          "partial": [
+            "Advanced features",
+            "Technical specifications"
+          ],
+          "unknown": [
+            "Niche features",
+            "Advanced integrations"
+          ],
+          "confident": [
+            "Basic product usage",
+            "Common scenarios"
+          ]
+        },
+        "cognitive_profile": {
+          "patience": 5,
+          "comprehension_speed": "medium",
+          "learning_preference": "guided"
+        },
+        "emotional_profile": {
+          "baseline": "neutral",
+          "excitement_triggers": [
+            "Easy solutions",
+            "Time saving",
+            "Cost benefits",
+            "Clear value"
+          ],
+          "frustration_triggers": [
+            "Slow systems",
+            "Poor UX",
+            "Bugs"
+          ]
+        },
+        "personality_traits": {
+          "adjectives": [
+            "focused",
+            "practical"
+          ],
+          "personality_archetype": "Professional"
+        },
+        "vocabulary_profile": {
+          "complexity": 5,
+          "avoided_words": [
+            "subsequently",
+            "nevertheless"
+          ],
+          "jargon_comfort": "medium"
+        },
+        "communication_style": {
+          "formality": 5,
+          "question_style": "direct",
+          "sentence_length": "medium",
+          "english_proficiency": "Intermediate"
+        },
+        "cultural_background": null
+      },
+      "demographics": {
+        "age": 33,
+        "gender": "Male",
+        "education": "Diploma/Certificate",
+        "family_size": 2,
+        "income_bracket": "₹4-8 LPA",
+        "marital_status": "Married"
+      }
+    },
+    {
+      "id": "7e697c1f-d241-42e3-abcf-ed4c761d4814",
+      "name": "Dr. Venkatesh Iyer",
+      "avatar_url": "https://api.dicebear.com/7.x/avataaars/svg?seed=Dr.+Venkatesh+Iyer&backgroundColor=87ceeb&skinColor=fdbcb4&hairColor=000000&eyeColor=000000&mouthType=smile&eyebrowType=default&accessoriesType=blank&clotheType=blazerShirt&clotheColor=262e38&facialHairType=beardMedium&facialHairColor=000000&size=200",
+      "occupation": "Research Director",
+      "title": "Research Director",
+      "location": "Bangalore, Karnataka",
+      "company": "Full-time",
+      "age": 40,
+      "gender": "Male",
+      "education": "Bachelor's or Higher",
+      "english_proficiency": "Elementary",
+      "quote": "Naaku simple ga undali, ekkuva complications oddu. Family ki manchidi kavali.",
+      "goals": [
+        "Career advancement",
+        "Financial planning",
+        "Skill development"
+      ],
+      "motivations": [
+        "Career growth",
+        "Family welfare"
+      ],
+      "pain_points": [
+        "Missing opportunities",
+        "Poor ROI",
+        "Lack of transparency"
+      ],
+      "frustrations": [
+        "Financial stress",
+        "Job insecurity"
+      ],
+      "traits": [
+        "focused",
+        "practical"
+      ],
+      "values": [
+        "Honesty",
+        "Efficiency",
+        "Quality",
+        "Innovation",
+        "Customer focus"
+      ],
+      "background": "No background information available yet.",
+      "hobbies": [],
+      "life_events": [],
+      "voice": {
+        "speaking_style": "medium",
+        "common_phrases": [
+          "Naaku artham kaaledu",
+          "Idi ela work avtundi?",
+          "Koncham slow ga cheppandi",
+          "Simple ga chepthe better",
+          "Kani naaku doubt undi"
+        ],
+        "tone": "professional"
+      },
+      "technology": {
+        "devices": [
+          "Smartphone",
+          "Laptop",
+          "Tablet"
+        ],
+        "apps": [
+          "WhatsApp",
+          "Gmail",
+          "Google Chrome",
+          "Microsoft Office"
+        ]
+      },
+      "daily_routine": [],
+      "behaviors": {},
+      "cultural_background": {},
+      "decision_making": {
+        "style": "Pragmatic"
+      },
+      "status": "active",
+      "created_at": "2025-10-15T08:59:27.742Z",
+      "updated_at": "2025-10-16T12:26:36.181Z",
+      "raw_persona": {
+        "fears": [
+          "Missing opportunities",
+          "Poor ROI",
+          "Lack of transparency"
+        ],
+        "needs": [
+          "Simple interfaces",
+          "Offline options",
+          "Personal assistance"
+        ],
+        "quote": "Naaku simple ga undali, ekkuva complications oddu. Family ki manchidi kavali.",
+        "location": "Bangalore, Karnataka",
+        "key_quotes": null,
+        "objectives": [
+          "Career advancement",
+          "Financial planning",
+          "Skill development"
+        ],
+        "occupation": "Research Director",
+        "life_events": null,
+        "motivations": [
+          "Career growth",
+          "Family welfare"
+        ],
+        "demographics": {
+          "age": 40,
+          "gender": "Male",
+          "education": "Bachelor's or Higher",
+          "family_size": 4,
+          "income_bracket": "₹8-15 LPA",
+          "marital_status": "Married"
+        },
+        "frustrations": [
+          "Financial stress",
+          "Job insecurity"
+        ],
+        "apprehensions": [
+          "Technology complexity",
+          "Security concerns",
+          "Fear of mistakes",
+          "Need for human help"
+        ],
+        "tech_savviness": "Low",
+        "domain_literacy": {
+          "level": "High",
+          "primary_domain": "General"
+        },
+        "employment_type": "Full-time",
+        "speech_patterns": {
+          "filler_words": [
+            "Ante",
+            "Ento",
+            "Uh",
+            "Hmm",
+            "Kani"
+          ],
+          "common_phrases": [
+            "Naaku artham kaaledu",
+            "Idi ela work avtundi?",
+            "Koncham slow ga cheppandi",
+            "Simple ga chepthe better",
+            "Kani naaku doubt undi"
+          ],
+          "vocabulary_mixing": "heavy"
+        },
+        "knowledge_bounds": {
+          "partial": [
+            "Product benefits",
+            "Comparison shopping"
+          ],
+          "unknown": [
+            "Niche features",
+            "Advanced integrations"
+          ],
+          "confident": [
+            "Industry best practices",
+            "Market trends",
+            "Product features"
+          ]
+        },
+        "cognitive_profile": {
+          "patience": 3,
+          "comprehension_speed": "fast",
+          "learning_preference": "guided"
+        },
+        "emotional_profile": {
+          "baseline": "neutral",
+          "excitement_triggers": [
+            "Easy solutions",
+            "Time saving",
+            "Cost benefits",
+            "Clear value"
+          ],
+          "frustration_triggers": [
+            "Complex interfaces",
+            "Too many steps",
+            "Technical jargon",
+            "No human support"
+          ]
+        },
+        "personality_traits": {
+          "adjectives": [
+            "focused",
+            "practical"
+          ],
+          "personality_archetype": "Professional"
+        },
+        "vocabulary_profile": {
+          "complexity": 2,
+          "avoided_words": [
+            "subsequently",
+            "nevertheless",
+            "comprehensive"
+          ],
+          "jargon_comfort": "high"
+        },
+        "communication_style": {
+          "formality": 7,
+          "question_style": "clarifying",
+          "sentence_length": "short",
+          "english_proficiency": "Elementary"
+        },
+        "cultural_background": null
+      },
+      "demographics": {
+        "age": 40,
+        "gender": "Male",
+        "education": "Bachelor's or Higher",
+        "family_size": 4,
+        "income_bracket": "₹8-15 LPA",
+        "marital_status": "Married"
+      }
+    }
+  ],
+  "savedAt": "2025-10-17T16:34:50.734Z",
+  "createdAt": "2025-10-17T16:34:50.735Z"
+}

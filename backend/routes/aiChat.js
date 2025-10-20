@@ -276,11 +276,34 @@ router.post('/feedback', async (req, res) => {
 /**
  * Get agent by ID
  */
-async function getAgentById(agentId) {
+        async function getAgentById(agentId) {
     try {
-        const query = 'SELECT * FROM ai_agents WHERE id = $1 AND is_active = true';
-        const result = await pool.query(query, [agentId]);
-        return result.rows[0];
+                // First try ai_agents table
+                let query = 'SELECT * FROM ai_agents WHERE id = $1 AND is_active = true';
+                let result = await pool.query(query, [agentId]);
+                let row = result.rows[0];
+
+                if (!row) {
+                    // Fallback to agents table
+                    query = 'SELECT * FROM agents WHERE id = $1';
+                    result = await pool.query(query, [agentId]);
+                    row = result.rows[0];
+                }
+
+                if (!row) {
+                    throw new Error('Agent not found');
+                }
+
+                // Ensure master_system_prompt exists
+                if (!row.master_system_prompt && row.persona) {
+                    const p = row.persona || {};
+                    const name = row.name || 'Assistant';
+                    const occ = p.occupation || 'professional';
+                    const loc = p.location || 'India';
+                    row.master_system_prompt = `You are ${name}, a ${occ} from ${loc}. Be helpful, precise, and conversational. Answer based on your persona, domain literacy and tech savviness.`;
+                }
+
+                return row;
     } catch (error) {
         console.error('Error fetching agent:', error);
         throw error;
@@ -326,15 +349,48 @@ function buildEnhancedContext(agent, chatHistory, query, ui_path) {
         cultural_background,
         social_context,
         tech_savviness,
-        communication_style
+        communication_style,
+        personality_traits,
+        language_preference,
+        raw_persona
     } = agent;
     
     const agentName = name || 'AI Agent';
     const agentOccupation = occupation || 'Professional';
     const agentLocation = location || 'Unknown';
     
+    // Extract rich persona details
+    const rawPersona = raw_persona || {};
+    const culturalInfo = cultural_background || rawPersona.cultural_background || {};
+    const commStyle = communication_style || rawPersona.communication_style || {};
+    
     // Use the master system prompt as the base (it contains comprehensive persona data)
     let context = `${master_system_prompt || 'You are a helpful AI assistant.'}\n\n`;
+    
+    // CRITICAL: Add explicit persona identity and cultural context
+    context += `🎭 YOUR IDENTITY:\n`;
+    context += `- You are ${agentName}, a ${agentOccupation} from ${agentLocation}\n`;
+    
+    if (culturalInfo.region || agentLocation) {
+        context += `- Cultural Background: You are from ${culturalInfo.region || agentLocation}\n`;
+    }
+    
+    if (language_preference || commStyle.language) {
+        context += `- Language: You speak ${language_preference || commStyle.language || 'English'}\n`;
+    }
+    
+    if (personality_traits) {
+        context += `- Personality: ${personality_traits}\n`;
+    }
+    
+    if (commStyle.tone) {
+        context += `- Communication Tone: ${commStyle.tone}\n`;
+    }
+    
+    context += `\n⚠️ IMPORTANT: Stay in character! Speak and respond based on your cultural background and location.\n`;
+    context += `- Use language, phrases, and references that match your cultural context\n`;
+    context += `- Reference your location and cultural experiences naturally\n`;
+    context += `- Express opinions and viewpoints consistent with your persona\n\n`;
     
     // Add persona-specific UI analysis context
     if (ui_path) {

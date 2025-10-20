@@ -8,6 +8,7 @@ const router = express.Router();
 const { pool } = require('../models/database');
 const { v4: uuidv4 } = require('uuid');
 const PersonaExtractor = require('../services/personaExtractor');
+const PersonaAnalysisEngine = require('../services/personaAnalysisEngine');
 const promptBuilder = require('../services/promptBuilder');
 const IndianDemographicsService = require('../services/indianDemographics');
 
@@ -40,8 +41,9 @@ router.post('/generate', async (req, res) => {
         // Generate Indian demographics if not provided
         const indianDemographics = IndianDemographicsService.generateIndianDemographics(demographics);
         
-        // Extract persona using PersonaExtractor
-        const personaData = await getPersonaExtractor().extractPersona(transcriptText, indianDemographics);
+        // Use enhanced persona analysis engine for comprehensive extraction
+        const personaAnalysisEngine = new PersonaAnalysisEngine();
+        const personaData = await personaAnalysisEngine.analyzeTranscript(transcriptText, indianDemographics);
         
         // Create agent prompt template
         const agentPrompt = buildAgentPrompt(personaData);

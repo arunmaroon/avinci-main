@@ -12,6 +12,19 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    // Propagate user id for admin-gated endpoints
+    try {
+        const auth = localStorage.getItem('auth-store');
+        if (auth) {
+            const parsed = JSON.parse(auth);
+            const userId = parsed?.state?.user?.id;
+            if (userId) {
+                config.headers['x-user-id'] = userId;
+            }
+        }
+    } catch (e) {
+        // ignore parse errors
+    }
     return config;
 });
 

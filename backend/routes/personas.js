@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { auth, optionalAuth } = require('../middleware/auth');
 const { analyzeTranscript, synthesizePersona, buildMasterPrompt } = require('../src/transcriptAnalysis');
 const { pool } = require('../models/database');
 const avatarService = require('../services/avatarService');
@@ -9,7 +10,7 @@ const promptBuilder = require('../services/promptBuilder');
  * GET /personas?view=short
  * Returns AgentShort for grid/list rendering
  */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { view = 'full' } = req.query;
     
@@ -67,7 +68,7 @@ router.get('/', async (req, res) => {
  * GET /personas/:id
  * Returns AgentFull with complete persona data
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -92,7 +93,8 @@ router.get('/:id', async (req, res) => {
  * POST /personas
  * Create new persona from transcript and demographics
  */
-router.post('/', async (req, res) => {
+// Protect persona creation
+router.post('/', auth, async (req, res) => {
   try {
     const { transcript, demographics = {} } = req.body;
     
@@ -191,7 +193,7 @@ router.post('/', async (req, res) => {
  * PATCH /personas/:id/status
  * Update persona lifecycle status
  */
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', auth, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -229,7 +231,7 @@ router.patch('/:id/status', async (req, res) => {
  * DELETE /personas/:id
  * Soft delete persona (set to archived)
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     

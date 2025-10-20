@@ -15,6 +15,14 @@ const promptBuilder = require('../services/promptBuilder');
 const IndianDemographicsService = require('../services/indianDemographics');
 const avatarService = require('../services/avatarService');
 
+// Prevent client/proxy caching to ensure fresh agents list
+router.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+});
+
 // Configure multer for PDF uploads
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -82,19 +90,63 @@ router.get('/', async (req, res) => {
                 ORDER BY created_at DESC
             `;
             
-            const result = await pool.query(query);
+            let result = await pool.query(query);
+            // Fallback: if no ai_agents found, derive short view from legacy agents table
+            if (result.rows.length === 0) {
+                const legacy = await pool.query('SELECT id, name, persona, avatar_url, created_at FROM agents WHERE status = $1 ORDER BY created_at DESC', ['active']);
+                if (legacy.rows.length > 0) {
+                    const mapped = legacy.rows.map(row => {
+                        const p = row.persona || {};
+                        const comm = p.communication_style || {};
+                        return {
+                            id: row.id,
+                            name: row.name,
+                            avatar_url: row.avatar_url || '',
+                            role_title: p.occupation || 'Professional',
+                            occupation: p.occupation || 'Professional',
+                            company: p.employment_type || 'Unknown',
+                            location: p.location || 'Unknown',
+                            quote: Array.isArray(p.key_quotes) && p.key_quotes[0] ? String(p.key_quotes[0]).replace(/"/g, '') : (p.quote || ''),
+                            age: p.demographics?.age || null,
+                            education: p.demographics?.education || null,
+                            goals_preview: (p.objectives || []).slice(0, 3),
+                            challenges_preview: (p.fears || []).slice(0, 3),
+                            tech_savviness: p.tech_savviness || 'medium',
+                            domain_literacy: p.domain_literacy?.level || 'medium',
+                            english_savvy: comm.english_proficiency || 'intermediate',
+                            communication_style: comm,
+                            status: 'active',
+                            created_at: row.created_at
+                        };
+                    });
+                    return res.json(mapped);
+                }
+            }
+
             const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
             const shortAgents = agentsWithAvatars.map(agent => {
                 const goals = agent.objectives || [];
                 const challenges = [...(agent.fears || []), ...(agent.apprehensions || [])];
                 const demographics = agent.demographics || {};
                 const communicationStyle = agent.communication_style || {};
+
+                // Normalize commonly used fields for the frontend cards
+                const englishSavvy = communicationStyle.english_proficiency
+                    || communicationStyle.english_level
+                    || agent.english_savvy
+                    || calculateEnglishLiteracy(agent);
+
+                const domainLevel = typeof agent.domain_literacy === 'string'
+                    ? agent.domain_literacy
+                    : (agent.domain_literacy?.level || 'medium');
                 
                 return {
                     id: agent.id,
                     name: agent.name,
                     avatar_url: agent.avatar_url,
-                    role_title: agent.role_title,
+                    // expose both occupation and role_title for compatibility
+                    occupation: agent.role_title || agent.occupation || 'Professional',
+                    role_title: agent.role_title || agent.occupation || 'Professional',
                     company: agent.company,
                     location: agent.location,
                     quote: agent.quote,
@@ -102,13 +154,17 @@ router.get('/', async (req, res) => {
                     education: demographics.education || null,
                     goals_preview: goals.slice(0, 3),
                     challenges_preview: challenges.slice(0, 3),
+                    // top-level normalized badges used by UI
+                    tech_savviness: agent.tech_savviness || 'medium',
+                    domain_literacy: domainLevel,
+                    english_savvy: englishSavvy,
                     gauges: {
                         tech: agent.tech_savviness || 'medium',
-                        domain: agent.domain_literacy?.level || 'medium',
+                        domain: domainLevel,
                         comms: communicationStyle.sentence_length || 'medium',
-                        english_literacy: communicationStyle.english_proficiency || calculateEnglishLiteracy(agent)
+                        english_literacy: englishSavvy
                     },
-                    // Add communication_style for frontend to extract english_proficiency
+                    // Keep full style for advanced UI
                     communication_style: communicationStyle,
                     status: agent.status,
                     created_at: agent.created_at
@@ -350,23 +406,27 @@ router.patch('/:id/status', async (req, res) => {
 
 /**
  * DELETE /agents/:id
- * Soft delete agent (set status to archived)
+ * Delete agent permanently
  */
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         
-        const query = 'UPDATE ai_agents SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING *';
-        const result = await pool.query(query, [false, id]);
+        console.log('🗑️ Attempting to delete agent with ID:', id);
+        
+        const query = 'DELETE FROM ai_agents WHERE id = $1 RETURNING *';
+        const result = await pool.query(query, [id]);
         
         if (result.rows.length === 0) {
+            console.log('❌ Agent not found with ID:', id);
             return res.status(404).json({ error: 'Agent not found' });
         }
         
-        res.json({ message: 'Agent archived successfully' });
+        console.log('✅ Agent deleted successfully:', result.rows[0].name);
+        res.json({ message: 'Agent deleted successfully', agent: result.rows[0] });
     } catch (error) {
-        console.error('Error archiving agent:', error);
-        res.status(500).json({ error: 'Failed to archive agent' });
+        console.error('❌ Error deleting agent:', error);
+        res.status(500).json({ error: 'Failed to delete agent', details: error.message });
     }
 });
 

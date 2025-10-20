@@ -99,11 +99,12 @@ const GroupChat = ({ agents, onAddAgents, chatPurpose, isChatActive, onChatReset
                     });
                 } catch (error) {
                     console.error(`Error getting response from ${agent.name}:`, error);
+                    const errorMessage = error.response?.data?.error || error.message || 'Sorry, I encountered an error. Please try again.';
                     appendGroupMessage({
                         id: Date.now() + i,
                         type: 'agent',
                         agent,
-                        content: 'Sorry, I encountered an error. Please try again.',
+                        content: errorMessage,
                         timestamp: new Date().toISOString(),
                         isError: true,
                     });

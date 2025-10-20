@@ -15,6 +15,7 @@ from services.text_processor import TextProcessor
 from services.embedding_service import EmbeddingService
 from services.vector_service import VectorService
 from services.nlp_analyzer import NLPAnalyzer
+from services.enhanced_transcript_processor import process_transcripts
 from api.data_api import DataAPI
 from config.settings import Settings
 

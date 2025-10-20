@@ -6,6 +6,7 @@ const multer = require('multer');
 const http = require('http');
 const socketIO = require('socket.io');
 const { createTables, redis } = require('./models/database');
+const { auth, cors: corsMiddleware, errorHandler, requestLogger, rateLimit } = require('./middleware/auth');
 require('dotenv').config();
 
 // FIX: Disable SSL verification globally for ElevenLabs API
@@ -66,7 +67,10 @@ const upload = multer({
     }
 });
 
-app.use(cors());
+// Middleware
+app.use(corsMiddleware);
+app.use(requestLogger);
+app.use(rateLimit(15 * 60 * 1000, 1000)); // 1000 requests per 15 minutes
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static('uploads'));
@@ -133,6 +137,125 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Test transcript upload without authentication - with real AI processing
+app.post('/api/test-transcript', async (req, res) => {
+    try {
+        const { text } = req.body;
+        
+        if (!text) {
+            return res.status(400).json({ error: 'No text provided' });
+        }
+        
+        console.log('📝 Processing transcript:', text.substring(0, 100) + '...');
+        
+        // Use OpenAI to extract persona from transcript
+        const { ChatOpenAI } = require("@langchain/openai");
+        const llm = new ChatOpenAI({
+            modelName: "gpt-4o",
+            temperature: 0.1,
+            maxTokens: 4000,
+            openAIApiKey: process.env.OPENAI_API_KEY
+        });
+        
+        const prompt = `Extract a persona from this user research transcript with exact details.
+
+IMPORTANT: This transcript follows a research interview format:
+- "Moderator:" is the researcher asking questions (IGNORE their statements)
+- "Respondent:" is the user being interviewed (EXTRACT ALL their information)
+
+You must ONLY extract information from the Respondent's answers.
+
+Extract the following fields as JSON:
+{
+  "name": string,
+  "age": integer,
+  "gender": string,
+  "occupation": string,
+  "location": string (include state, e.g., "Bangalore, Karnataka"),
+  "key_quotes": [string] (exact quotes from Respondent only),
+  "pain_points": [string],
+  "goals": [string],
+  "personality_traits": [string]
+}
+
+Example:
+Respondent: "My name is Abdul, I live in Bangalore" → name: "Abdul", location: "Bangalore, Karnataka"
+
+Transcript:
+${text}
+
+Return ONLY valid JSON, no other text.`;
+
+        const response = await llm.invoke(prompt);
+        
+        // Clean up the response - remove markdown code blocks if present
+        let jsonContent = response.content.trim();
+        if (jsonContent.startsWith('```json')) {
+            jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (jsonContent.startsWith('```')) {
+            jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
+        const personaData = JSON.parse(jsonContent);
+        
+        console.log('✅ Extracted persona:', personaData.name);
+        
+        // Get image from Unsplash
+        const UnsplashImageService = require('./services/unsplashImageService');
+        const unsplashService = new UnsplashImageService();
+        
+        let imageUrl = 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80';
+        try {
+            const imageResult = await unsplashService.fetchPersonaImage(personaData);
+            imageUrl = imageResult.url;
+        } catch (imgError) {
+            console.warn('⚠️  Using fallback image:', imgError.message);
+        }
+        
+        // Save to database
+        const { pool } = require('./models/database');
+        const insertQuery = `
+            INSERT INTO ai_agents (
+                name, occupation, location, age, gender, avatar_url, 
+                pain_points, goals, personality, sample_quote,
+                source_type, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id, name, occupation, location, age, gender, avatar_url, created_at;
+        `;
+        
+        const result = await pool.query(insertQuery, [
+            personaData.name,
+            personaData.occupation,
+            personaData.location,
+            personaData.age,
+            personaData.gender,
+            imageUrl,
+            personaData.pain_points || [],
+            personaData.goals || [],
+            JSON.stringify({ traits: personaData.personality_traits || [] }),
+            personaData.key_quotes?.[0] || '',
+            'transcript_upload',
+            new Date()
+        ]);
+        
+        const savedAgent = result.rows[0];
+        console.log('💾 Saved agent to database:', savedAgent.id);
+        
+        res.json({
+            success: true,
+            agents: [savedAgent],
+            message: "Persona generated successfully from transcript"
+        });
+        
+    } catch (error) {
+        console.error('❌ Test transcript error:', error);
+        res.status(500).json({ 
+            error: 'Failed to process transcript', 
+            details: error.message 
+        });
+    }
+});
+
 // Routes - Active Production Routes Only
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/simple-test', require('./routes/simpleTest'));
@@ -143,12 +266,19 @@ app.use('/api/personas', require('./routes/personas')); // Enhanced personas wit
 app.use('/api/agents/v5', require('./routes/agents_v5')); // Latest agent API with full features
 app.use('/api/agents', require('./routes/agents')); // Legacy agent support
 app.use('/api/agent/generate', require('./routes/agentGenerate')); // Agent generation with PersonaExtractor
+app.use('/api/transcript', require('./routes/enhancedTranscriptUpload')); // Enhanced transcript upload and processing
+app.use('/api/accurate-transcript', require('./routes/accurateTranscriptUpload')); // ACCURATE extraction from transcript
+app.use('/api/transcript-map', require('./routes/transcriptMap')); // NEW: Comprehensive transcript mapping with Google Docs support
+
+// ✅ Persona Management Routes (v2)
+app.use('/api/personas/v2', require('./routes/personas_v2')); // Comprehensive persona CRUD
 
 // ✅ Chat & AI Routes
 app.use('/api/ai', require('./routes/aiChat')); // AI chat with GPT-4o vision & memory
-app.use('/api/ai', require('./routes/parallelChat')); // Parallel chat processing
+app.use('/api/ai/parallel', require('./routes/parallelChat')); // Parallel chat processing
 app.use('/api/enhanced-chat', require('./routes/enhancedChat')); // Enhanced persona-aware chat
 app.use('/api/chat', require('./routes/chat')); // Base chat route
+app.use('/api/chat', require('./routes/chatSummary')); // Chat summary and conversation saving
 
 // ✅ Feedback & Analytics
 app.use('/api/analytics', require('./routes/analytics')); // Analytics and insights
@@ -161,6 +291,12 @@ app.use('/api/upload', require('./routes/upload')); // General file uploads
 // ✅ User Research & Sessions
 app.use('/api/research-agents', require('./routes/agentsForResearch')); // Agents for user research
 app.use('/api/sessions', require('./routes/sessions')); // User research sessions (group & 1:1)
+
+// ✅ Admin Panel & RBAC
+app.use('/api/admin/roles', require('./routes/adminRoles')); // Admin roles management
+
+// ✅ Design & Figma Imports
+app.use('/api/design', require('./routes/design'));
 
 // ✅ Utility Routes
 app.use('/api/generate', require('./routes/generate'));
@@ -179,10 +315,7 @@ app.use('/api/prds', require('./routes/prds')); // PRD management
 // Note: Legacy routes (agents_v2-v4, chat_v2-v4, feedback_v2) moved to /tests folder
 
 // Error handling
-app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
-    res.status(500).json({ error: 'Something went wrong!', message: err.message });
-});
+app.use(errorHandler);
 
 app.use('*', (req, res) => {
     res.status(404).json({ error: 'Route not found' });

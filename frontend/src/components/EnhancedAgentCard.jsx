@@ -144,11 +144,12 @@ const EnhancedAgentCard = ({
     >
       <div 
         className={`
-          relative overflow-hidden rounded-3xl bg-white shadow-lg transition-all duration-300 cursor-pointer
+          relative overflow-hidden rounded-3xl bg-white shadow-lg transition-all duration-300 cursor-pointer aspect-square
           ${isHovered ? 'shadow-2xl shadow-blue-500/10' : 'shadow-lg shadow-gray-500/5'}
           ${isPressed ? 'scale-95' : ''}
           border border-gray-100/50
         `}
+        style={{ height: '10em', width: '100%' }}
         onClick={handleCardClick}
       >
         {/* Gradient Background Overlay */}
@@ -169,7 +170,7 @@ const EnhancedAgentCard = ({
             {/* Avatar with enhanced styling */}
             <div className="relative">
               <div className={`
-                w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-lg
+                w-10 h-10 rounded-2xl overflow-hidden border-2 border-white shadow-lg
                 ${isHovered ? 'scale-110' : ''}
                 transition-transform duration-200
               `}>
@@ -326,11 +327,11 @@ const EnhancedAgentCard = ({
               <AnimatePresence>
                 {showMenu && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-12 w-48 rounded-2xl border border-gray-200 bg-white py-2 shadow-xl z-50"
+                    className="absolute right-0 bottom-12 w-48 rounded-2xl border border-gray-200 bg-white py-2 shadow-xl z-50"
                   >
                     <button
                       onClick={handleSleepToggle}

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket.IO Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #status { margin: 20px 0; }
+        .status-item { padding: 10px; margin: 5px 0; border-left: 4px solid #3b82f6; background: #eff6ff; }
+        button { padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #2563eb; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Socket.IO Live Status Test</h1>
+    
+    <div>
+        <h3>Transcript:</h3>
+        <textarea id="transcript">Moderator: Hi, can you tell us about yourself?
+Respondent: Hi! I am Abdul Yasser, 24 years old, working as a stock market trader.</textarea>
+        
+        <button onclick="testGeneration()">Test Generation with Live Status</button>
+    </div>
+    
+    <h3>Live Status Updates:</h3>
+    <div id="status"></div>
+
+    <script>
+        // Connect to Socket.IO
+        const socket = io('http://localhost:9001');
+        const statusDiv = document.getElementById('status');
+
+        socket.on('connect', () => {
+            console.log('✅ Connected to Socket.IO');
+            addStatus('Connected to server', 'success');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('❌ Disconnected from Socket.IO');
+            addStatus('Disconnected from server', 'error');
+        });
+
+        function addStatus(message, type = 'info') {
+            const item = document.createElement('div');
+            item.className = 'status-item';
+            item.style.borderLeftColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+            item.style.background = type === 'success' ? '#ecfdf5' : type === 'error' ? '#fef2f2' : '#eff6ff';
+            item.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            statusDiv.appendChild(item);
+            statusDiv.scrollTop = statusDiv.scrollHeight;
+        }
+
+        async function testGeneration() {
+            const transcript = document.getElementById('transcript').value;
+            const requestId = `test-${Date.now()}`;
+            
+            statusDiv.innerHTML = '';
+            addStatus('Starting generation...', 'info');
+            
+            // Listen for this specific request's events
+            socket.on(`persona-generation:${requestId}`, (data) => {
+                console.log('📡 Received:', data);
+                addStatus(`[${data.step}] ${data.message}`, 
+                    data.step === 'done' ? 'success' : data.step === 'error' ? 'error' : 'info');
+            });
+
+            try {
+                const response = await fetch('http://localhost:9001/api/accurate-transcript/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ transcript, requestId })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addStatus(`✅ Success: ${data.agent.name} created!`, 'success');
+                    console.log('Agent:', data.agent);
+                } else {
+                    addStatus(`❌ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                addStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
+

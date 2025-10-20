@@ -1,52 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, Box, CircularProgress, Typography } from '@mui/material';
-import M3Layout from './components/layout/M3Layout';
+import AirbnbLayout from './components/layout/AirbnbLayout';
 import Dashboard from './pages/Dashboard';
-import StageDashboard from './pages/ai-setup/stages/StageDashboard';
-import PmDashboard from './pages/ai-setup/PmDashboard';
-import AdminSettings from './pages/ai-setup/AdminSettings';
-import Projects from './pages/Projects';
-import ProjectsDashboard from './pages/ProjectsDashboard';
-import ProjectWorkflow from './pages/ProjectWorkflow';
-import AIAgents from './pages/AIAgents';
-import AirbnbAgentLibrary from './pages/AirbnbAgentLibrary';
+// Removed unused StageDashboard import
+import AirbnbAgentLibrary_v2 from './pages/AirbnbAgentLibrary_v2';
 import AgentChatPage from './pages/AgentChatPage';
 import EnhancedChatPage from './pages/EnhancedChatPage';
-import GroupChatPage from './pages/GroupChatPage';
+import EnhancedGroupChatPage from './pages/chat/EnhancedGroupChatPage';
 import DesignFeedback from './components/DesignFeedback';
-import UserResearch from './pages/UserResearch';
+import UserResearchModern from './pages/UserResearchModern';
 import SessionCall from './pages/SessionCall';
 import UserInterview from './pages/UserInterview';
 import AudioCall from './pages/AudioCall';
 import SocketTest from './pages/SocketTest';
 import TestRoute from './pages/TestRoute';
+import AdminRoles from './pages/AdminRoles';
+import LoginPage from './pages/LoginPage';
+import useAuthStore from './stores/authStore';
+import usePermissions from './hooks/usePermissions';
 import modernTheme from './theme/modernTheme';
 import './index.css';
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthenticated, isLoading, login, logout, initialize } = useAuthStore();
+  const { canAccessAdmin } = usePermissions();
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem('sirius_user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-    setIsLoading(false);
-  }, []);
-
-  const handleLogin = (userData) => {
-    setUser(userData);
-    localStorage.setItem('sirius_user', JSON.stringify(userData));
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('sirius_user');
-  };
+    // Initialize the auth store after rehydration
+    initialize();
+  }, [initialize]);
 
   if (isLoading) {
     return (
@@ -72,38 +56,41 @@ function App() {
     );
   }
 
-  if (!user) {
-    // Auto-login for demo purposes
-    const demoUser = { name: 'Demo User', role: 'admin' };
-    handleLogin(demoUser);
-    return null;
-  }
-
   return (
     <ThemeProvider theme={modernTheme}>
       <CssBaseline />
       <Router>
-        <M3Layout user={user} onLogout={handleLogout}>
+        {!isAuthenticated ? (
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/generate" element={<AIAgents />} />
-            <Route path="/agents" element={<AirbnbAgentLibrary />} />
-            <Route path="/group-chat" element={<GroupChatPage />} />
-            <Route path="/design-feedback" element={<DesignFeedback />} />
-            <Route path="/user-research" element={<UserResearch />} />
-            <Route path="/user-research/session/:sessionId" element={<SessionCall />} />
-            <Route path="/user-interview" element={<UserInterview />} />
-            <Route path="/audio-call" element={<AudioCall />} />
-            <Route path="/socket-test" element={<SocketTest />} />
-            <Route path="/test-route" element={<TestRoute />} />
-            <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
-            <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />
-            <Route path="/projects" element={<ProjectsDashboard />} />
-            <Route path="/projects/:projectId" element={<ProjectWorkflow />} />
-            <Route path="/projects/:projectId/stages/:stageId" element={<StageDashboard />} />
-            <Route path="*" element={<Navigate to="/" />} />
+            <Route path="*" element={<LoginPage />} />
           </Routes>
-        </M3Layout>
+        ) : (
+          <AirbnbLayout user={user} onLogout={logout}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/agents" element={<AirbnbAgentLibrary_v2 />} />
+              <Route path="/group-chat" element={<EnhancedGroupChatPage />} />
+              <Route path="/design-feedback" element={<DesignFeedback />} />
+              <Route path="/user-research" element={<UserResearchModern />} />
+              <Route path="/user-research/session/:sessionId" element={<SessionCall />} />
+              <Route path="/user-interview" element={<UserInterview />} />
+              <Route path="/audio-call" element={<AudioCall />} />
+              <Route path="/socket-test" element={<SocketTest />} />
+              <Route path="/test-route" element={<TestRoute />} />
+              <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
+              <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />
+              
+              {/* Admin Routes - Protected by permissions */}
+              {canAccessAdmin() && (
+                <>
+                  <Route path="/admin/roles" element={<AdminRoles />} />
+                </>
+              )}
+              
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </AirbnbLayout>
+        )}
       </Router>
     </ThemeProvider>
   );

@@ -142,6 +142,22 @@ const createTables = async () => {
             );
         `);
 
+        // Prototypes (design imports)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS design_prototypes (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                file_key VARCHAR(64) NOT NULL,
+                name VARCHAR(200),
+                ast JSONB NOT NULL,
+                version INTEGER DEFAULT 1,
+                imported_by UUID REFERENCES admin_users(id),
+                project_id UUID,
+                validation JSONB,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+
         // Create indexes
         await pool.query('CREATE INDEX IF NOT EXISTS idx_agents_category ON ai_agents(category)');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_agents_created_by ON ai_agents(created_by)');

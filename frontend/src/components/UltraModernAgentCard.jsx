@@ -67,7 +67,8 @@ const UltraModernAgentCard = ({
   onAgentStatusChange,
   onViewDetails,
   onStartChat,
-  onStartAudioCall
+  onStartAudioCall,
+  onRequestProtectedAction
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -372,7 +373,9 @@ const UltraModernAgentCard = ({
                     <button
                       onClick={() => {
                         setShowMenu(false);
-                        if (onDeleteAgent) {
+                        if (onRequestProtectedAction) {
+                          onRequestProtectedAction('Delete', agent);
+                        } else if (onDeleteAgent) {
                           onDeleteAgent(agent.id);
                         }
                       }}

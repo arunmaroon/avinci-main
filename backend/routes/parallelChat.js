@@ -277,18 +277,27 @@ router.post('/streaming-parallel-chat', async (req, res) => {
  */
 async function getAgentById(agentId) {
     try {
-        const query = 'SELECT * FROM ai_agents WHERE id = $1';
-        const result = await pool.query(query, [agentId]);
-        
-        if (result.rows.length === 0) {
-            return null;
+        // Try ai_agents
+        let q = 'SELECT * FROM ai_agents WHERE id = $1';
+        let r = await pool.query(q, [agentId]);
+        let row = r.rows[0];
+        if (!row) {
+            // Fallback to legacy agents table
+            q = 'SELECT * FROM agents WHERE id = $1';
+            r = await pool.query(q, [agentId]);
+            row = r.rows[0];
+            if (!row) return null;
         }
-        
-        const agentRow = result.rows[0];
-        const agentWithAvatar = await avatarService.ensureAgentAvatar(agentRow);
-        const fullAgent = promptBuilder.buildFullProfile(agentWithAvatar);
-        
-        return fullAgent;
+        const agentWithAvatar = await avatarService.ensureAgentAvatar(row);
+        const full = promptBuilder.buildFullProfile(agentWithAvatar);
+        // Ensure master_system_prompt exists
+        if (!full.master_system_prompt) {
+            const name = full.name || 'Assistant';
+            const occ = full.occupation || 'professional';
+            const loc = full.location || 'India';
+            full.master_system_prompt = `You are ${name}, a ${occ} from ${loc}. Be helpful, precise, and conversational. Answer based on your persona, domain literacy and tech savviness.`;
+        }
+        return full;
     } catch (error) {
         console.error('Error fetching agent:', error);
         return null;

@@ -503,28 +503,28 @@ const GroupChatPage = () => {
                                                     {/* Skill Badges */}
                                                     <div className="flex flex-wrap gap-2">
                                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                            techSavvy === 'High' ? 'bg-green-100 text-green-800' :
-                                                            techSavvy === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                                                            techSavvy === 'Low' ? 'bg-red-100 text-red-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
+                                                            techSavvy === 'High' ? 'text-green-800' :
+                                                            techSavvy === 'Medium' ? 'text-yellow-800' :
+                                                            techSavvy === 'Low' ? 'text-red-800' :
+                                                            'text-gray-800'
+                                                        }`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
                                                             Tech: {techSavvy}
                                                         </span>
                                                         
                                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                            domainSavvy === 'High' ? 'bg-green-100 text-green-800' :
-                                                            domainSavvy === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                                                            'bg-red-100 text-red-800'
-                                                        }`}>
+                                                            domainSavvy === 'High' ? 'text-green-800' :
+                                                            domainSavvy === 'Medium' ? 'text-yellow-800' :
+                                                            'text-red-800'
+                                                        }`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
                                                             Domain: {domainSavvy}
                                                         </span>
                                                         
                                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                            englishSavvy === 'Advanced' ? 'bg-green-100 text-green-800' :
-                                                            englishSavvy === 'High' ? 'bg-blue-100 text-blue-800' :
-                                                            englishSavvy === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                                                            'bg-red-100 text-red-800'
-                                                        }`}>
+                                                            englishSavvy === 'Advanced' ? 'text-green-800' :
+                                                            englishSavvy === 'High' ? 'text-blue-800' :
+                                                            englishSavvy === 'Medium' ? 'text-yellow-800' :
+                                                            'text-red-800'
+                                                        }`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
                                                             English: {englishSavvy}
                                                         </span>
                                                     </div>
