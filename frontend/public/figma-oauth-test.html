@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma OAuth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #FF6B6B;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .button:hover {
+            background: #FF5252;
+        }
+        .success {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .error {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .info {
+            background: #2196F3;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .code {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Figma OAuth Test</h1>
+        <p>This page helps you test the Figma OAuth flow for importing your prototype.</p>
+        
+        <div class="info">
+            <strong>File Key:</strong> FPqV8e9Y7DbQfyoABniMp1<br>
+            <strong>Description:</strong> AI-Design-Test prototype
+        </div>
+
+        <h2>Method 1: Direct OAuth (Recommended)</h2>
+        <p>Click the button below to start the OAuth flow:</p>
+        <button class="button" onclick="startOAuth()">🔗 Start Figma OAuth</button>
+        
+        <h2>Method 2: Manual Token</h2>
+        <p>If OAuth doesn't work, you can use a personal access token:</p>
+        <ol>
+            <li>Go to <a href="https://www.figma.com/settings" target="_blank">Figma Settings</a></li>
+            <li>Navigate to "Personal Access Tokens"</li>
+            <li>Generate a new token with <code>file_content:read</code> scope</li>
+            <li>Copy the token and use it in the import form</li>
+        </ol>
+
+        <h2>Method 3: Direct Import with Token</h2>
+        <div>
+            <input type="text" id="tokenInput" placeholder="Paste your Figma token here" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <button class="button" onclick="importWithToken()">📥 Import with Token</button>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function startOAuth() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="info">🔄 Getting OAuth URL...</div>';
+            
+            fetch('/api/design/admin/import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': 'test-admin-id'
+                },
+                body: JSON.stringify({
+                    fileKey: 'FPqV8e9Y7DbQfyoABniMp1',
+                    needsAuth: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.needsAuth && data.authUrl) {
+                    statusDiv.innerHTML = '<div class="success">✅ OAuth URL generated! Redirecting...</div>';
+                    // Open in same window
+                    window.location.href = data.authUrl;
+                } else {
+                    statusDiv.innerHTML = '<div class="error">❌ Failed to get OAuth URL</div>';
+                }
+            })
+            .catch(error => {
+                statusDiv.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
+            });
+        }
+
+        function importWithToken() {
+            const token = document.getElementById('tokenInput').value;
+            if (!token) {
+                alert('Please enter a Figma token');
+                return;
+            }
+
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="info">🔄 Importing prototype with token...</div>';
+
+            fetch('/api/design/admin/import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-id': 'test-admin-id'
+                },
+                body: JSON.stringify({
+                    fileKey: 'FPqV8e9Y7DbQfyoABniMp1',
+                    accessToken: token
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.innerHTML = '<div class="success">✅ Prototype imported successfully! <a href="/admin/design-import">View in Admin Panel</a></div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="error">❌ Import failed: ' + (data.error || 'Unknown error') + '</div>';
+                }
+            })
+            .catch(error => {
+                statusDiv.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
+            });
+        }
+
+        // Check if we're returning from OAuth callback
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('code')) {
+            document.getElementById('status').innerHTML = '<div class="success">✅ OAuth completed! You can now go back to the <a href="/admin/design-import">Design Import page</a> to import your prototype.</div>';
+        }
+    </script>
+</body>
+</html>
+

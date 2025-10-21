@@ -1,0 +1,466 @@
+/* POTHOS Design System Styles - Authentic Implementation */
+
+/* Import AT Aero font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Base button styles */
+.mv-button {
+  font-family: "AT Aero", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+  border: none;
+  cursor: pointer;
+  text-transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.mv-button:focus-visible {
+  outline: 2px solid #144835;
+  outline-offset: 2px;
+}
+
+/* Primary Button - POTHOS Green */
+.mv-button-primary {
+  background-color: #144835; /* primary800 */
+  color: #ffffff;
+  border: 1px solid #144835;
+}
+
+.mv-button-primary:hover:not(:disabled) {
+  background-color: #217858; /* primary700 */
+  box-shadow: 0px 4px 12px 4px rgba(16,16,18,0.08);
+}
+
+.mv-button-primary:active:not(:disabled) {
+  box-shadow: 0px 2px 6px 0px inset rgba(16,16,18,0.24),0px -2px 6px 0px inset rgba(16,16,18,0.24);
+}
+
+/* Support Primary Button */
+.mv-button-support-primary {
+  background-color: #ffffff;
+  color: #144835; /* primary800 */
+  border: 1px solid #217858; /* primary700 */
+}
+
+.mv-button-support-primary:hover:not(:disabled) {
+  background-color: #f6f6f6; /* grey50 */
+  box-shadow: 0px 4px 12px 4px rgba(16,16,18,0.08);
+}
+
+.mv-button-support-primary:active:not(:disabled) {
+  background-color: #ededee; /* grey100 */
+}
+
+/* Support Secondary Button */
+.mv-button-support-secondary {
+  background-color: #ffffff;
+  color: #144835; /* primary800 */
+  border: none;
+}
+
+.mv-button-support-secondary:hover:not(:disabled) {
+  background-color: #e7f4ed; /* primary50 */
+}
+
+.mv-button-support-secondary:active:not(:disabled) {
+  background-color: #d7f4e9; /* primary100 */
+}
+
+/* Danger Button - POTHOS Red */
+.mv-button-danger {
+  background-color: #e12b1d; /* red500 */
+  color: #ffffff;
+  border: 1px solid #e12b1d;
+}
+
+.mv-button-danger:hover:not(:disabled) {
+  background-color: #e7554a; /* red400 */
+  box-shadow: 0px 4px 12px 4px rgba(16,16,18,0.08);
+}
+
+.mv-button-danger:active:not(:disabled) {
+  box-shadow: 0px 2px 6px 0px inset rgba(16,16,18,0.24),0px -2px 6px 0px inset rgba(16,16,18,0.24);
+}
+
+/* Link Button */
+.mv-button-link {
+  background-color: transparent;
+  color: #144835; /* primary800 */
+  border: none;
+  text-decoration: underline;
+  height: auto;
+  min-width: auto;
+  padding: 0;
+}
+
+.mv-button-link:hover:not(:disabled) {
+  color: #217858; /* primary700 */
+  text-decoration: none;
+}
+
+/* Button Sizes */
+.mv-button-small {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  border-radius: 8px;
+}
+
+.mv-button-default {
+  height: 48px;
+  padding: 0 16px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  border-radius: 12px;
+}
+
+/* Disabled state */
+.mv-button:disabled {
+  background-color: #b9babd; /* grey300 */
+  color: #73757a; /* grey400 */
+  border-color: #b9babd;
+  cursor: not-allowed;
+}
+
+/* Card Styles */
+.mv-card {
+  font-family: "AT Aero", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 24px; /* 2xLarge */
+  box-shadow: 0px 2px 8px 0px rgba(16,16,18,0.08);
+  border: 1px solid #dcdcde; /* grey200 */
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.mv-card:hover {
+  box-shadow: 0px 8px 16px 0px rgba(16,16,18,0.08);
+  transform: translateY(-1px);
+}
+
+.mv-card-variant-1 {
+  /* Default card style */
+}
+
+.mv-card-variant-2 {
+  /* Alternative card style */
+}
+
+/* Input Styles */
+.mv-input {
+  font-family: "AT Aero", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  width: 100%;
+  height: 56px; /* xLarge */
+  padding: 0 16px;
+  border: 1px solid #b9babd; /* grey300 */
+  border-radius: 8px; /* small */
+  font-size: 16px;
+  font-weight: 350;
+  line-height: 24px;
+  letter-spacing: 0px;
+  background-color: #ffffff;
+  color: #34353a; /* grey700 */
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.mv-input:focus {
+  border-color: #144835; /* primary800 */
+  box-shadow: 0 0 0 3px #e7f4ed; /* primary50 */
+}
+
+.mv-input:disabled {
+  background-color: #f6f6f6; /* grey50 */
+  color: #73757a; /* grey400 */
+  border-color: #ededee; /* grey100 */
+  cursor: not-allowed;
+}
+
+.mv-input::placeholder {
+  color: #73757a; /* grey400 */
+}
+
+/* Badge Styles */
+.mv-badge {
+  font-family: "AT Aero", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 12px; /* medium */
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.mv-badge-primary {
+  background-color: #144835; /* primary800 */
+}
+
+.mv-badge-secondary {
+  background-color: #505259; /* grey500 */
+}
+
+.mv-badge-success {
+  background-color: #2ca076; /* primary600 */
+}
+
+.mv-badge-warning {
+  background-color: #2b73de; /* blue500 */
+}
+
+.mv-badge-danger {
+  background-color: #e12b1d; /* red500 */
+}
+
+.mv-badge-small {
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.5px;
+}
+
+.mv-badge-medium {
+  padding: 4px 12px;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.5px;
+}
+
+.mv-badge-large {
+  padding: 8px 16px;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+}
+
+/* Avatar Styles */
+.mv-avatar {
+  font-family: "AT Aero", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #dcdcde; /* grey200 */
+  color: #73757a; /* grey400 */
+  font-weight: 600;
+}
+
+.mv-avatar-small {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+.mv-avatar-medium {
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+}
+
+.mv-avatar-large {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+
+/* Checkbox Styles */
+.mv-checkbox {
+  font-family: "AT Aero", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px; /* small */
+  border: 2px solid #505259; /* grey500 */
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mv-checkbox:hover:not(:disabled) {
+  border-color: #144835; /* primary800 */
+}
+
+.mv-checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Typography Styles */
+.mv-typography {
+  font-family: "AT Aero", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Typography Variants */
+.mv-typography-headline1 {
+  font-size: 42px;
+  font-weight: 500;
+  line-height: 56px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-headline2 {
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 46px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-title1 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-title2 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 26px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-bodyLargeLowEmphasis {
+  font-size: 16px;
+  font-weight: 350;
+  line-height: 24px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-bodyLargeMediumEmphasis {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-bodyLargeHighEmphasis {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-bodyMediumLowEmphasis {
+  font-size: 14px;
+  font-weight: 350;
+  line-height: 20px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-bodyMediumMediumEmphasis {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-bodyMediumHighEmphasis {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0px;
+}
+
+.mv-typography-bodySmallLowEmphasis {
+  font-size: 12px;
+  font-weight: 350;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+}
+
+.mv-typography-bodySmallHighEmphasis {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+}
+
+.mv-typography-bodyTinyLowEmphasis {
+  font-size: 11px;
+  font-weight: 350;
+  line-height: 14px;
+  letter-spacing: 0.5px;
+}
+
+.mv-typography-bodyTinyHighEmphasis {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.5px;
+}
+
+/* Color Classes */
+.mv-color-highEmphasis { color: #28292d; } /* grey800 */
+.mv-color-mediumEmphasis { color: #34353a; } /* grey700 */
+.mv-color-lowEmphasis { color: #73757a; } /* grey400 */
+.mv-color-disabled { color: #b9babd; } /* grey300 */
+.mv-color-primary { color: #144835; } /* primary800 */
+.mv-color-success { color: #2ca076; } /* primary600 */
+.mv-color-warning { color: #2b73de; } /* blue500 */
+.mv-color-danger { color: #e12b1d; } /* red500 */
+
+/* Utility Classes */
+.mv-shadow-sm {
+  box-shadow: 0px 2px 8px 0px rgba(16,16,18,0.08);
+}
+
+.mv-shadow-md {
+  box-shadow: 0px 8px 16px 0px rgba(16,16,18,0.08);
+}
+
+.mv-shadow-lg {
+  box-shadow: 0px 16px 24px 0px rgba(16,16,18,0.08);
+}
+
+.mv-rounded-sm { border-radius: 4px; }
+.mv-rounded-md { border-radius: 8px; }
+.mv-rounded-lg { border-radius: 12px; }
+.mv-rounded-xl { border-radius: 16px; }
+.mv-rounded-2xl { border-radius: 24px; }
+.mv-rounded-full { border-radius: 50%; }
+
+/* Spacing Utilities */
+.mv-p-1 { padding: 4px; }
+.mv-p-2 { padding: 8px; }
+.mv-p-3 { padding: 12px; }
+.mv-p-4 { padding: 16px; }
+.mv-p-6 { padding: 24px; }
+
+.mv-m-1 { margin: 4px; }
+.mv-m-2 { margin: 8px; }
+.mv-m-3 { margin: 12px; }
+.mv-m-4 { margin: 16px; }
+.mv-m-6 { margin: 24px; }
+
+.mv-mb-1 { margin-bottom: 4px; }
+.mv-mb-2 { margin-bottom: 8px; }
+.mv-mb-3 { margin-bottom: 12px; }
+.mv-mb-4 { margin-bottom: 16px; }
+.mv-mb-6 { margin-bottom: 24px; }
+
+.mv-mt-1 { margin-top: 4px; }
+.mv-mt-2 { margin-top: 8px; }
+.mv-mt-3 { margin-top: 12px; }
+.mv-mt-4 { margin-top: 16px; }
+.mv-mt-6 { margin-top: 24px; }
+
+/* Flexbox Utilities */
+.mv-flex { display: flex; }
+.mv-flex-col { flex-direction: column; }
+.mv-items-center { align-items: center; }
+.mv-justify-center { justify-content: center; }
+.mv-justify-between { justify-content: space-between; }
+.mv-gap-1 { gap: 4px; }
+.mv-gap-2 { gap: 8px; }
+.mv-gap-3 { gap: 12px; }
+.mv-gap-4 { gap: 16px; }
