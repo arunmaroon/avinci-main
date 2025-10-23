@@ -2,34 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import Global Styles */
-@import './styles/global.css';
+/* Import Inter font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Import Design System */
+@import './styles/design-system.css';
 
 @layer base {
-  /* Override with Manrope font from global.css */
   * {
-    font-family: var(--font-family-sans);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
   }
 
   body {
-    font-family: var(--font-family-sans);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--color-neutral-50);
-    color: var(--color-neutral-900);
+    background-color: #F8FAFC;
+    color: #1E293B;
     min-height: 100vh;
   }
 
-  /* Typography hierarchy */
+  /* Fresh modern typography hierarchy */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-family-sans);
-    font-weight: var(--font-weight-bold);
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
     letter-spacing: -0.025em;
-    color: var(--color-neutral-900);
+    color: #1E293B;
   }
 
   p, span, div, a, button, input, textarea, select {
-    font-family: var(--font-family-sans);
+    font-family: 'Inter', sans-serif;
+  }
+  
+  /* Modern utility classes */
+  .font-inter {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .font-inter-light {
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+  }
+  
+  .font-inter-regular {
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+  }
+  
+  .font-inter-medium {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+  }
+  
+  .font-inter-semibold {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+  }
+  
+  .font-inter-bold {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+  }
+  
+  .font-inter-extrabold {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
   }
 }
 

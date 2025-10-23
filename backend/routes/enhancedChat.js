@@ -321,75 +321,33 @@ router.patch('/sessions/:session_id/close', async (req, res) => {
 
 /**
  * GET /enhanced-chat/personas
- * Get available personas for enhanced chat with rich data
+ * Get available personas for enhanced chat
  */
 router.get('/personas', async (req, res) => {
   try {
-    // Query from personas table to get rich persona data
-    const query = 'SELECT * FROM personas WHERE status = $1 ORDER BY created_at DESC';
-    const result = await pool.query(query, ['active']);
+    const query = `
+      SELECT id, name, occupation, location, quote, communication_style, 
+             emotional_profile, tech_savviness, demographics, avatar_url
+      FROM ai_agents 
+      WHERE is_active = true
+      ORDER BY created_at DESC
+    `;
     
-    // Map personas data for frontend compatibility
-    const personas = result.rows.map(persona => {
-      return {
-        id: persona.id,
-        name: persona.name,
-        avatar_url: persona.avatar_url,
-        
-        // Basic Info
-        occupation: persona.occupation || 'Professional',
-        title: persona.title || persona.occupation || 'Professional',
-        location: persona.location || 'Unknown Location',
-        company: persona.company || 'Unknown Company',
-        
-        // Demographics
-        age: persona.age || 'Unknown',
-        gender: persona.gender || 'Unknown',
-        education: persona.education || 'Unknown',
-        
-        // Quote
-        quote: persona.quote || '',
-        
-        // Goals & Motivations
-        goals: persona.primary_goals || [],
-        motivations: persona.motivations || [],
-        
-        // Personality
-        traits: persona.personality_adjectives || [],
-        values: persona.values || ['Honesty', 'Efficiency', 'Quality', 'Innovation', 'Customer focus'],
-        
-        // Background
-        background: persona.persona_json?.background || 'No background information available yet.',
-        
-        // Hobbies & Interests
-        hobbies: persona.hobbies || [],
-        
-        // Life Events
-        life_events: persona.life_events || {},
-        
-        // Pain Points
-        pain_points: persona.pain_points || [],
-        frustrations: persona.frustrations || [],
-        
-        // Communication
-        communication_style: persona.communication_style || {},
-        
-        // Tech & Domain
-        tech_savviness: persona.tech_savviness || 'Medium',
-        
-        // Cultural & Social
-        cultural_background: persona.cultural_background || {},
-        social_context: persona.social_context || {},
-        
-        // Additional fields for compatibility
-        personality_archetype: persona.personality_archetype,
-        financial_goals: persona.financial_goals || [],
-        daily_routine: persona.daily_routine || {},
-        
-        // Raw persona data for debugging
-        raw_persona: persona
-      };
-    });
+    const result = await pool.query(query);
+    const agentsWithAvatars = await avatarService.ensureAvatarsForAgents(result.rows);
+    
+    const personas = agentsWithAvatars.map(agent => ({
+      id: agent.id,
+      name: agent.name,
+      occupation: agent.occupation,
+      location: agent.location,
+      quote: agent.quote,
+      avatar_url: agent.avatar_url,
+      communication_style: agent.communication_style,
+      emotional_profile: agent.emotional_profile,
+      tech_savviness: agent.tech_savviness,
+      demographics: agent.demographics
+    }));
     
     res.json({
       success: true,
@@ -412,8 +370,13 @@ router.get('/personas/:id', async (req, res) => {
     const { id } = req.params;
     
     const query = `
-      SELECT * FROM personas 
-      WHERE id = $1 AND status = 'active'
+      SELECT id, name, occupation, location, quote, communication_style, 
+             emotional_profile, tech_savviness, demographics, traits, behaviors,
+             objectives, needs, fears, apprehensions, motivations, frustrations,
+             domain_literacy, speech_patterns, vocabulary_profile, cognitive_profile,
+             knowledge_bounds, master_system_prompt, avatar_url
+      FROM ai_agents 
+      WHERE id = $1 AND is_active = true
     `;
     
     const result = await pool.query(query, [id]);
@@ -422,38 +385,36 @@ router.get('/personas/:id', async (req, res) => {
       return res.status(404).json({ error: 'Persona not found' });
     }
     
-    const persona = result.rows[0];
+    const agentRow = result.rows[0];
+    const agent = await avatarService.ensureAgentAvatar(agentRow);
     
     res.json({
       success: true,
       agent: {
-        id: persona.id,
-        name: persona.name,
-        occupation: persona.occupation,
-        title: persona.title,
-        location: persona.location,
-        company: persona.company,
-        age: persona.age,
-        gender: persona.gender,
-        education: persona.education,
-        quote: persona.quote,
-        avatar_url: persona.avatar_url,
-        communication_style: persona.communication_style,
-        emotional_profile: persona.emotional_profile,
-        tech_savviness: persona.tech_savviness,
-        personality_archetype: persona.personality_archetype,
-        traits: persona.personality_adjectives,
-        values: persona.values,
-        primary_goals: persona.primary_goals,
-        motivations: persona.motivations,
-        pain_points: persona.pain_points,
-        frustrations: persona.frustrations,
-        hobbies: persona.hobbies,
-        daily_routine: persona.daily_routine,
-        cultural_background: persona.cultural_background,
-        social_context: persona.social_context,
-        financial_goals: persona.financial_goals,
-        master_system_prompt: persona.master_system_prompt
+        id: agent.id,
+        name: agent.name,
+        occupation: agent.occupation,
+        location: agent.location,
+        quote: agent.quote,
+        avatar_url: agent.avatar_url,
+        communication_style: agent.communication_style,
+        emotional_profile: agent.emotional_profile,
+        tech_savviness: agent.tech_savviness,
+        demographics: agent.demographics,
+        traits: agent.traits,
+        behaviors: agent.behaviors,
+        objectives: agent.objectives,
+        needs: agent.needs,
+        fears: agent.fears,
+        apprehensions: agent.apprehensions,
+        motivations: agent.motivations,
+        frustrations: agent.frustrations,
+        domain_literacy: agent.domain_literacy,
+        speech_patterns: agent.speech_patterns,
+        vocabulary_profile: agent.vocabulary_profile,
+        cognitive_profile: agent.cognitive_profile,
+        knowledge_bounds: agent.knowledge_bounds,
+        master_system_prompt: agent.master_system_prompt
       }
     });
   } catch (error) {

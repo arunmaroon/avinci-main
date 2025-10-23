@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.js": "/static/js/main.82e8d704.js",
+    "runtime-main.js": "/static/js/runtime-main.652d2a24.js",
+    "static/css/754.9a3b807a.css": "/static/css/754.9a3b807a.css",
+    "static/js/754.734227fb.js": "/static/js/754.734227fb.js",
+    "workbox-9e68dac3.js": "/workbox-9e68dac3.js",
+    "service-worker.js": "/service-worker.js",
+    "index.html": "/index.html"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.652d2a24.js",
+    "static/css/754.9a3b807a.css",
+    "static/js/754.734227fb.js",
+    "static/js/main.82e8d704.js"
+  ]
+}

@@ -33,8 +33,6 @@ import {
   TrendingUp as TrendingIcon,
   Notifications as NotificationsIcon,
   Settings,
-  Psychology as ResearchIcon,
-  Mic as InterviewIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
@@ -110,16 +108,14 @@ const M3Layout = ({ children, user, onLogout }) => {
     handleProfileMenuClose();
   };
 
-        const menuItems = [
-          { text: 'Dashboard', icon: <DashboardIcon />, path: '/', badge: null },
-          { text: 'Generate Agents', icon: <AgentsIcon />, path: '/generate', badge: null },
-          { text: 'Agent Library', icon: <AgentsIcon />, path: '/agents', badge: '12' },
-          { text: 'User Research', icon: <ResearchIcon />, path: '/user-research', badge: null },
-          { text: 'User Interview', icon: <InterviewIcon />, path: '/user-interview', badge: null },
-          { text: 'Group Chat', icon: <ChatIcon />, path: '/group-chat', badge: null },
-          { text: 'Design Feedback', icon: <FeedbackIcon />, path: '/design-feedback', badge: null },
-          { text: 'Projects', icon: <ProjectsIcon />, path: '/projects', badge: '3' },
-        ];
+  const menuItems = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/', badge: null },
+    { text: 'Generate Agents', icon: <AgentsIcon />, path: '/generate', badge: null },
+    { text: 'Agent Library', icon: <AgentsIcon />, path: '/agents', badge: '12' },
+    { text: 'Group Chat', icon: <ChatIcon />, path: '/group-chat', badge: null },
+    { text: 'Design Feedback', icon: <FeedbackIcon />, path: '/design-feedback', badge: null },
+    { text: 'Projects', icon: <ProjectsIcon />, path: '/projects', badge: '3' },
+  ];
 
   const drawer = (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>

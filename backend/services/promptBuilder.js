@@ -4,61 +4,6 @@
 
 class PromptBuilder {
     /**
-     * English level mapping (old to new Beginner-Expert scale)
-     */
-    static ENGLISH_LEVEL_MAP = {
-        'Very Low': 'Beginner',
-        'Low': 'Elementary',
-        'Medium': 'Intermediate',
-        'High': 'Advanced',
-        'Very High': 'Expert'
-    };
-
-    /**
-     * Regional profiles with HEAVY language mixing for authentic Indian responses
-     */
-    static REGIONAL_PROFILES = {
-        north: {
-            local_words: ['yaar', 'achha', 'theek hai', 'bilkul', 'kya', 'haan', 'nahi', 'bas', 'arre', 'aap'],
-            example: 'Yaar, this looks theek hai na? Bilkul perfect!'
-        },
-        south: {
-            local_words: ['kada', 'ra', 'sare', 'aitey', 'eppudu', 'chala', 'em chestham', 'bagundi'],
-            example: 'Chala bagundi kada this design. Aitey we can improve it more.'
-        },
-        tamil: {
-            local_words: ['da', 'pa', 'seri', 'puriyuthu', 'nalla', 'romba', 'enna', 'ponga', 'illa'],
-            example: 'Seri pa, nalla irukku this feature. Romba useful da!'
-        },
-        west: {
-            local_words: ['mhanje', 'kay', 'mast', 'chalu', 'ho na', 'kay re', 'ata'],
-            example: 'Mast hai yaar! Kay mhantos, this is really good na?'
-        },
-        east: {
-            local_words: ['bhalo', 'darun', 'ektu', 'toh', 'na', 'ekebare', 'bujhecho'],
-            example: 'Ektu darun! This is bhalo but needs more work na?'
-        },
-        default: {
-            local_words: ['yaar', 'achha', 'theek hai'],
-            example: 'Yaar, this is achha!'
-        }
-    };
-
-    /**
-     * Determine region from location
-     */
-    static getRegion(location) {
-        if (!location) return 'north';
-        const loc = location.toLowerCase();
-        if (loc.includes('tamil') || loc.includes('chennai') || loc.includes('madurai') || loc.includes('coimbatore')) return 'tamil';
-        if (loc.includes('delhi') || loc.includes('punjab') || loc.includes('haryana') || loc.includes('rajasthan') || loc.includes('uttar pradesh')) return 'north';
-        if (loc.includes('bangalore') || loc.includes('karnataka') || loc.includes('kerala') || loc.includes('andhra') || loc.includes('telangana') || loc.includes('hyderabad')) return 'south';
-        if (loc.includes('mumbai') || loc.includes('maharashtra') || loc.includes('gujarat') || loc.includes('goa') || loc.includes('pune')) return 'west';
-        if (loc.includes('kolkata') || loc.includes('west bengal') || loc.includes('odisha') || loc.includes('bihar')) return 'east';
-        return 'north';
-    }
-
-    /**
      * Build comprehensive master system prompt for persona
      */
     static buildMasterPrompt(persona) {
@@ -73,68 +18,34 @@ class PromptBuilder {
         const needs = persona.needs?.join('; ') || 'N/A';
         const fears = [...(persona.fears || []), ...(persona.apprehensions || [])].join('; ') || 'N/A';
 
-        const fillerWords = (persona.speech_patterns?.filler_words || persona.speech_patterns?.fillers || []).join(', ') || 'none';
+        const fillerWords = (persona.speech_patterns?.filler_words || []).join(', ') || 'none';
         const avoidedWords = (persona.vocabulary_profile?.avoided_words || []).slice(0, 10).join(', ') || 'none';
 
-        const frustrationTriggers = (persona.emotional_profile?.frustration_triggers || persona.emotional_profile?.triggers || []).join(', ') || 'none';
+        const frustrationTriggers = (persona.emotional_profile?.frustration_triggers || []).join(', ') || 'none';
         const excitementTriggers = (persona.emotional_profile?.excitement_triggers || []).join(', ') || 'none';
 
         const confidentTopics = (persona.knowledge_bounds?.confident || []).join(', ') || 'none';
         const partialTopics = (persona.knowledge_bounds?.partial || []).join(', ') || 'none';
         const unknownTopics = (persona.knowledge_bounds?.unknown || []).join(', ') || 'none';
 
-        // Extract speech patterns and native phrases
-        const nativeLanguage = persona.cultural_background?.primary_language || persona.native_language || 'Hindi';
-        const nativePhrases = persona.speech_patterns?.native_phrases || [];
-        const englishLevel = persona.speech_patterns?.english_level || persona.english_savvy || 'Medium';
-        const speechStyle = persona.speech_patterns?.style || '';
+        // Determine language mixing based on English proficiency
+        const englishSavvy = persona.english_savvy || persona.communication_style?.english_proficiency || 'Medium';
+        const nativeLanguage = persona.cultural_background?.primary_language || persona.native_language || 'Telugu';
         
-        // Determine region and get local words
-        const region = this.getRegion(persona.location);
-        const regionalProfile = this.REGIONAL_PROFILES[region] || this.REGIONAL_PROFILES.default;
-        
-        // Normalize English level to new scale (Beginner to Expert)
-        const normalizedEnglishLevel = this.ENGLISH_LEVEL_MAP[englishLevel] || englishLevel || 'Intermediate';
-        
-        // Determine mixing intensity based on English level (Beginner to Expert scale)
-        let mixingInstructions = '';
-        const englishLower = normalizedEnglishLevel.toLowerCase();
-        if (englishLower === 'beginner') {
-            mixingInstructions = `VERY HEAVY MIXING (4-5 native words per sentence) - You struggle with English and prefer ${nativeLanguage}. Use native language primarily.`;
-        } else if (englishLower === 'elementary') {
-            mixingInstructions = `HEAVY MIXING (3-4 native words per sentence) - You mix ${nativeLanguage} heavily with English. More comfortable in native language.`;
-        } else if (englishLower === 'intermediate') {
-            mixingInstructions = `MODERATE MIXING (1-2 native words per sentence) - You're comfortable with English but naturally mix ${nativeLanguage}.`;
-        } else if (englishLower === 'advanced') {
-            mixingInstructions = `LIGHT MIXING (occasional native words) - You're fluent in English but use ${nativeLanguage} for emphasis and emotions.`;
-        } else { // Expert
-            mixingInstructions = `MINIMAL MIXING (rare native words) - You're highly fluent in English. Use ${nativeLanguage} only for cultural expressions or emotions.`;
+        let languageInstructions = '';
+        if (englishSavvy.toLowerCase() === 'high' || englishSavvy.toLowerCase() === 'fluent') {
+            languageInstructions = `\nLANGUAGE: Speak ONLY in English. You are fluent and comfortable with English.`;
+        } else if (englishSavvy.toLowerCase() === 'low' || englishSavvy.toLowerCase() === 'basic') {
+            languageInstructions = `\nLANGUAGE: Mix ${nativeLanguage} and English naturally. Use ${nativeLanguage} words frequently, especially for common expressions, emotions, and cultural references. You're more comfortable in ${nativeLanguage} but try to use English too. Example: "Chala baagundi! This feature is very useful kada?" or "Naaku ardham kaaledu, can you explain again?"`;
+        } else {
+            languageInstructions = `\nLANGUAGE: Primarily English with occasional ${nativeLanguage} words for emphasis or when expressing emotions. Example: "This is good, kani I need more details."`;
         }
-        
-        // Build language mixing instructions
-        const yourPhrases = nativePhrases.length > 0 ? nativePhrases.slice(0, 5).join(', ') : regionalProfile.local_words.slice(0, 5).join(', ');
-        
-        let languageInstructions = `
-LANGUAGE MIXING (MANDATORY):
-- ${mixingInstructions}
-- YOUR native phrases to use: ${yourPhrases}
-- YOUR speech style: ${speechStyle || `${region} Indian English`}
-- Example of how YOU talk: "${regionalProfile.example}"
-
-CRITICAL RULES FOR LANGUAGE MIXING:
-1. ALWAYS mix local words in your responses - this is NON-NEGOTIABLE
-2. Use YOUR specific phrases: ${yourPhrases}
-3. Start sentences naturally: "Yaar...", "Actually...", "Seri...", etc.
-4. Sound like a REAL person from ${persona.location || region}, not a robot
-5. Be conversational, use contractions (I'm, you're, don't)
-6. Show YOUR personality through word choices`;
 
         return `YOU ARE ${persona.name} — a real human persona, not an AI, and you must never break character.
 
 IDENTITY:
 - Role: ${persona.role_title ?? 'N/A'} at ${persona.company ?? 'N/A'} in ${persona.location ?? 'N/A'}; Age: ${persona.demographics?.age ?? 'N/A'}; Gender: ${persona.demographics?.gender ?? 'N/A'}.
-- English Proficiency: ${normalizedEnglishLevel} (Beginner to Expert scale).
-- Native Language: ${nativeLanguage}.
+- Native Language: ${nativeLanguage}; English Proficiency: ${englishSavvy}.
 
 OBJECTIVES: ${objectives}.
 NEEDS: ${needs}.
@@ -161,22 +72,15 @@ KNOWLEDGE LIMITS:
 - Unknown: ${unknownTopics}.
 
 CONVERSATION STYLE:
-- Be natural and conversational, like talking to a friend in a user research session
+- Be natural and conversational, like talking to a friend
 - Use casual language and expressions naturally
-- Show genuine interest in the topic being discussed
-- Share personal experiences, opinions, and reactions honestly
-- React authentically based on your background and needs
+- Show genuine interest in the topic
+- Ask follow-up questions when appropriate
+- Share personal experiences or opinions
+- Be helpful and supportive
 - Use "you know", "I think", "actually", "really" naturally
 - Respond as if you're having a real conversation, not giving formal answers
 - Be engaging and show personality
-
-YOU ARE A REAL USER, NOT A HELPER:
-⚠️  CRITICAL: You are NOT a customer service agent, chatbot, or assistant
-⚠️  You are a REAL PERSON participating in user research/product feedback
-⚠️  NEVER offer help, assistance, or ask "How can I help you?"
-⚠️  React naturally to what's shown to you - give your honest feedback
-⚠️  Ask questions only when YOU are confused or want to understand something better
-⚠️  Share YOUR needs, frustrations, and expectations as a user
 
 RULES:
     1) Never say "as an AI"; you are ${persona.name} and remain in character at all times.
@@ -185,12 +89,12 @@ RULES:
     4) Match your sentence length and formality; keep vocabulary within constraints and avoid "avoid" words.
     5) Reflect your objectives/needs/fears when relevant and react to triggers appropriately.
     6) Reference earlier turns briefly to maintain continuity without repeating yourself verbatim.
-    7) FORBIDDEN PHRASES - NEVER SAY: "How can I help you?", "What can I do for you?", "How may I assist you?", "Is there anything else?", "Let me know if you need help", "I'm here to help", "How may I be of service?". You are NOT an assistant!
-    8) Provide direct, honest feedback and insights. React naturally to what you see/hear.
-    9) When reviewing designs or content, give YOUR honest opinion as a USER - what YOU like, what frustrates YOU, what YOU need.
-    10) NEVER use customer service or AI assistant language patterns. Speak as a REAL USER with your own personality, background, needs, and frustrations.
-    11) Respond naturally based on what's being discussed - don't wait for prompts or offer assistance.
-    12) Be conversational and authentic - respond like a real person in a research interview, not a formal presentation or help desk.`;
+    7) NEVER ask generic questions like "How can I help you?", "What can I do for you?", "How may I assist you today?", "Is there anything else I can help with?" — only ask questions when you genuinely need specific information or clarification.
+    8) Provide direct, substantive feedback and insights. Don't prompt for more input unless you're truly confused about something specific.
+    9) When reviewing designs or content, give your honest opinion and specific suggestions WITHOUT asking if the user wants more feedback.
+    10) NEVER use AI assistant language patterns. Speak as a real person with your own personality, background, and communication style.
+    11) Start conversations naturally based on your persona - don't wait for prompts or ask how you can help.
+    12) Be conversational and engaging - respond like you're talking to a friend, not giving a formal presentation.`;
     }
 
     /**
@@ -298,42 +202,6 @@ RULES:
         const goals = persona.goals || persona.objectives || [];
         const motivations = persona.motivations || [];
         
-        // Parse enriched fields safely with error handling
-        const personalityTraits = persona.personality_traits ? persona.personality_traits.split(', ') : [];
-        
-        let culturalBackgroundData = {};
-        try {
-            culturalBackgroundData = typeof persona.cultural_background === 'string' ? 
-                JSON.parse(persona.cultural_background || '{}') : (persona.cultural_background || {});
-        } catch (error) {
-            console.warn('Failed to parse cultural_background for agent', persona.name, ':', error.message);
-            culturalBackgroundData = {};
-        }
-        
-        let keyQuotesData = [];
-        try {
-            keyQuotesData = typeof persona.key_quotes === 'string' ? 
-                JSON.parse(persona.key_quotes || '[]') : (persona.key_quotes || []);
-        } catch (error) {
-            console.warn('Failed to parse key_quotes for agent', persona.name, ':', error.message);
-            keyQuotesData = [];
-        }
-        
-        let lifeEventsData = [];
-        try {
-            lifeEventsData = typeof persona.life_events === 'string' ? 
-                JSON.parse(persona.life_events || '[]') : (persona.life_events || []);
-        } catch (error) {
-            console.warn('Failed to parse life_events for agent', persona.name, ':', error.message);
-            lifeEventsData = [];
-        }
-        
-        const objectivesData = Array.isArray(persona.objectives) ? persona.objectives : [];
-        const needsData = Array.isArray(persona.needs) ? persona.needs : [];
-        const fearsData = Array.isArray(persona.fears) ? persona.fears : [];
-        const apprehensionsData = Array.isArray(persona.apprehensions) ? persona.apprehensions : [];
-        
-        
         return {
             // Header Section
             id: persona.id,
@@ -366,29 +234,15 @@ RULES:
 
             // Expanded background
             background,
-            background_story: persona.background_story || background,
             personality_profile: Array.isArray(persona.personality) ? persona.personality : persona.traits || ['Analytical', 'Goal-oriented', 'Collaborative'],
-            personality_traits: personalityTraits,
-            hobbies: Array.isArray(hobbies) ? hobbies : [],
+            hobbies,
             fintech_preferences: fintechPrefs,
             pain_points: Array.isArray(painPoints) ? painPoints : [],
             ui_pain_points: Array.isArray(uiPainPoints) ? uiPainPoints : [],
-            key_quotes: Array.isArray(keyQuotesData) ? keyQuotesData : [],
+            key_quotes: Array.isArray(keyQuotes) ? keyQuotes : [],
             goals: Array.isArray(goals) ? goals : [],
             motivations: Array.isArray(motivations) ? motivations : [],
             extrapolation_rules: Array.isArray(extrapolationRules) ? extrapolationRules : [],
-            
-            // Enriched fields
-            life_events: Array.isArray(lifeEventsData) ? lifeEventsData : [],
-            objectives: objectivesData,
-            needs: needsData,
-            fears: fearsData,
-            apprehensions: apprehensionsData,
-            
-            // Core persona attributes (needed for all services: Chat, Calls, Group Chats)
-            english_savvy: persona.english_savvy || demographics.english_proficiency || 'Intermediate',
-            tech_savviness: persona.tech_savviness || 'Intermediate',
-            voice_id: persona.voice_id,
             emotional_profile_extended: {
                 triggers: Array.isArray(emotionalProfile.triggers) ? emotionalProfile.triggers : [],
                 responses: Array.isArray(emotionalProfile.responses) ? emotionalProfile.responses : []
@@ -399,15 +253,8 @@ RULES:
                 community_values: Array.isArray(socialContext.community_values) ? socialContext.community_values : []
             },
             cultural_background: {
-                heritage: culturalBackgroundData.region || culturalBackground.heritage || demographics.region || location,
-                beliefs: Array.isArray(culturalBackgroundData.beliefs) ? culturalBackgroundData.beliefs : 
-                       Array.isArray(culturalBackground.beliefs) ? culturalBackground.beliefs : [],
-                region: culturalBackgroundData.region || demographics.region || location,
-                language: culturalBackgroundData.language || 'Hindi',
-                traditions: culturalBackgroundData.traditions || [],
-                values: culturalBackgroundData.values || [],
-                food_culture: culturalBackgroundData.food_culture || [],
-                festivals: culturalBackgroundData.festivals || []
+                heritage: culturalBackground.heritage || demographics.region || location,
+                beliefs: Array.isArray(culturalBackground.beliefs) ? culturalBackground.beliefs : []
             },
             daily_routine: Array.isArray(dailyRoutine) ? dailyRoutine : [],
             decision_making: {

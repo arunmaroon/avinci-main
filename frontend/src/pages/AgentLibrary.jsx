@@ -9,7 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import api from '../utils/api';
 import EnhancedAgentCreator from '../components/EnhancedAgentCreator';
-import EnhancedAgentGrid from '../components/EnhancedAgentGrid';
+import AgentGrid from '../components/AgentGrid';
 
 const formatTitleCase = (value = '') => {
     if (!value) return '';
@@ -26,18 +26,11 @@ const complexityToEnglishLevel = (complexity) => {
 };
 
 const deriveEnglishLevel = (agent) => {
-    // Use same logic as Group Chat for consistency
-    if (agent.speech_patterns?.english_level) return agent.speech_patterns.english_level;
-    if (agent.english_savvy) return agent.english_savvy;
-    if (agent.communication_style?.english_proficiency) return agent.communication_style.english_proficiency;
-    if (agent.communication_style?.english_level) return agent.communication_style.english_level;
-    
-    // Fallback to old logic if new fields are empty
     if (agent?.vocabulary_profile?.complexity) {
         return complexityToEnglishLevel(agent.vocabulary_profile.complexity);
     }
     const gauge = agent?.gauges?.english_literacy;
-    if (!gauge) return 'Intermediate'; // Default fallback (new scale)
+    if (!gauge) return 'Unknown';
     const normalized = gauge.toLowerCase();
     switch (normalized) {
         case 'high':
@@ -45,7 +38,7 @@ const deriveEnglishLevel = (agent) => {
         case 'medium':
             return 'Intermediate';
         case 'low':
-            return 'Elementary';
+            return 'Basic';
         case 'basic':
             return 'Beginner';
         default:
@@ -393,15 +386,11 @@ const AgentLibrary = () => {
                         </div>
                     </div>
                 ) : (
-                    <EnhancedAgentGrid
+                    <AgentGrid
                         agents={filteredAgents}
                         onSelectAgent={handleStartChat}
                         onDeleteAgent={handleDeleteAgent}
                         onAgentStatusChange={handleAgentStatusChange}
-                        onStartAudioCall={(agent) => {
-                            // Navigate to audio call with selected agent
-                            window.location.href = `/audio-call?agentId=${agent.id}`;
-                        }}
                     />
                 )}
             </div>

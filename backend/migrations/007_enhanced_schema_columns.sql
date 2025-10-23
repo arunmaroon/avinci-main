@@ -26,7 +26,3 @@ CREATE INDEX IF NOT EXISTS idx_ai_agents_life_events ON ai_agents USING gin(life
 
 
 
-
-
-
-
