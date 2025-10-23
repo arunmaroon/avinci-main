@@ -1,13 +1,10 @@
 const { pool } = require('../models/database');
 const IndianDemographicsService = require('./indianDemographics');
-const { fetchPersonaImage } = require('./imageService');
 
 const PLACEHOLDER_PATTERNS = [
   'ui-avatars.com',
   'pravatar.cc',
   'data:image/svg+xml',
-  // Don't replace DiceBear avatars - they are good quality
-  // 'api.dicebear.com',
 ];
 
 const DEFAULT_DEMOGRAPHICS = {
@@ -64,9 +61,7 @@ const ensureAgentAvatar = async (agent) => {
   }
 
   const demographics = buildDemographics(agent);
-  // Prefer cached Pexels/Unsplash via imageService
-  const image = await fetchPersonaImage(agent, demographics);
-  const avatarUrl = image?.url || IndianDemographicsService.generateUnsplashPhoto(demographics);
+  const avatarUrl = IndianDemographicsService.generateUnsplashPhoto(demographics);
 
   if (!avatarUrl) {
     return agent;

@@ -137,10 +137,10 @@ router.post('/upload-ui', upload.single('image'), async (req, res) => {
     console.log('Request file:', req.file);
     console.log('Request files:', req.files);
     try {
-        const { agentId, callId } = req.body;
+        const { agentId } = req.body;
         const image = req.file;
         
-        console.log('Upload request received:', { agentId, callId, image: image ? image.filename : 'no file' });
+        console.log('Upload request received:', { agentId, image: image ? image.filename : 'no file' });
         
         if (!agentId || !image) {
             return res.status(400).json({ 
@@ -168,26 +168,10 @@ router.post('/upload-ui', upload.single('image'), async (req, res) => {
         
         console.log('File saved successfully to:', ui_path);
         
-        // If callId is provided, store the image path in the calls table
-        if (callId) {
-            try {
-                const { pool } = require('../models/database');
-                await pool.query(
-                    'UPDATE calls SET ui_path = $1 WHERE id = $2',
-                    [ui_path, callId]
-                );
-                console.log(`✅ Stored image path in calls table: ${ui_path} for call ${callId}`);
-            } catch (dbError) {
-                console.warn('⚠️ Failed to store image path in calls table:', dbError.message);
-                // Don't fail the upload if database update fails
-            }
-        }
-        
         res.json({
             success: true,
             ui_path: ui_path,
             agentId: agentId,
-            callId: callId,
             timestamp: new Date().toISOString()
         });
         
@@ -276,34 +260,11 @@ router.post('/feedback', async (req, res) => {
 /**
  * Get agent by ID
  */
-        async function getAgentById(agentId) {
+async function getAgentById(agentId) {
     try {
-                // First try ai_agents table
-                let query = 'SELECT * FROM ai_agents WHERE id = $1 AND is_active = true';
-                let result = await pool.query(query, [agentId]);
-                let row = result.rows[0];
-
-                if (!row) {
-                    // Fallback to agents table
-                    query = 'SELECT * FROM agents WHERE id = $1';
-                    result = await pool.query(query, [agentId]);
-                    row = result.rows[0];
-                }
-
-                if (!row) {
-                    throw new Error('Agent not found');
-                }
-
-                // Ensure master_system_prompt exists
-                if (!row.master_system_prompt && row.persona) {
-                    const p = row.persona || {};
-                    const name = row.name || 'Assistant';
-                    const occ = p.occupation || 'professional';
-                    const loc = p.location || 'India';
-                    row.master_system_prompt = `You are ${name}, a ${occ} from ${loc}. Be helpful, precise, and conversational. Answer based on your persona, domain literacy and tech savviness.`;
-                }
-
-                return row;
+        const query = 'SELECT * FROM ai_agents WHERE id = $1 AND is_active = true';
+        const result = await pool.query(query, [agentId]);
+        return result.rows[0];
     } catch (error) {
         console.error('Error fetching agent:', error);
         throw error;
@@ -349,48 +310,15 @@ function buildEnhancedContext(agent, chatHistory, query, ui_path) {
         cultural_background,
         social_context,
         tech_savviness,
-        communication_style,
-        personality_traits,
-        language_preference,
-        raw_persona
+        communication_style
     } = agent;
     
     const agentName = name || 'AI Agent';
     const agentOccupation = occupation || 'Professional';
     const agentLocation = location || 'Unknown';
     
-    // Extract rich persona details
-    const rawPersona = raw_persona || {};
-    const culturalInfo = cultural_background || rawPersona.cultural_background || {};
-    const commStyle = communication_style || rawPersona.communication_style || {};
-    
     // Use the master system prompt as the base (it contains comprehensive persona data)
     let context = `${master_system_prompt || 'You are a helpful AI assistant.'}\n\n`;
-    
-    // CRITICAL: Add explicit persona identity and cultural context
-    context += `🎭 YOUR IDENTITY:\n`;
-    context += `- You are ${agentName}, a ${agentOccupation} from ${agentLocation}\n`;
-    
-    if (culturalInfo.region || agentLocation) {
-        context += `- Cultural Background: You are from ${culturalInfo.region || agentLocation}\n`;
-    }
-    
-    if (language_preference || commStyle.language) {
-        context += `- Language: You speak ${language_preference || commStyle.language || 'English'}\n`;
-    }
-    
-    if (personality_traits) {
-        context += `- Personality: ${personality_traits}\n`;
-    }
-    
-    if (commStyle.tone) {
-        context += `- Communication Tone: ${commStyle.tone}\n`;
-    }
-    
-    context += `\n⚠️ IMPORTANT: Stay in character! Speak and respond based on your cultural background and location.\n`;
-    context += `- Use language, phrases, and references that match your cultural context\n`;
-    context += `- Reference your location and cultural experiences naturally\n`;
-    context += `- Express opinions and viewpoints consistent with your persona\n\n`;
     
     // Add persona-specific UI analysis context
     if (ui_path) {
@@ -703,110 +631,4 @@ async function storeConversation(agentId, userMessage, agentResponse) {
     }
 }
 
-/**
- * Generate summary of group chat session
- */
-router.post('/generate-summary', async (req, res) => {
-    try {
-        const { chatHistory, chatPurpose, agents } = req.body;
-        
-        console.log('Generating summary for:', {
-            historyLength: chatHistory?.length || 0,
-            purpose: chatPurpose,
-            agentCount: agents?.length || 0
-        });
-
-        if (!chatHistory || chatHistory.length === 0) {
-            return res.status(400).json({ 
-                error: 'No chat history provided',
-                summary: 'No conversation to summarize'
-            });
-        }
-
-        // Build context for summary generation
-        const agentNames = agents?.map(a => a.name).join(', ') || 'Multiple agents';
-        const agentOccupations = agents?.map(a => a.occupation).join(', ') || 'Various professions';
-        
-        const summaryPrompt = `You are an AI assistant tasked with creating a comprehensive summary of a group chat session.
-
-CHAT PURPOSE: ${chatPurpose || 'General discussion'}
-
-PARTICIPANTS: ${agentNames} (${agentOccupations})
-
-CHAT HISTORY:
-${chatHistory.map((msg, index) => `${index + 1}. ${msg.role}: ${msg.content}`).join('\n')}
-
-Please create a detailed summary that includes:
-1. Key topics discussed
-2. Main insights and conclusions
-3. Important decisions or agreements reached
-4. Action items or next steps mentioned
-5. Overall sentiment and tone of the conversation
-
-Format the summary in a clear, professional manner that would be useful for future reference.`;
-
-        const response = await getOpenAI().chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                {
-                    role: "system",
-                    content: summaryPrompt
-                }
-            ],
-            temperature: 0.3,
-            max_tokens: 1000
-        });
-
-        const summary = response.choices[0].message.content;
-        
-        console.log('Generated summary successfully');
-        
-        res.json({ 
-            summary,
-            metadata: {
-                historyLength: chatHistory.length,
-                agentCount: agents?.length || 0,
-                purpose: chatPurpose,
-                generatedAt: new Date().toISOString()
-            }
-        });
-
-    } catch (error) {
-        console.error('Error generating summary:', error);
-        
-        // Handle quota exceeded errors with fallback response
-        if (error.status === 429 || error.code === 'insufficient_quota' || error.message.includes('quota')) {
-            console.warn('OpenAI quota exceeded, using fallback summary');
-            
-            const fallbackSummary = `Group Chat Summary
-            
-Purpose: ${req.body.chatPurpose || 'General discussion'}
-Participants: ${req.body.agents?.map(a => a.name).join(', ') || 'Multiple agents'}
-Duration: ${req.body.chatHistory?.length || 0} messages
-
-This was a productive group discussion involving multiple AI agents sharing their perspectives and insights on the topic. The conversation covered various aspects and provided valuable input from different professional viewpoints.
-
-Note: This is a basic summary due to API limitations. For a more detailed analysis, please try again later.`;
-            
-            return res.json({ 
-                summary: fallbackSummary,
-                metadata: {
-                    historyLength: req.body.chatHistory?.length || 0,
-                    agentCount: req.body.agents?.length || 0,
-                    purpose: req.body.chatPurpose,
-                    generatedAt: new Date().toISOString(),
-                    fallback: true
-                }
-            });
-        }
-        
-        res.status(500).json({ 
-            error: 'Failed to generate summary',
-            summary: 'Unable to generate summary at this time. Please try again later.'
-        });
-    }
-});
-
 module.exports = router;
-module.exports.buildEnhancedContext = buildEnhancedContext;
-module.exports.generateEnhancedResponse = generateEnhancedResponse;

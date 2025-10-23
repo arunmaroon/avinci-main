@@ -20,6 +20,13 @@ import AdminRoles from './pages/AdminRoles';
 import DesignImport from './pages/DesignImport';
 import FigmaCallback from './components/FigmaCallback';
 import LoginPage from './pages/LoginPage';
+import AdminDashboard from './pages/AdminDashboard';
+import Products from './pages/Products';
+import Projects from './pages/Projects';
+import ProjectsDashboard from './pages/ProjectsDashboard';
+import AIAgents from './pages/AIAgents';
+import AgentLibrary from './pages/AgentLibrary';
+import GroupChatPage from './pages/GroupChatPage';
 import useAuthStore from './stores/authStore';
 import usePermissions from './hooks/usePermissions';
 import modernTheme from './theme/modernTheme';
@@ -71,7 +78,10 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/agents" element={<AirbnbAgentLibrary_v2 />} />
+              <Route path="/agent-library" element={<AgentLibrary />} />
+              <Route path="/ai-agents" element={<AIAgents />} />
               <Route path="/group-chat" element={<EnhancedGroupChatPage />} />
+              <Route path="/chat" element={<GroupChatPage />} />
               <Route path="/design-feedback" element={<DesignFeedback />} />
               <Route path="/user-research" element={<UserResearchModern />} />
               <Route path="/user-research/session/:sessionId" element={<SessionCall />} />
@@ -79,13 +89,17 @@ function App() {
               <Route path="/audio-call" element={<AudioCall />} />
               <Route path="/socket-test" element={<SocketTest />} />
               <Route path="/test-route" element={<TestRoute />} />
+              <Route path="/projects" element={<ProjectsDashboard />} />
+              <Route path="/projects/:projectId" element={<Projects />} />
               <Route path="/agent-chat/:agentId" element={<AgentChatPage />} />
               <Route path="/enhanced-chat/:agentId" element={<EnhancedChatPage />} />
               
               {/* Admin Routes - Protected by permissions */}
               {canAccessAdmin() && (
                 <>
+                  <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/roles" element={<AdminRoles />} />
+                  <Route path="/admin/products" element={<Products />} />
                   <Route path="/admin/design-import" element={<DesignImport />} />
                 </>
               )}

@@ -67,13 +67,8 @@ const GroupChatPage = () => {
     const fetchAllAgents = async () => {
         try {
             setLoading(true);
-            // Use the same central Agent Library endpoint for consistency
-            // Add cache buster to ensure fresh data
-            const response = await api.get(`/agents/v5?_t=${Date.now()}`);
-            const agents = response.data || [];
-            console.log('✅ Loaded agents from Central Library:', agents.length);
-            console.log('📊 English levels:', agents.map(a => `${a.name}: ${a.speech_patterns?.english_level || a.english_savvy || '?'}`));
-            setAllAgents(agents);
+            const response = await api.get('/enhanced-chat/personas');
+            setAllAgents(response.data.personas);
         } catch (err) {
             console.error('Error fetching agents:', err);
         } finally {
@@ -140,12 +135,11 @@ const GroupChatPage = () => {
     const getTechSavvyLevel = (agent) => agent.tech_savviness || 'Unknown';
     const getDomainSavvyLevel = (agent) => agent.domain_savvy || 'Medium';
     const getEnglishSavvyLevel = (agent) => {
-        // Check multiple possible locations for English proficiency (prioritize speech_patterns)
-        if (agent.speech_patterns?.english_level) return agent.speech_patterns.english_level;
+        // Check multiple possible locations for English proficiency
         if (agent.english_savvy) return agent.english_savvy;
         if (agent.communication_style?.english_proficiency) return agent.communication_style.english_proficiency;
         if (agent.communication_style?.english_level) return agent.communication_style.english_level;
-        return 'Intermediate'; // Default fallback (new scale)
+        return 'Medium'; // Default fallback
     };
 
     const filteredAgents = allAgents.filter((agent) => {
@@ -162,26 +156,10 @@ const GroupChatPage = () => {
     const techSavvyLevels = [...new Set(allAgents.map((agent) => getTechSavvyLevel(agent)))];
     const englishSavvyLevels = [...new Set(allAgents.map((agent) => getEnglishSavvyLevel(agent)))];
     
-    // Sort Tech levels for better UX (Beginner to Expert scale)
-    const sortedTechLevels = techSavvyLevels.sort((a, b) => {
-        const order = ['Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'];
-        const indexA = order.indexOf(a);
-        const indexB = order.indexOf(b);
-        // Put unknown/invalid values at the end
-        if (indexA === -1) return 1;
-        if (indexB === -1) return -1;
-        return indexA - indexB;
-    });
-    
-    // Sort English levels for better UX (Beginner to Expert scale)
+    // Sort English levels for better UX
     const sortedEnglishLevels = englishSavvyLevels.sort((a, b) => {
-        const order = ['Beginner', 'Elementary', 'Intermediate', 'Advanced', 'Expert'];
-        const indexA = order.indexOf(a);
-        const indexB = order.indexOf(b);
-        // Put unknown/invalid values at the end
-        if (indexA === -1) return 1;
-        if (indexB === -1) return -1;
-        return indexA - indexB;
+        const order = ['Advanced', 'High', 'Medium', 'Low'];
+        return order.indexOf(a) - order.indexOf(b);
     });
 
     const clearFilters = () => {
@@ -430,7 +408,7 @@ const GroupChatPage = () => {
                                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     >
                                         <option value="">All Tech Levels</option>
-                                        {sortedTechLevels.map(level => (
+                                        {techSavvyLevels.map(level => (
                                             <option key={level} value={level}>{level}</option>
                                         ))}
                                     </select>
@@ -503,28 +481,28 @@ const GroupChatPage = () => {
                                                     {/* Skill Badges */}
                                                     <div className="flex flex-wrap gap-2">
                                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                            techSavvy === 'High' ? 'text-green-800' :
-                                                            techSavvy === 'Medium' ? 'text-yellow-800' :
-                                                            techSavvy === 'Low' ? 'text-red-800' :
-                                                            'text-gray-800'
-                                                        }`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
+                                                            techSavvy === 'High' ? 'bg-green-100 text-green-800' :
+                                                            techSavvy === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                            techSavvy === 'Low' ? 'bg-red-100 text-red-800' :
+                                                            'bg-gray-100 text-gray-800'
+                                                        }`}>
                                                             Tech: {techSavvy}
                                                         </span>
                                                         
                                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                            domainSavvy === 'High' ? 'text-green-800' :
-                                                            domainSavvy === 'Medium' ? 'text-yellow-800' :
-                                                            'text-red-800'
-                                                        }`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
+                                                            domainSavvy === 'High' ? 'bg-green-100 text-green-800' :
+                                                            domainSavvy === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-red-100 text-red-800'
+                                                        }`}>
                                                             Domain: {domainSavvy}
                                                         </span>
                                                         
                                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                            englishSavvy === 'Advanced' ? 'text-green-800' :
-                                                            englishSavvy === 'High' ? 'text-blue-800' :
-                                                            englishSavvy === 'Medium' ? 'text-yellow-800' :
-                                                            'text-red-800'
-                                                        }`} style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}>
+                                                            englishSavvy === 'Advanced' ? 'bg-green-100 text-green-800' :
+                                                            englishSavvy === 'High' ? 'bg-blue-100 text-blue-800' :
+                                                            englishSavvy === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-red-100 text-red-800'
+                                                        }`}>
                                                             English: {englishSavvy}
                                                         </span>
                                                     </div>

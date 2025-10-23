@@ -142,50 +142,11 @@ const createTables = async () => {
             );
         `);
 
-        // Prototypes (design imports)
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS design_prototypes (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                file_key VARCHAR(64) NOT NULL,
-                name VARCHAR(200),
-                ast JSONB NOT NULL,
-                version INTEGER DEFAULT 1,
-                imported_by UUID REFERENCES admin_users(id),
-                project_id UUID,
-                validation JSONB,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            );
-        `);
-
         // Create indexes
         await pool.query('CREATE INDEX IF NOT EXISTS idx_agents_category ON ai_agents(category)');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_agents_created_by ON ai_agents(created_by)');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_session_id ON chat_messages(session_id)');
         await pool.query('CREATE INDEX IF NOT EXISTS idx_documents_status ON document_uploads(status)');
-
-        // Voice calls tables for User Interview (audio) feature
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS voice_calls (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                topic TEXT,
-                agent_ids UUID[],
-                status VARCHAR(20) DEFAULT 'open',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS voice_events (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                call_id UUID REFERENCES voice_calls(id) ON DELETE CASCADE,
-                speaker VARCHAR(64),
-                kind VARCHAR(32),
-                text TEXT,
-                audio_url TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
 
         // Add missing columns to agents table if they don't exist
         await pool.query(`

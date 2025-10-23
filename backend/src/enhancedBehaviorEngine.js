@@ -330,21 +330,11 @@ async function generatePersonaResponse(persona, userMessage, chatHistory = [], c
       frequency_penalty: 0.5
     };
 
-    let rawResponse;
-    
-    // Try to get AI response, fallback to persona-based response if API fails
-    try {
-      rawResponse = await providerGateway.chat(messages, aiParams);
-      console.log('✅ AI response received successfully');
-    } catch (apiError) {
-      console.warn('⚠️  AI API unavailable, using persona-based fallback');
-      rawResponse = generatePersonaBasedFallback(persona, userMessage, chatHistory, context);
-      console.log('✅ Persona-based fallback response generated');
-    }
+    // Get AI response
+    const rawResponse = await providerGateway.chat(messages, aiParams);
     
     // Humanize the response
     const humanizedResponse = humanize(persona, rawResponse, context);
-    console.log('✅ Response humanized');
     
     // Compute realistic delay
     const delay = computeDelay(persona, userMessage, humanizedResponse, context);
@@ -358,142 +348,8 @@ async function generatePersonaResponse(persona, userMessage, chatHistory = [], c
     
   } catch (error) {
     console.error('Error generating persona response:', error);
-    // Final fallback - generate basic response
-    const fallbackResponse = generatePersonaBasedFallback(persona, userMessage, chatHistory, context);
-    return {
-      content: fallbackResponse,
-      delay: computeDelay(persona, userMessage, fallbackResponse, context),
-      emotion: detectEmotion(userMessage, persona),
-      typingEvents: []
-    };
+    throw error;
   }
-}
-
-/**
- * Generate persona-based response using agent's rich data (fallback when API unavailable)
- */
-function generatePersonaBasedFallback(persona, userMessage, chatHistory = [], context = {}) {
-  const { 
-    name,
-    occupation,
-    personality,
-    goals,
-    pain_points,
-    motivations,
-    fears,
-    apprehensions,
-    speech_patterns,
-    communication_style
-  } = persona;
-  
-  const agentName = name || 'Agent';
-  const occupation_text = occupation || 'professional';
-  const personality_traits = personality?.traits || [];
-  const agent_tone = communication_style?.formality || 5;
-  const agent_goals = goals || [];
-  const agent_pains = pain_points || [];
-  const agent_apprehensions = apprehensions || [];
-  const common_phrases = speech_patterns?.common_phrases || [];
-  const filler_words = speech_patterns?.filler_words || [];
-  
-  let response = '';
-  
-  // Add filler word sometimes for authenticity
-  if (filler_words.length > 0 && Math.random() > 0.7) {
-    response += filler_words[Math.floor(Math.random() * filler_words.length)] + ' ';
-  }
-  
-  // Add personality-driven opening based on formality
-  const openings = agent_tone > 6
-    ? [
-        `From my experience as a ${occupation_text}, `,
-        `In my professional opinion, `,
-        `Based on my background, `,
-        `Allow me to share my perspective. `
-      ]
-    : [
-        `You know, as a ${occupation_text}, `,
-        `From my experience, `,
-        `Let me share my thoughts on this. `,
-        `Honestly, `,
-        `So basically, `,
-        `I think `
-      ];
-  
-  response += openings[Math.floor(Math.random() * openings.length)];
-  
-  // Add query-specific context
-  const queryLower = userMessage.toLowerCase();
-  
-  if (queryLower.includes('problem') || queryLower.includes('issue') || queryLower.includes('challenge') || queryLower.includes('difficult')) {
-    // Relate to pain points
-    if (agent_pains.length > 0 && Math.random() > 0.5) {
-      const pain = agent_pains[Math.floor(Math.random() * agent_pains.length)];
-      response += `this reminds me of challenges I've faced with ${pain}. `;
-    }
-    response += `I think the key is to break it down and tackle it step by step. `;
-  } else if (queryLower.includes('goal') || queryLower.includes('want') || queryLower.includes('need')) {
-    // Relate to goals
-    if (agent_goals.length > 0 && Math.random() > 0.5) {
-      const goal = agent_goals[Math.floor(Math.random() * agent_goals.length)];
-      response += `this aligns with my goal around ${goal}. `;
-    }
-    response += `What I really need is a solution that actually works for my situation. `;
-  } else if (queryLower.includes('fintech') || queryLower.includes('app') || queryLower.includes('digital')) {
-    if (agent_apprehensions.length > 0 && Math.random() > 0.6) {
-      const concern = agent_apprehensions[Math.floor(Math.random() * agent_apprehensions.length)];
-      response += `I'm always concerned about ${concern}. `;
-    }
-    response += `I think fintech can be really useful, but it has to be trustworthy and easy to use. `;
-  } else if (queryLower.includes('how') || queryLower.includes('what') || queryLower.includes('why')) {
-    response += `let me explain how I see this. `;
-  } else if (queryLower.includes('hi') || queryLower.includes('hello') || queryLower.includes('hey')) {
-    response = `Hi there! `;
-    if (common_phrases.length > 0 && Math.random() > 0.5) {
-      response += common_phrases[Math.floor(Math.random() * common_phrases.length)] + '. ';
-    }
-    response += `How can I help you today?`;
-    return response;
-  } else {
-    response += `I have some thoughts on this. `;
-  }
-  
-  // Add personality-specific insights
-  if (personality_traits.includes('cautious') || personality_traits.includes('risk-averse')) {
-    response += `I'd want to make sure we're considering all the risks here. `;
-  } else if (personality_traits.includes('innovative') || personality_traits.includes('tech-savvy')) {
-    response += `I'm thinking we could try a more innovative approach. `;
-  } else if (personality_traits.includes('practical') || personality_traits.includes('pragmatic')) {
-    response += `Let's focus on what actually works in practice. `;
-  }
-  
-  // Add motivations
-  if (motivations && motivations.length > 0 && Math.random() > 0.6) {
-    const motivation = motivations[Math.floor(Math.random() * motivations.length)];
-    response += `What drives me is ${motivation}. `;
-  }
-  
-  // Add closing based on formality
-  if (agent_tone > 6) {
-    const formals = [
-      "I hope this perspective is helpful.",
-      "Please let me know if you'd like to discuss this further.",
-      "I'm happy to elaborate on any point.",
-      "Feel free to ask if you have more questions."
-    ];
-    response += formals[Math.floor(Math.random() * formals.length)];
-  } else {
-    const casuals = [
-      "Hope that helps!",
-      "Let me know what you think.",
-      "Does that make sense?",
-      "What do you reckon?",
-      "That's my take anyway."
-    ];
-    response += casuals[Math.floor(Math.random() * casuals.length)];
-  }
-  
-  return response;
 }
 
 module.exports = {

@@ -277,27 +277,18 @@ router.post('/streaming-parallel-chat', async (req, res) => {
  */
 async function getAgentById(agentId) {
     try {
-        // Try ai_agents
-        let q = 'SELECT * FROM ai_agents WHERE id = $1';
-        let r = await pool.query(q, [agentId]);
-        let row = r.rows[0];
-        if (!row) {
-            // Fallback to legacy agents table
-            q = 'SELECT * FROM agents WHERE id = $1';
-            r = await pool.query(q, [agentId]);
-            row = r.rows[0];
-            if (!row) return null;
+        const query = 'SELECT * FROM ai_agents WHERE id = $1';
+        const result = await pool.query(query, [agentId]);
+        
+        if (result.rows.length === 0) {
+            return null;
         }
-        const agentWithAvatar = await avatarService.ensureAgentAvatar(row);
-        const full = promptBuilder.buildFullProfile(agentWithAvatar);
-        // Ensure master_system_prompt exists
-        if (!full.master_system_prompt) {
-            const name = full.name || 'Assistant';
-            const occ = full.occupation || 'professional';
-            const loc = full.location || 'India';
-            full.master_system_prompt = `You are ${name}, a ${occ} from ${loc}. Be helpful, precise, and conversational. Answer based on your persona, domain literacy and tech savviness.`;
-        }
-        return full;
+        
+        const agentRow = result.rows[0];
+        const agentWithAvatar = await avatarService.ensureAgentAvatar(agentRow);
+        const fullAgent = promptBuilder.buildFullProfile(agentWithAvatar);
+        
+        return fullAgent;
     } catch (error) {
         console.error('Error fetching agent:', error);
         return null;
@@ -334,13 +325,11 @@ async function generateAgentResponse(agent, message, chatHistory) {
     - Be natural and conversational, like talking to a friend
     - Use casual language and expressions
     - Show genuine interest in the topic
-    - Only ask questions if you genuinely need clarification or have a specific doubt
-    - Do NOT end every response with questions like "What about you?" or "Where are you from?"
+    - Ask follow-up questions when appropriate
     - Share personal experiences or opinions
     - Be helpful and supportive
     - Use "you know", "I think", "actually", "really" naturally
-    - Respond as if you're having a real conversation, not giving formal answers
-    - Keep responses focused on the topic being discussed`;
+    - Respond as if you're having a real conversation, not giving formal answers`;
 
     const messages = [
         {
